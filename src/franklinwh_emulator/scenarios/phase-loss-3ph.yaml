@@ -1,0 +1,19 @@
+name: phase-loss-3ph
+description: >
+  A three-phase Australian site loses L2. The aGate must island immediately (phase loss), each
+  leg carrying its own load, then reconnect 60 s after all three phases are healthy again.
+start: "2026-01-15T20:00:00"
+duration: 10m
+record_every: 5s
+fleet:
+  gateways:
+    - {id: au3, seed: 11, ac_type: 2, load_split: {L1: 3, L2: 1, L3: 1}, location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"},
+       initial_soc: 70}
+steps:
+  - {at: 0,   do: load, with: {w: 2500}}
+  - {at: 1m,  do: grid, with: {available: false, phase: L2}}
+  - {at: 1m,  expect: {grid_connected: false, trip_reason: phase-loss, trip_stage: L2,
+                       grid_w: 0, battery_w: "~2500"}}
+  - {at: 5m,  do: grid, with: {restore: true}}
+  - {at: 5m59s, expect: {grid_connected: false}}
+  - {at: 6m1s, expect: {grid_connected: true}}

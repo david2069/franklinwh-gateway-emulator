@@ -1,0 +1,22 @@
+name: ev-solar-divert
+description: >
+  An EV in solar-divert mode under broken cloud: it charges only from PV surplus, between 6 A
+  (1.4 kW) and 32 A (7 kW), following the clouds and stopping whenever surplus falls below
+  6 A. Export stays near zero while it charges.
+start: "2026-01-15T10:00:00"
+duration: 3h
+record_every: 10s
+fleet:
+  gateways:
+    - id: home
+      seed: 7
+      grid_code: ausgrid
+      initial_soc: 100
+      location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}
+      loads:
+        - {name: base, type: base, w: 300, drift: 0.1}
+        - {name: ev, type: ev, w: 7000, min_w: 1400, arrive: "09:00", depart: "17:00",
+           kwh: 30, mode: solar, circuit: 2}
+      weather: {model: synthetic, kwp: 6.6, tilt: 20, sky: broken}
+steps:
+  - {at: 1h, expect: {circuits.2.on: true}}

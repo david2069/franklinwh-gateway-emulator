@@ -1,0 +1,23 @@
+name: sydney-dst-end
+description: >
+  Daylight saving ends in Sydney on Sunday 5 April 2026 at 03:00 AEDT (clocks go back to
+  02:00 AEST, a 25-hour day). The site's wall clock, Direct Connect time, daily totals and the
+  TOU peak window (17:00–21:00 local) must all follow the change. Checks at 16:30 and 20:30
+  AEST would fail with a fixed +11 offset.
+start: "2026-04-04T12:00:00"          # AEDT (UTC+11)
+duration: 36h
+record_every: 15m
+fleet:
+  gateways:
+    - {id: home, seed: 7, grid_code: ausgrid, native_mode: 3, tou_reserve: 20, initial_soc: 90,
+       location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney,
+                  postcode: "2000"}}
+steps:
+  - {at: 0,     do: pv,   with: {solar_w: 0}}
+  - {at: 0,     do: load, with: {w: 1500}}
+  - {at: 13h,   expect: {utc_offset_hours: 11, dst: true}}               # 01:00 AEDT, Apr 5
+  - {at: 12h15m, expect: {today_kwh.kwh_load: "<0.5"}}                   # reset at local midnight
+  - {at: 17h,   expect: {utc_offset_hours: 10, dst: false}}              # 04:00 AEST
+  - {at: 28h,   do: soc, with: {value: 90}}                             # top up after day 1
+  - {at: 29h30m, expect: {battery_w: "==0"}}                             # 16:30 AEST: off-peak
+  - {at: 33h30m, expect: {battery_w: ">1000"}}                           # 20:30 AEST: peak

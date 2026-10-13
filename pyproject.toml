@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "franklinwh-gateway-emulator"
+version = "0.1.0"
+description = "FranklinWH aGate emulator — Modbus TCP (SunSpec + extension registers), multi-gateway"
+readme = "README.md"
+license = "MIT"
+authors = [{name = "david2069", email = "david2069@users.noreply.github.com"}]
+requires-python = ">=3.10"
+dependencies = [
+    "pysunspec2>=1.1.0",
+    "pyyaml>=6.0",
+    "tzdata; platform_system == 'Windows'",   # IANA zones where the OS has none
+]
+keywords = ["franklinwh", "agate", "modbus", "sunspec", "emulator", "simulator"]
+
+[project.optional-dependencies]
+dc = ["franklinwh-direct-connect-api>=0.3.0"]
+dev = [
+    "franklinwh-direct-connect-api>=0.3.0",
+    "pytest>=7.0",
+    "pymodbus>=3.6",
+    "franklinwh-modbus @ git+https://github.com/david2069/franklinwh-modbus.git@8af83011755a538fb5c0020817d19569c8e48278",  # develop after #23/#25: connect() never writes
+]
+
+[project.scripts]
+franklinwh-emulator = "franklinwh_emulator.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+franklinwh_emulator = ["baselines/*.json", "scenarios/*.yaml", "weather_data/open-meteo/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

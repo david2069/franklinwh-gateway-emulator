@@ -1,0 +1,23 @@
+name: outage-during-vpp
+description: >
+  A VPP charge from the grid is running at 17:30 when the grid fails. The aGate must island
+  at once, ignore the VPP command, carry the house from the battery, then reconnect only
+  after the 60 s enter-service delay once the grid returns.
+start: "2026-01-15T17:30:00"
+duration: 50m
+record_every: 5s
+fleet:
+  gateways:
+    - {id: home, seed: 7, grid_code: ausgrid, location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}, initial_soc: 60}
+steps:
+  - {at: 0,   do: pv,   with: {solar_w: 0}}
+  - {at: 0,   do: load, with: {w: 1500}}
+  - {at: 1m,  do: vpp,  with: {watts: 3000}}
+  - {at: 2m,  expect: {battery_w: "~-3000", grid_w: "~4500", remote: true}}
+  - {at: 10m, do: grid, with: {available: false}, label: blackout}
+  - {at: 10m, expect: {grid_connected: false, trip_reason: outage, grid_w: 0, battery_w: "~1500"}}
+  - {at: 30m, do: grid, with: {restore: true}}
+  - {at: 30m, expect: {grid_connected: false}}
+  - {at: 31m, expect: {grid_connected: true, battery_w: "~-3000"}}
+  - {at: 35m, do: release}
+  - {at: 36m, expect: {remote: false}}

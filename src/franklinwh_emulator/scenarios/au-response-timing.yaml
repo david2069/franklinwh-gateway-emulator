@@ -1,0 +1,36 @@
+name: au-response-timing
+description: >
+  AS/NZS 4777.2 response timing end to end. An over-frequency excursion curtails PV after the
+  1 s dead time and settles within 10 s. A small fall in frequency is held by the 0.1 Hz
+  hysteresis, and a larger one releases. A black-out then islands the site; on restoration
+  the relay waits 60 s, and output ramps back over 360 s (703 ESRmpTms).
+start: "2026-01-15T12:00:00"
+duration: 15m
+record_every: 500ms
+fleet:
+  gateways:
+    - {id: home, seed: 7, grid_code: ausgrid, location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}, initial_soc: 100}
+steps:
+  - {at: 0,   do: pv,   with: {solar_w: 4000}}
+  - {at: 0,   do: load, with: {w: 0}}
+  - {at: 30s, expect: {solar_w: "~4000"}}
+  # Over-frequency: target is half output (50.25 → 52 Hz), 2000 W.
+  - {at: 1m,  do: grid, with: {hz: 51.125}}
+  - {at: 1m500ms, expect: {solar_w: "~4000"}}            # dead time: nothing yet
+  - {at: 1m5s, expect: {solar_w: ">2000", throttle_pct: ">0"}}   # moving
+  - {at: 1m11s, expect: {solar_w: "<=2100"}}             # within 5 % by 1 s + 10 s
+  # Hysteresis: back 0.05 Hz holds; back 0.225 Hz releases to the 51.0 Hz level.
+  - {at: 2m,  do: grid, with: {hz: 51.075}}
+  - {at: 2m30s, expect: {solar_w: "~2000"}}
+  - {at: 3m,  do: grid, with: {hz: 50.9}}
+  - {at: 3m30s, expect: {solar_w: "~2286"}}
+  - {at: 4m,  do: grid, with: {hz: 50.0}}
+  - {at: 4m30s, expect: {solar_w: "~4000"}}
+  # Black-out and restoration: 60 s enter-service delay, then a 360 s ramp.
+  - {at: 5m,  do: grid, with: {available: false}}
+  - {at: 5m1s, expect: {grid_connected: false}}
+  - {at: 6m,  do: grid, with: {restore: true}}
+  - {at: 6m59s, expect: {grid_connected: false}}
+  - {at: 7m1s, expect: {grid_connected: true, solar_w: "<50"}}
+  - {at: 10m, expect: {solar_w: "~2000"}}               # halfway through the 360 s ramp
+  - {at: 13m30s, expect: {solar_w: "~4000"}}

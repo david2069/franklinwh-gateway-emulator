@@ -1,0 +1,86 @@
+{"ev": "start", "host": "127.0.0.1", "port": 5020, "profile": "agate-v10r01b04d00", "max_connections": 1, "busy_behaviour": "close", "ext_15507_15509": [2, 20, 20], "ts": 1791879634.412}
+{"ev": "connect", "conn": "127.0.0.1:58395", "active_before": 0, "refused_busy": false, "ts": 1791879674.589}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 40000, "count": 3, "exception": 2, "ts": 1791879674.59}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 0, "count": 3, "exception": null, "ts": 1791879674.591}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 3, "count": 1, "exception": null, "ts": 1791879674.592}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 2, "count": 68, "exception": null, "ts": 1791879674.593}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 70, "count": 1, "exception": null, "ts": 1791879674.593}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 71, "count": 1, "exception": null, "ts": 1791879674.593}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 70, "count": 123, "exception": null, "ts": 1791879674.594}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 193, "count": 32, "exception": null, "ts": 1791879674.595}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 225, "count": 1, "exception": null, "ts": 1791879674.595}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 226, "count": 1, "exception": null, "ts": 1791879674.596}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 225, "count": 52, "exception": null, "ts": 1791879674.596}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 277, "count": 1, "exception": null, "ts": 1791879674.597}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 278, "count": 1, "exception": null, "ts": 1791879674.597}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 277, "count": 19, "exception": null, "ts": 1791879674.598}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 296, "count": 1, "exception": null, "ts": 1791879674.598}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 297, "count": 1, "exception": null, "ts": 1791879674.599}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 296, "count": 67, "exception": null, "ts": 1791879674.6}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 363, "count": 1, "exception": null, "ts": 1791879674.6}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 364, "count": 1, "exception": null, "ts": 1791879674.6}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 365, "count": 5, "exception": null, "ts": 1791879674.601}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 363, "count": 69, "exception": null, "ts": 1791879674.602}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 432, "count": 1, "exception": null, "ts": 1791879674.602}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 433, "count": 1, "exception": null, "ts": 1791879674.603}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 434, "count": 5, "exception": null, "ts": 1791879674.603}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 432, "count": 33, "exception": null, "ts": 1791879674.604}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 465, "count": 1, "exception": null, "ts": 1791879674.604}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 466, "count": 1, "exception": null, "ts": 1791879674.605}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 467, "count": 5, "exception": null, "ts": 1791879674.605}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 465, "count": 107, "exception": null, "ts": 1791879674.606}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 572, "count": 1, "exception": null, "ts": 1791879674.606}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 573, "count": 1, "exception": null, "ts": 1791879674.607}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 574, "count": 5, "exception": null, "ts": 1791879674.608}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 572, "count": 107, "exception": null, "ts": 1791879674.608}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 679, "count": 1, "exception": null, "ts": 1791879674.609}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 680, "count": 1, "exception": null, "ts": 1791879674.609}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 681, "count": 5, "exception": null, "ts": 1791879674.61}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 679, "count": 123, "exception": null, "ts": 1791879674.611}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 802, "count": 14, "exception": null, "ts": 1791879674.611}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 816, "count": 1, "exception": null, "ts": 1791879674.611}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 817, "count": 1, "exception": null, "ts": 1791879674.612}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 818, "count": 5, "exception": null, "ts": 1791879674.612}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 816, "count": 123, "exception": null, "ts": 1791879674.613}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 939, "count": 14, "exception": null, "ts": 1791879674.613}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 953, "count": 1, "exception": null, "ts": 1791879674.614}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 954, "count": 1, "exception": null, "ts": 1791879674.614}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 955, "count": 4, "exception": null, "ts": 1791879674.615}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 953, "count": 34, "exception": null, "ts": 1791879674.616}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 987, "count": 1, "exception": null, "ts": 1791879674.616}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 988, "count": 1, "exception": null, "ts": 1791879674.616}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 989, "count": 5, "exception": null, "ts": 1791879674.617}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 987, "count": 46, "exception": null, "ts": 1791879674.618}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 1033, "count": 1, "exception": null, "ts": 1791879674.618}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 1034, "count": 1, "exception": null, "ts": 1791879674.619}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 1033, "count": 9, "exception": null, "ts": 1791879674.62}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 1042, "count": 1, "exception": null, "ts": 1791879674.62}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 1043, "count": 1, "exception": null, "ts": 1791879674.62}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 1044, "count": 3, "exception": null, "ts": 1791879674.621}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 1042, "count": 45, "exception": null, "ts": 1791879674.622}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 1087, "count": 1, "exception": null, "ts": 1791879674.622}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 1088, "count": 1, "exception": null, "ts": 1791879674.622}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 1087, "count": 9, "exception": null, "ts": 1791879674.623}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 1096, "count": 1, "exception": null, "ts": 1791879674.624}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 1097, "count": 1, "exception": null, "ts": 1791879674.624}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 1096, "count": 30, "exception": null, "ts": 1791879674.625}
+{"ev": "request", "conn": "127.0.0.1:58395", "fc": 3, "address": 1126, "count": 1, "exception": null, "ts": 1791879674.625}
+{"ev": "disconnect", "conn": "127.0.0.1:58395", "ts": 1791879674.626}
+{"ev": "connect", "conn": "127.0.0.1:58396", "active_before": 0, "refused_busy": false, "ts": 1791879674.832}
+{"ev": "request", "conn": "127.0.0.1:58396", "fc": 3, "address": 2, "count": 68, "exception": null, "ts": 1791879674.834}
+{"ev": "disconnect", "conn": "127.0.0.1:58396", "ts": 1791879674.835}
+{"ev": "connect", "conn": "127.0.0.1:58397", "active_before": 0, "refused_busy": false, "ts": 1791879674.835}
+{"ev": "request", "conn": "127.0.0.1:58397", "fc": 3, "address": 2, "count": 68, "exception": null, "ts": 1791879674.837}
+{"ev": "disconnect", "conn": "127.0.0.1:58397", "ts": 1791879674.837}
+{"ev": "connect", "conn": "127.0.0.1:58398", "active_before": 0, "refused_busy": false, "ts": 1791879674.837}
+{"ev": "request", "conn": "127.0.0.1:58398", "fc": 3, "address": 2, "count": 68, "exception": null, "ts": 1791879674.838}
+{"ev": "disconnect", "conn": "127.0.0.1:58398", "ts": 1791879674.838}
+{"ev": "connect", "conn": "127.0.0.1:58399", "active_before": 0, "refused_busy": false, "ts": 1791879675.044}
+{"ev": "request", "conn": "127.0.0.1:58399", "fc": 3, "address": 15500, "count": 14, "exception": null, "ts": 1791879675.045}
+{"ev": "disconnect", "conn": "127.0.0.1:58399", "ts": 1791879675.047}
+{"ev": "connect", "conn": "127.0.0.1:58400", "active_before": 0, "refused_busy": false, "ts": 1791879675.25}
+{"ev": "request", "conn": "127.0.0.1:58400", "fc": 3, "address": 15507, "count": 3, "exception": null, "ts": 1791879675.252}
+{"ev": "request", "conn": "127.0.0.1:58400", "fc": 3, "address": 2, "count": 68, "exception": null, "ts": 1791879675.254}
+{"ev": "request", "conn": "127.0.0.1:58400", "fc": 3, "address": 2, "count": 68, "exception": null, "ts": 1791879675.256}
+{"ev": "request", "conn": "127.0.0.1:58400", "fc": 3, "address": 2, "count": 68, "exception": null, "ts": 1791879675.258}
+{"ev": "disconnect", "conn": "127.0.0.1:58400", "ts": 1791879675.459}

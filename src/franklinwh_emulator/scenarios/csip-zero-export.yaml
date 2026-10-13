@@ -1,0 +1,23 @@
+name: csip-zero-export
+description: >
+  Ausgrid's CSIP-AUS server sends a 30-minute zero-export event at midday while a VPP
+  discharge is running. The event must cap export at 0 W (battery discharge first, then PV),
+  and export must resume when the event expires.
+start: "2026-01-15T12:00:00"
+duration: 50m
+record_every: 10s
+fleet:
+  gateways:
+    - {id: home, seed: 7, grid_code: ausgrid, location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}, initial_soc: 80}
+steps:
+  - {at: 0,   do: pv,   with: {solar_w: 5000}}
+  - {at: 0,   do: load, with: {w: 800}}
+  - {at: 0,   do: csip, with: {enable: true, uri: "https://csip.ausgrid.example/dcap"}}
+  - {at: 10s, expect: {csip.status: registered}}
+  - {at: 1m,  do: vpp,  with: {watts: -5000}}
+  - {at: 2m,  expect: {grid_w: "~-9200"}}
+  - {at: 5m,  do: csip, with: {control: {opModExpLimW: 0}, duration_s: 1800}}
+  # A soft export limit is met within 15 s (AS/NZS 4777.1), not instantly.
+  - {at: 5m,  expect: {export_limit_w: 0, csip_source: event}}
+  - {at: 6m,  expect: {grid_w: ">=-1", battery_w: "~0"}}
+  - {at: 36m, expect: {csip_source: none, grid_w: "~-9200"}}

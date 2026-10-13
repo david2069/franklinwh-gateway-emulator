@@ -1,0 +1,18 @@
+name: latent-export-breach
+description: >
+  The exposure recorded in franklinwh-direct-connect-api BACKLOG: 5.7 kW of solar plus a 5 kW
+  midday VPP discharge exports 10.7 kW against Ausgrid's 10 kW single-phase limit, which the
+  aGate does not enforce (grid_feed_max = -1). The breach must be visible and accounted.
+start: "2026-01-15T12:00:00"
+duration: 20m
+record_every: 10s
+fleet:
+  gateways:
+    - {id: home, seed: 7, grid_code: ausgrid, location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}, initial_soc: 80}
+steps:
+  - {at: 0,   do: pv,   with: {solar_w: 5700}}
+  - {at: 0,   do: load, with: {w: 0}}
+  - {at: 1m,  do: vpp,  with: {watts: -5000}}
+  - {at: 2m,  expect: {grid_w: "~-10700", export_over_limit_w: "~700", export_limit_w: null}}
+  - {at: 12m, do: release}
+  - {at: 13m, expect: {export_over_limit_w: 0}}

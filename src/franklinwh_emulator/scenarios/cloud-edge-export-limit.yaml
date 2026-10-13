@@ -1,0 +1,28 @@
+name: cloud-edge-export-limit
+description: >
+  Broken cumulus over a Sydney midday with a CSIP 1.5 kW export limit and a VPP discharge.
+  Solar swings by kilowatts within seconds; the enforced limit must hold at every sample
+  while export follows the clouds below it. Then a storm rolls in.
+start: "2026-01-15T11:00:00"
+duration: 1h
+record_every: 5s
+fleet:
+  gateways:
+    - id: home
+      seed: 7
+      grid_code: ausgrid
+      location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}
+      initial_soc: 90
+      weather: {model: synthetic, kwp: 6.6, tilt: 20,
+                sky: broken}
+steps:
+  - {at: 0,   do: load, with: {w: 600}}
+  - {at: 0,   do: csip, with: {enable: true}}
+  - {at: 10s, do: csip, with: {control: {opModExpLimW: 1500}}}
+  - {at: 1m,  do: vpp,  with: {watts: -3000}}
+  # Cloud edges move the export faster than the 15 s soft-limit response, so small
+  # transient breaches are expected; the export_limit check allows the response envelope.
+  - {at: 2m,  expect: {grid_w: ">=-1550", csip_source: event}}
+  - {at: 40m, do: weather, with: {sky: storm}}
+  - {at: 41m, expect: {weather.sky: storm}}
+checks: [energy_balance, soc_bounds, export_limit, reserve_floor, islanded_no_flow]

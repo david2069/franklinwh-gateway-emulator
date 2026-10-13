@@ -1,0 +1,26 @@
+name: offgrid-circuit-shedding
+description: >
+  A summer-evening blackout with the battery low: the aGate cannot carry the whole house, so
+  it sheds the smart circuits (EV, aircon) first and keeps the essential load running; when
+  the grid returns, the circuits come back.
+start: "2026-01-15T18:30:00"
+duration: 2h
+record_every: 30s
+fleet:
+  gateways:
+    - id: home
+      seed: 7
+      grid_code: ausgrid
+      initial_soc: 35
+      location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}
+      loads:
+        preset: sydney-family
+        set: {ev: {mode: immediate, arrive: "18:00"}}
+      weather: {model: synthetic, kwp: 6.6, tilt: 20, sky: overcast}
+steps:
+  - {at: 1m,  expect: {loads.ev: 7000}}
+  - {at: 5m,  do: grid, with: {available: false}, label: blackout}
+  - {at: 5m,  expect: {grid_connected: false, circuits_shed: true, loads.ev: 0, load_shed_w: 0,
+                       grid_w: 0}}
+  - {at: 65m, do: grid, with: {restore: true}}
+  - {at: 67m, expect: {grid_connected: true, circuits_shed: false, loads.ev: 7000}}

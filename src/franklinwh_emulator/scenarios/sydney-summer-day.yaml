@@ -1,0 +1,16 @@
+name: sydney-summer-day
+description: >
+  A full January day on the Sydney/Ausgrid reference site in Self-Consumption, with
+  natural solar and load and no events. A baseline for regression and for checking the
+  daily energy picture.
+start: "2026-01-15T00:00:00"
+duration: 24h
+record_every: 60s
+fleet:
+  gateways:
+    - {id: home, seed: 7, grid_code: ausgrid, location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}, initial_soc: 40}
+steps:
+  - {at: 2h,  expect: {solar_w: "==0", grid_connected: true}}
+  - {at: 12h, expect: {solar_w: ">2000"}}
+  - {at: 15h, expect: {soc: ">60"}}
+  - {at: 23h, expect: {solar_w: "==0"}}

@@ -1,0 +1,69 @@
+# franklinwh-emulator fleet ./examples/fleet.yaml
+#
+# Every key outside `gateways` is optional. Per gateway:
+#   id, seed, serial, host, port (or modbus: {host, port}), directconnect: {port} (needs the
+#   [dc] extra), profile, quirks, span_unlock,
+#   time_scale, and any site setting:
+#     apower_units, ac_type (0 single, 1 split, 2 three), phases ([L1, L2, ...]),
+#     load_split / gen_split ({L1: 2, L2: 1}), grid_code (as4777-au-a, ieee1547-cat2,
+#     ieee1547-cat3, ausgrid), grid_overrides ({es_delay_s: 5, ...}),
+#     location ({latitude, longitude, timezone: <IANA, DST-aware>, postcode}), weather
+#     ({model: bell|synthetic|open-meteo, kwp, tilt, azimuth, sky} — inherits lat/lon),
+#     tz_offset_hours (fixed offset, no DST; location.timezone wins),
+#     native_mode (1 backup, 2 self, 3 TOU, 4 manual), self_reserve, tou_reserve,
+#     initial_soc, solar_peak_w, home_base_w, pv_inputs ({proximal: 0.6, remote1: 0.4}),
+#     offgrid_floor_soc.
+defaults:
+  host: 127.0.0.1
+
+gateways:
+  # Sydney single-phase home on Ausgrid (the reference aGate): Australia A + 10 kW export.
+  - id: site
+    seed: 7
+    apower_units: 2
+    grid_code: ausgrid
+    location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}
+    weather: {model: synthetic, kwp: 6.6, tilt: 20, sky: broken}
+    modbus: {port: 5020}
+    directconnect: {port: 9020}
+
+  # US split-phase 120/240 V, IEEE 1547-2018 Category II.
+  - id: us-split
+    seed: 42
+    ac_type: 1
+    location: {latitude: 33.45, longitude: -112.07, timezone: America/Phoenix}
+    modbus: {port: 5021}
+    directconnect: {port: 9021}
+
+  # Melbourne three-phase supply with an unbalanced house, remote PV on an aPbox.
+  - id: au-3phase
+    seed: 11
+    ac_type: 2
+    location: {latitude: -37.81, longitude: 144.96, timezone: Australia/Melbourne}
+    load_split: {L1: 3, L2: 1, L3: 1}
+    pv_inputs: {proximal: 0.6, remote1: 0.4}
+    modbus: {port: 5022}
+
+  # Two legs of a three-phase supply, in Adelaide (UTC+9:30/+10:30).
+  - id: au-2phase
+    seed: 12
+    ac_type: 2
+    location: {latitude: -34.93, longitude: 138.60, timezone: Australia/Adelaide}
+    phases: [L1, L2]
+    modbus: {port: 5023}
+
+  # Behaves like the bridge's mock gateways today: mode/reserve writes stick.
+  - id: span-unlocked
+    seed: 99
+    span_unlock: true
+    quirks:
+      tou_reserve_mirrors_self: false
+    modbus: {port: 5024}
+
+  # A spec-compliant SunSpec DER on Rule 21-style Category III ride-through.
+  - id: spec
+    seed: 3
+    profile: spec
+    ac_type: 1
+    grid_code: ieee1547-cat3
+    modbus: {port: 5025}

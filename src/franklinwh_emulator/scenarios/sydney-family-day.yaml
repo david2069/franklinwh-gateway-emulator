@@ -1,0 +1,25 @@
+name: sydney-family-day
+description: >
+  A summer day for a Sydney family on the Ausgrid reference site (preset sydney-family): base
+  load and fridge, seeded kettles and dishwasher, evening cooking, a pool pump and hot water
+  soaking midday PV (hot water on smart circuit 1), temperature-driven aircon on circuit 3,
+  and an EV on circuit 2 charging 18 kWh off-peak from 22:00. Broken-cloud synthetic sky.
+start: "2026-01-15T00:00:00"
+duration: 24h
+record_every: 1m
+fleet:
+  gateways:
+    - id: home
+      seed: 7
+      grid_code: ausgrid
+      initial_soc: 40
+      location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}
+      loads: sydney-family
+      weather: {model: synthetic, kwp: 6.6, tilt: 20, sky: broken}
+steps:
+  - {at: 4h,      expect: {appliances.ev.session_kwh: "~18", loads.ev: 0}}     # done overnight
+  - {at: 12h,     expect: {loads.hot_water: 3600, circuits.1.on: true}}
+  - {at: 12h,     do: circuit, with: {n: 1, on: false}, label: shed hot water}
+  - {at: 12h,     expect: {loads.hot_water: 0, circuits.1.power_w: 0}}
+  - {at: 12h30m,  do: circuit, with: {n: 1, on: true}}
+  - {at: 22h30m,  expect: {loads.ev: 7000}}

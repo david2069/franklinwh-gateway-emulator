@@ -1,0 +1,21 @@
+name: sydney-real-day
+description: >
+  15 January 2026 in Sydney from real Open-Meteo 15-minute irradiance and temperature
+  (bundled, so offline), on the 6.6 kWp Ausgrid reference site with north-facing panels at
+  20°. Cloud-edge flicker follows the real cloud cover. Data: Open-Meteo, CC BY 4.0.
+start: "2026-01-15T00:00:00"
+duration: 24h
+record_every: 30s
+fleet:
+  gateways:
+    - id: home
+      seed: 7
+      grid_code: ausgrid
+      location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}
+      initial_soc: 30
+      weather: {model: open-meteo, kwp: 6.6, tilt: 20,
+                cache_dir: builtin, offline: true}
+steps:
+  - {at: 3h,  expect: {solar_w: "==0"}}
+  - {at: 12h, expect: {solar_w: ">1000", weather.model: open-meteo}}
+  - {at: 21h, expect: {solar_w: "==0"}}

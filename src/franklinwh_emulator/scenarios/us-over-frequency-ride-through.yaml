@@ -1,0 +1,17 @@
+name: us-over-frequency-ride-through
+description: >
+  IEEE 1547-2018 Category II on a US split-phase site: 61.5 Hz must ride through for 300 s
+  (OF1) and then trip; reconnection needs 300 s inside 59.5–60.1 Hz.
+start: "2026-01-15T14:00:00"
+duration: 20m
+record_every: 5s
+fleet:
+  gateways:
+    - {id: us, seed: 42, ac_type: 1, location: {latitude: 33.45, longitude: -112.07, timezone: America/Phoenix}, initial_soc: 60}
+steps:
+  - {at: 1m,   do: grid, with: {hz: 61.5}}
+  - {at: 5m55s, expect: {grid_connected: true}}
+  - {at: 6m5s,  expect: {grid_connected: false, trip_stage: OF1}}
+  - {at: 7m,   do: grid, with: {restore: true}}
+  - {at: 11m55s, expect: {grid_connected: false}}
+  - {at: 12m5s,  expect: {grid_connected: true}}

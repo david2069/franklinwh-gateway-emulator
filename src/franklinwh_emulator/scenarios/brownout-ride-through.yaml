@@ -1,0 +1,20 @@
+name: brownout-ride-through
+description: >
+  AS/NZS 4777.2 Australia A under-voltage: a 175 V sag for 8 s must ride through (V< needs
+  10 s). A second 175 V sag for 12 s must trip. Reconnection only after 60 s of healthy grid.
+start: "2026-01-15T19:00:00"
+duration: 10m
+record_every: 1s
+fleet:
+  gateways:
+    - {id: home, seed: 7, grid_code: ausgrid, location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}, initial_soc: 70}
+steps:
+  - {at: 30s, do: grid, with: {voltage: 175}}
+  - {at: 37s, expect: {grid_connected: true, v_ln: "~175"}}
+  - {at: 38s, do: grid, with: {restore: true}}
+  - {at: 2m,  do: grid, with: {voltage: 175}}
+  - {at: 2m9s, expect: {grid_connected: true}}
+  - {at: 131s, expect: {grid_connected: false, trip_stage: "V<"}}
+  - {at: 3m,  do: grid, with: {restore: true}}
+  - {at: 239s, expect: {grid_connected: false}}
+  - {at: 241s, expect: {grid_connected: true}}

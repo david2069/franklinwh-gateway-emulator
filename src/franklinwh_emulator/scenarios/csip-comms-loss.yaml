@@ -1,0 +1,23 @@
+name: csip-comms-loss
+description: >
+  A registered CSIP client loses its utility server. Active events keep applying until the
+  300 s comms-loss timeout, then the DefaultDERControl (1.5 kW export) takes over until
+  comms return.
+start: "2026-01-15T11:00:00"
+duration: 30m
+record_every: 10s
+fleet:
+  gateways:
+    - {id: home, seed: 7, grid_code: ausgrid, location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}, initial_soc: 100}
+steps:
+  - {at: 0,   do: pv,   with: {solar_w: 6000}}
+  - {at: 0,   do: load, with: {w: 500}}
+  - {at: 0,   do: csip, with: {enable: true, default: {opModExpLimW: 1500}}}
+  - {at: 10s, do: csip, with: {control: {opModExpLimW: 10000}}}
+  - {at: 1m,  expect: {grid_w: "~-5500", csip_source: event}}
+  - {at: 2m,  do: csip, with: {server_up: false}}
+  - {at: 6m,  expect: {csip_source: event}}
+  - {at: 8m,  expect: {csip_source: comms-loss-default, grid_w: "~-1500", csip.status: comms-lost}}
+  - {at: 20m, do: csip, with: {server_up: true}}
+  - {at: 20m, expect: {csip_source: event}}
+  - {at: 21m, expect: {grid_w: "~-5500"}}
