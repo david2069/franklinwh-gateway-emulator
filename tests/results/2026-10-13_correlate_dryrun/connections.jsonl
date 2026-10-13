@@ -1,0 +1,9 @@
+{"ev": "start", "host": "127.0.0.1", "port": 5020, "profile": "agate-v10r01b04d00", "max_connections": 1, "busy_behaviour": "close", "ext_15507_15509": [2, 20, 20], "ts": 1791890926.539}
+{"ev": "connect", "conn": "127.0.0.1:64006", "active_before": 0, "refused_busy": false, "ts": 1791890946.599}
+{"ev": "disconnect", "conn": "127.0.0.1:64006", "ts": 1791890946.635}
+{"ev": "connect", "conn": "127.0.0.1:64007", "active_before": 0, "refused_busy": false, "ts": 1791890946.635}
+{"ev": "disconnect", "conn": "127.0.0.1:64007", "ts": 1791891126.968}
+{"ev": "connect", "conn": "127.0.0.1:64254", "active_before": 0, "refused_busy": false, "ts": 1791891140.697}
+{"ev": "disconnect", "conn": "127.0.0.1:64254", "ts": 1791891140.738}
+{"ev": "connect", "conn": "127.0.0.1:64255", "active_before": 0, "refused_busy": false, "ts": 1791891140.739}
+{"ev": "disconnect", "conn": "127.0.0.1:64255", "ts": 1791891200.861}
