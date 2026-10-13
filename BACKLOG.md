@@ -287,5 +287,6 @@ real addresses on :502/:9000, not port offsets.
 15507–15509 exists. The option still makes those writes take effect, and the README, DESIGN,
 BRIDGE_INTEGRATION and `examples/fleet.yaml` describe it as a device state.
 **Scope:** remove it, or rename it to a clearly hypothetical test hook (for example
-`accept_extension_writes`) with no SPAN wording, and update the tests that use it. Separately, ask
-franklinwh-modbus-bridge and franklinwh-modbus to relabel their "SPAN unlock" text. Not scheduled.
+`accept_extension_writes`) with no SPAN wording, and update the tests that use it. franklinwh-modbus
+and franklinwh-modbus-bridge have already removed it (owner, 2026-10-14), so only this repo is left.
+Not scheduled.
