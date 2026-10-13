@@ -1,0 +1,47 @@
+{
+ "emulator_truth": {
+  "battery_soc_pct": 60,
+  "battery_power_w (+discharge)": -3478.559777510725,
+  "grid_power_w (+import)": 0.0,
+  "solar_power_w": 3922.876773875649,
+  "home_load_w": 444.3169963649244,
+  "grid_voltage_ln_v": 241.8,
+  "grid_frequency_hz": 49.99,
+  "grid_connected": true,
+  "operating_mode (native)": 2,
+  "self_reserve_pct": 20,
+  "tou_reserve_pct": 35,
+  "ambient_temp_c": 28.899711648727294,
+  "cabinet_temp_c": 40.378271426238015
+ },
+ "library": {
+  "battery_soc_pct": 60.0,
+  "battery_power_w (+discharge)": -3500,
+  "grid_power_w (+import)": 0,
+  "solar_power_w": 3900.0,
+  "home_load_w": 444.0,
+  "grid_voltage_ln_v": 241.8,
+  "grid_frequency_hz": 49.99,
+  "grid_connected": true,
+  "operating_mode (native)": "SELF_CONSUMPTION=self_consumption",
+  "self_reserve_pct": 20,
+  "tou_reserve_pct": 20,
+  "ambient_temp_c": 28.900000000000002,
+  "cabinet_temp_c": 40.400000000000006
+ },
+ "library_extra": {
+  "battery_capacity_wh": 13600,
+  "battery_soh_pct": 95.60000000000001,
+  "grid_voltage_ll_v": 241.8,
+  "alarms": [],
+  "battery_command_active": false,
+  "tou_dispatch (PADDING)": [
+   null,
+   null
+  ]
+ },
+ "reg_15508_15509": [
+  20,
+  20
+ ]
+}

@@ -1,0 +1,31 @@
+{
+ "async_get_device_info": {
+  "ok": true,
+  "result": {
+   "manufacturer": "FranklinWH Technologies Co., Ltd",
+   "model": "aGate X",
+   "firmware_version": "V10R01B04D00",
+   "serial_number": "<emulator serial>"
+  }
+ },
+ "async_get_status": {
+  "ok": false,
+  "error": "FranklinWHConnectionError: Modbus read error at address 15500 (count=17): ExceptionResponse(dev_id=1, function_code=131, exception_code=2)"
+ },
+ "async_get_battery_limits": {
+  "ok": true,
+  "result": [
+   5000,
+   5000
+  ]
+ },
+ "async_get_battery_command_status": {
+  "ok": true,
+  "result": {
+   "wset_ena": false,
+   "wset_mod": 0,
+   "wset_pct": 0.0,
+   "wset_pct_raw": 0
+  }
+ }
+}

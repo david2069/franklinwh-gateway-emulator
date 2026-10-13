@@ -1,0 +1,11 @@
+{"ev": "start", "host": "127.0.0.1", "port": 5022, "profile": "agate-v10r01b04d00", "max_connections": 1, "busy_behaviour": "close", "ext_15507_15509": [2, 20, 20], "ts": 1791891715.593}
+{"ev": "connect", "conn": "127.0.0.1:65110", "active_before": 0, "refused_busy": false, "ts": 1791891718.569}
+{"ev": "request", "conn": "127.0.0.1:65110", "fc": 3, "address": 4, "count": 66, "exception": null, "ts": 1791891718.57}
+{"ev": "request", "conn": "127.0.0.1:65110", "fc": 3, "address": 72, "count": 121, "exception": null, "ts": 1791891718.57}
+{"ev": "request", "conn": "127.0.0.1:65110", "fc": 3, "address": 1035, "count": 7, "exception": null, "ts": 1791891718.571}
+{"ev": "request", "conn": "127.0.0.1:65110", "fc": 3, "address": 1042, "count": 20, "exception": null, "ts": 1791891718.571}
+{"ev": "request", "conn": "127.0.0.1:65110", "fc": 3, "address": 15500, "count": 17, "exception": 2, "ts": 1791891718.572}
+{"ev": "request", "conn": "127.0.0.1:65110", "fc": 3, "address": 227, "count": 44, "exception": null, "ts": 1791891718.572}
+{"ev": "request", "conn": "127.0.0.1:65110", "fc": 3, "address": 318, "count": 35, "exception": null, "ts": 1791891718.572}
+{"ev": "disconnect", "conn": "127.0.0.1:65110", "ts": 1791891718.573}
+{"ev": "stop", "requests": 7, "ts": 1791891735.615}
