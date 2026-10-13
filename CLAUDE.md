@@ -28,6 +28,58 @@
 8. **Other repos:** defects found in another repo are filed there as GitHub issues, with
    evidence; code changes there belong to that repo's session.
 
+## Working rules (shared across the FranklinWH repos, with this repo's additions)
+
+### Ground every claim in evidence
+Don't speculate. What a field means, what an API does or what the hardware reports is a claim and
+needs a source:
+1. Vendor documentation: FranklinWH commissioning guides, the Modbus and CSIP PICS, the SunSpec
+   model definitions (copies in `~/Downloads` on the Mac mini; check the revision, since some are superseded).
+2. The API cookbooks: franklinwh-cloud, franklinwh-modbus, franklinwh-direct-connect-api.
+3. A live read: the paired capture (`tools/paired_collect.py`) or the Modbus bridge's
+   `/api/gateways/default/points`, with the file in `tests/results/`.
+4. The code, read, not inferred from a name, a neighbouring field or a comment.
+
+Cite the source and say what is unverified. One observation of an enum is not a mapping; a field's
+name is not its meaning. **Emulator values are not evidence of what a register means**: they are the
+emulator's own.
+
+### Test thoroughly
+- Every code change ships with tests, and the full suite passes. Retain the result in `tests/results/`.
+- A test that passes with the fix disabled proves nothing: break the change and watch it fail.
+- Test the failure paths: unavailable, timeout, ambiguous, disabled, not measured.
+- Prefer the emulator for device behaviour, within its scope (below).
+
+### Critical changes need real verification
+Critical means: anything that writes to hardware, changes dispatch, alters safety behaviour,
+migrates a schema, pauses the bridge or opens a direct Modbus client. It needs a real test on the
+reference aGate (coordinated with the owner, other clients quiesced), or an emulator run that genuinely
+covers the path. A mock written for the test in hand proves only that the test agrees with itself.
+
+**What an emulator run verifies.** It counts only for paths the emulator reproduces from observation
+of the reference aGate:
+
+| Area | Status | Basis |
+|---|---|---|
+| Modbus framing, function codes, exception codes for bad addresses and functions | substitute | hand-written server; layout matched the full scan of 2026-10-07 |
+| Register layout and static values, profile `agate-v10r01b04d00` | substitute for that firmware | 589 static points, `tests/data/reference_scan_static_2026-10-07.json` |
+| Writes: M704 obeyed; 15507–15509 acknowledged and discarded; DC 1207 stored | substitute, observed once each on one site | `tests/results/`, private research notes |
+| Direct Connect read payloads | substitute for V12R02B30D06 | captured from the reference site |
+| Live extension registers (15000–15043 dynamics, 16001/16002, 15016) | partial model | some mirrors calibrated on one site; 15514–15516 not served |
+| `spec` profile, US split phase, three phase, generator | model | not from a scan |
+| `span_unlock` | **withdrawn premise** | no evidence the state exists (owner, 2026-10-14) |
+| Connection limits | model | one client, newest refused; oldest-vs-newest behaviour on the aGate not established |
+| Timing: latency, ramps, settling, revert timers | model | answers instantly unless a fault is injected |
+| Firmware fault modes (0xFFFF values, broken sockets, partial replies, reboot recovery) | not covered | fault injection exists but is not calibrated |
+| Battery, solar and grid physics; grid-code responses | model | calibrated on one site; IEEE 1547 values from memory (`docs/DESIGN.md`) |
+| Concurrency or stress | not covered | single-threaded asyncio server: a smoke test, not a stress test |
+
+Anything marked model, withdrawn or not covered needs the reference aGate. Every emulator-verified
+claim names the profile and the emulator commit it ran against.
+
+### Say so when something is not done
+Report outcomes plainly: what was verified, what was assumed, what was skipped and why.
+
 ## Layout
 
 | Path | Purpose |
@@ -36,7 +88,7 @@
 | `tools/` | Capture and test tools for the reference aGate (`paired_collect`, `redact_capture`, `charge_test`, `bms_collect`, `agate_scan`) |
 | `tests/` | pytest suite; `tests/results/` holds retained results |
 | `docs/` | `CALIBRATION.md`, `FINDINGS.md`, `DIRECT_CONNECT.md`, `DESIGN.md` |
-| `scripts/check_pii.py` | PII scanner (terms from `~/.config/pii_terms`); `scripts/hooks/pre-push` |
+| `scripts/check_pii.py` | PII scanner (terms from `~/.config/pii_terms`); `scripts/hooks/pre-commit` and `pre-push` |
 
 ## Commands
 
