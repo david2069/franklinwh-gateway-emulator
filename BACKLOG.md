@@ -281,3 +281,11 @@ real addresses on :502/:9000, not port offsets.
 | Point local-bridge `mockgw.py` at this emulator's DC frontend | franklinwh-local-bridge | Would give its mocks grid events, CSIP, phases and the shared Site. |
 | Modbus bridge `MockPoller` → `Gateway` | franklinwh-modbus-bridge | Waits for the in-flight branches; see [docs/BRIDGE_INTEGRATION.md](docs/BRIDGE_INTEGRATION.md). |
 | Library fixes (read_alarms staleness, ac_type heuristic, health :502) | franklinwh-modbus / franklinwh-direct-connect-api | See [docs/FINDINGS.md](docs/FINDINGS.md). |
+
+### SPAN-UNLOCK-WITHDRAWN: retire or relabel the `span_unlock` option · `backlog, low priority`
+**Why:** the premise is withdrawn (owner, 2026-10-14): there is no evidence that a "SPAN unlock" of
+15507–15509 exists. The option still makes those writes take effect, and the README, DESIGN,
+BRIDGE_INTEGRATION and `examples/fleet.yaml` describe it as a device state.
+**Scope:** remove it, or rename it to a clearly hypothetical test hook (for example
+`accept_extension_writes`) with no SPAN wording, and update the tests that use it. Separately, ask
+franklinwh-modbus-bridge and franklinwh-modbus to relabel their "SPAN unlock" text. Not scheduled.
