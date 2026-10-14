@@ -191,6 +191,12 @@ Reference aGate (fw V10R01B04D00 / DC V12R02B30D06). One site, so these are cand
 | `vppSocVo.vppMinSoc` | — | 5, equal to the displayed-SoC floor; a link is not established |
 | `list[].minSoc` / `maxSoc` | — | 0 / 100 for every mode |
 
+**Cloud SoC keys** (reported by the franklinwh-cloud session from its HAR corpus on 2026-10-15; its counts, not re-verified here):
+- **Displayed family:** `getDeviceCompositeInfo` `runtimeData.soc` matched (fhpSoc − 5)/0.95 in 20,401 of 20,431 pairs, and live at 06:36 (17.4 → 13.05). `chargePowerDetails` `batterySoc` matched `runtimeData.soc` in 2,191 of 2,343 pairs. MQTT cmdType 203 `dataArea.soc` is the source of `runtimeData`. `getDeviceRealTimeData` `batterySoc`, `iotDayPowerStatistics` and `getFhpPowerByDay` `socArray` are only inferred to be displayed.
+- **BMS family:** `runtimeData.fhpSoc[]` and `obtainApowersInfo` `[].soc` (95 of 95 pairs), both per aPower. MQTT cmdType 211 `batSoc` matched in 20 of 30 pairs (slower poll).
+- **The 5 % floor:** the best candidate is MQTT cmdType 311 `selfMinSoc` (also in `getCommunicationOptimization`). It read 5 in 278 of 278 samples, and 5 live while the Self-Consumption reserve was 8. Inferred. Locally, Direct Connect 1405 `selfMinSoc` read **0** in all 255 samples of our capture, so it is a different field, not the same value seen through another path. `vppMinSoc` = 5 is the floor of the VPP reserve picker; that it shares the value doesn't establish a link.
+- **Reserves:** `getGatewayTouList` (v1) has the same per-mode `soc`. `chargePowerDetails` `touMinSoc` carries only the active mode's reserve (1,367 of 1,568 pairs), like 15508/15509. `vppSocVo.vppSoc` = 20 is the VPP reserve.
+
 ## Control-strategy observations (from the emulator's models)
 
 - **The home battery drains into an EV in Self-Consumption.** A 7 kW overnight session takes the
