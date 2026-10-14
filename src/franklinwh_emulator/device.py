@@ -233,6 +233,7 @@ class AGateDevice:
         e = self.ext
         pv_wh = int(s.pv_wh) & 0xFFFFFFFF
         tou = site.self_reserve if p.tou_reserve_mirrors_self else site.tou_reserve
+        batt_w = int(round(s.battery_w)) & 0xFFFFFFFF
         for addr, val in {
             15502: solar_q,
             15503: _q(s.pv_by_input.get("proximal", 0), p.quantize_w),
@@ -253,6 +254,11 @@ class AGateDevice:
             # Solar-side power at ~1 W: closes 15040 + 701.W + 15013 - 16000 on the reference
             # aGate (RMS 5 W, 2026-10-14, charging; #2). Not 701.PF. AC vs DC side unknown.
             15040: int(round(s.solar_w)),
+            # Live on the reference aGate (#4; 2026-10-12 cross-check and 2026-10-14 run):
+            15003: solar_q,                                         # = 15502 = 502.OutPw
+            15012: (batt_w >> 16) & 0xFFFF, 15013: batt_w & 0xFFFF,  # battery W, + discharge
+            15022: max(-32768, min(32767, int(round(s.grid_w)))),   # grid W, + import
+            15035: int(round(s.soc * 10)),                          # SoC x 10
         }.items():
             e[addr - EXT_START] = _u16(val)
         self.hires[0] = _u16(int(round(s.load_w)))

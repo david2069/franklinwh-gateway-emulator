@@ -1,3 +1,4 @@
+import pytest
 """The register layout must match the real aGate scan (AGATE_FULL_SCAN_2026-05-14)."""
 
 from franklinwh_emulator.device import ILLEGAL_ADDRESS
@@ -141,3 +142,29 @@ def test_15040_is_the_solar_term(client, gateway):
     solar = gateway.site._last.solar_w
     assert solar > 100                                  # midday: a real check, not 0 == 0
     assert value == round(solar)
+
+
+def _s16(v):
+    return v - 0x10000 if v >= 0x8000 else v
+
+
+@pytest.mark.parametrize("case", ["charging", "discharging"])
+def test_live_diagnostic_registers(client, gateway, case):
+    # Reference aGate (franklinwh-gateway-emulator#4): 15003 = solar in 100 W steps,
+    # 15012:15013 = battery W (+ discharge), 15022 = grid W (+ import), 15035 = SoC x 10;
+    # and 15040 + 701.W + 15013 - 16000 closes at RMS 5 W (2026-10-14).
+    site = gateway.site
+    if case == "discharging":
+        site.solar_override_w, site.load_override_w = 0, 2000
+    regs = client.read(15000, 44)
+    snap = site._last
+    hires = client.read(16000, 1)[0]
+    batt = (regs[12] << 16 | regs[13])
+    batt = batt - (1 << 32) if batt >= 1 << 31 else batt
+    assert (batt < 0) == (case == "charging") and abs(batt) > 100
+    assert batt == round(snap.battery_w)
+    assert regs[3] == client.read(15502, 1)[0] and regs[3] % 100 == 0
+    assert _s16(regs[22]) == round(snap.grid_w)
+    assert regs[35] == round(snap.soc * 10)
+    w701 = gateway.device.image.get(701, "W")
+    assert abs(_s16(regs[40]) + w701 + batt - hires) <= 3
