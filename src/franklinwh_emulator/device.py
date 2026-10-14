@@ -250,7 +250,9 @@ class AGateDevice:
             15024: int(round(s.hz * 1000)),               # grid frequency, mHz
             15029: (int(s.grid_export_wh) >> 16) & 0xFFFF, 15030: int(s.grid_export_wh) & 0xFFFF,
             15033: (int(s.grid_import_wh) >> 16) & 0xFFFF, 15034: int(s.grid_import_wh) & 0xFFFF,
-            15040: img.get(701, "PF") if img.get(701, "PF") is not None else 0,
+            # Solar-side power at ~1 W: closes 15040 + 701.W + 15013 - 16000 on the reference
+            # aGate (RMS 5 W, 2026-10-14, charging; #2). Not 701.PF. AC vs DC side unknown.
+            15040: int(round(s.solar_w)),
         }.items():
             e[addr - EXT_START] = _u16(val)
         self.hires[0] = _u16(int(round(s.load_w)))

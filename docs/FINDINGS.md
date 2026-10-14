@@ -12,7 +12,7 @@ their docs. Each item says where it belongs; fixes to other repos are theirs to 
 | M3 | `FRANKLINWH_SUNSPEC_QUIRKS.md` says **M714.DCW positive = charging**; `controller.py` says positive = discharging. | The scan has DCW = +500 W at night with 500 W load and no PV, i.e. discharging. | Correct the doc. |
 | M4 | `FRANKLINWH_SUNSPEC_QUIRKS.md` lists **15507 as 0 Emergency / 1 TOU / 2 Self / 3 Manual**; the controller and the extensions manifest use 1 Backup / 2 Self / 3 TOU / 4 Manual. | `controller.NATIVE_MODES`; the manifest notes "verified 1-indexed". | Correct the doc. |
 | M5 | **16001/16002** are described as reserve mirrors (QUIRKS correlation table) and as "NPt mirror / TmpAmb mirror" (manifest). | 2026-10-07 scan: 16001 = 5 (both reserves 5 %); **16002 = 20** with TmpAmb 17.5 °C and TOU reserve 15 %, so neither the TOU reserve nor TmpAmb. It matches 1406 `BBBackupSoc` 20 (candidate). | Filed as franklinwh-modbus#18 (cross-check with Direct Connect). |
-| M8 | **15000–15043 include live values the manifest treats as static.** 15029/15030 and 15033/15034 are 32-bit `701.TotWhInj`/`TotWhAbs`, 15024 is frequency in mHz, 15040 is `701.PF`, 15036 is SoH, 15020 is WHRtg; 15011 = 16000 (home load, candidate). The manifest's "15011 = ModelID 707" read 583. | Exact equality within one scan (2026-10-07). | franklinwh-modbus#18. |
+| M8 | **15000–15043 include live values the manifest treats as static.** 15029/15030 and 15033/15034 are 32-bit `701.TotWhInj`/`TotWhAbs`, 15024 is frequency in mHz, 15040 is the solar-side power term (closes the home-load balance at RMS 5 W, 2026-10-14; it equalled `701.PF` once in the night-time scan of 2026-10-07, a coincidence), 15036 is SoH, 15020 is WHRtg; 15011 = 16000 (home load, candidate). The manifest's "15011 = ModelID 707" read 583. | Exact equality within one scan (2026-10-07). | franklinwh-modbus#18. |
 | M6 | `WSetRvrtTms`: the quirks doc says reversion is unverified; `send_command` says the countdown is cosmetic (PICS Issue 4). | Both are in the code and docs. | The emulator follows "cosmetic"; make the doc consistent. |
 | M7 | `AGATE_NETWORK_PROFILE.md` publishes what appears to be a real aGate serial and its WiFi MAC, while the scan files redact the serial. | The doc header. | Redact, if the repo is public. |
 
@@ -163,7 +163,7 @@ two sites agree or differ, and what to ask for next. The emulator's mapping is u
 | 15011 = 16000 | 1000 throughout while load moved 1.3–1.9 kW | tracks load at 1 W (Modbus bridge, 24 h, 713 distinct values) | differs: firmware, model or setup |
 | 16002 | 10 (1405 `genStartSoc` 10, `BBBackupSoc` 20) | 20 (1405 `genStartSoc` 0, `BBBackupSoc` 20; 1901 `genStartElec` 20) | either generator start SoC or something else; their generator setup unknown |
 | 15017 | 20 | 20 | constant on both |
-| 15040 | −2 to −4, PF 0.713 | −9 | not PF on theirs |
+| 15040 | −2 to −4 at night; 0.600 × DC `p_sun` | −9 at night; 1353–1572 in sun, closing the home-load balance at RMS 5 W (2026-10-14) | solar-side power on both; the two sites disagree on scale |
 | 15507 | 3 in TOU | 2 in Self-Consumption | their repo documents 1 Backup / 2 Self / 3 TOU from ~300k readings across mode switches (relevant to franklinwh-modbus#7) |
 | 1301 `t_amb` | 195 (× 10?) | 15.8 (°C) | firmware or model difference |
 

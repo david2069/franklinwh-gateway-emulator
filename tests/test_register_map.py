@@ -130,3 +130,14 @@ def test_714_port_block_and_throtpct_per_profile():
     assert real["701"]["ThrotPct"] is None
     spec = _decode_image(Gateway(GatewayConfig(seed=7, profile="spec")))
     assert spec["714"]["Prt[0].DCW"] == spec["714"]["DCW"] and spec["701"]["ThrotPct"] == 0
+
+
+def test_15040_is_the_solar_term(client, gateway):
+    # Reference aGate, 2026-10-14 (franklinwh-gateway-emulator#2): 15040 closes the home-load
+    # balance 15040 + 701.W + 15013 - 16000 at RMS 5 W, so it is the solar-side power at ~1 W,
+    # not 701.PF. Here it is the site's own solar power.
+    raw = client.read(15040, 1)[0]
+    value = raw - 0x10000 if raw >= 0x8000 else raw
+    solar = gateway.site._last.solar_w
+    assert solar > 100                                  # midday: a real check, not 0 == 0
+    assert value == round(solar)
