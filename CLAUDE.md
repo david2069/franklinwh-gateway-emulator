@@ -65,7 +65,7 @@ of the reference aGate:
 | Register layout and static values, profile `agate-v10r01b04d00` | substitute for that firmware | 589 static points, `tests/data/reference_scan_static_2026-10-07.json` |
 | Writes: M704 obeyed; 15507–15509 acknowledged and discarded; DC 1207 stored | substitute, observed once each on one site | `tests/results/`, private research notes |
 | Direct Connect read payloads | substitute for V12R02B30D06 | captured from the reference site |
-| Live extension registers | partial model | 15003, 15011–15013, 15022, 15024/25, 15029–15036, 15040 and 16000 live from one site's evidence (#2, #4); 15514–15516 served as 0, observed once while charging (#3); 15016, 16001/16002 and the rest static or candidate |
+| Live extension registers | partial model | 15003, 15011–15013, 15022, 15024/25, 15029–15036, 15040 and 16000 are live, following one site's evidence: candidates, not established (#2, #4); 15514–15516 served as 0, observed once while charging (#3); 15016, 16001/16002 and the rest static or candidate |
 | `spec` profile, US split phase, three phase, generator | model | not from a scan |
 | `span_unlock` | **withdrawn premise** | no evidence the state exists (owner, 2026-10-14) |
 | Connection limits | model | one client, newest refused; oldest-vs-newest behaviour on the aGate not established |
