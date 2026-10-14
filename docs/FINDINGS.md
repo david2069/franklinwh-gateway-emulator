@@ -171,6 +171,26 @@ two sites agree or differ, and what to ask for next. The emulator's mapping is u
 Connect) at capture time, how the solar and any generator are wired, and longer captures from both
 sites covering a dispatch step, daytime solar, a mode change and a reserve change.
 
+## State of charge and mode across Modbus, Direct Connect and the cloud (2026-10-15)
+
+Reference aGate (fw V10R01B04D00 / DC V12R02B30D06). One site, so these are candidates.
+
+**SoC families** (`tests/results/2026-10-15_soc_families.md`, 7,606 paired samples):
+- The **BMS SoC** is 1301 `fhpSoc` = 1705 `batSoc`.
+- The **displayed SoC** is 1301 `soc` = (BMS − 5) / 0.95 (RMS 0.014). M713 `SoC` (whole %), 15035 (×10) and `WHAvail`/`WHRtg` follow the displayed SoC.
+- The 5 is a **fixed floor, not the reserve**: changing the Self-Consumption reserve from 5 to 8 % on 2026-10-15 left the formula at −5 / 0.95.
+
+**Cloud `getGatewayTouListV2`** (owner-supplied response, 2026-10-15; site-specific IDs omitted here):
+
+| Cloud field | Matches | Note |
+|---|---|---|
+| `result.currendId` | DC 1301 `mode` | the active entry's `id` in `result.list`; 1301 `mode` switched to the Self-Consumption entry's id when the bridge's discharge released |
+| `list[].oldIndex` | Modbus 15507 | 1 Emergency Backup, 2 Self-Consumption, 3 TOU |
+| `list[].workMode` | — | a different numbering: 1 TOU, 2 Self-Consumption, 3 Emergency Backup. Don't map it to 15507 |
+| `list[].soc` | per-mode reserve | Self-Consumption 8, TOU 15, Emergency Backup 100 at the time. 15508 = 15509 = 16001 read 8 (the active mode's reserve), so 15509 is **not** the TOU reserve |
+| `vppSocVo.vppMinSoc` | — | 5, equal to the displayed-SoC floor; a link is not established |
+| `list[].minSoc` / `maxSoc` | — | 0 / 100 for every mode |
+
 ## Control-strategy observations (from the emulator's models)
 
 - **The home battery drains into an EV in Self-Consumption.** A 7 kW overnight session takes the
