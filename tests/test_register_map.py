@@ -55,7 +55,11 @@ def test_extension_and_hires_ranges(client, gateway):
     hires = client.read(16000, 3)
     assert abs(hires[0] - ext[6]) <= 50
     assert client.read(15020, 1) == [13600]             # WHRtg mirror
-    assert client.read(15514, 1) == ("exc", ILLEGAL_ADDRESS)
+    # 15514-15516 exist on the reference aGate and read 0 (2026-10-14, 897 samples, charging;
+    # franklinwh-gateway-emulator#3). The map ends after 15516.
+    assert client.read(15514, 3) == [0, 0, 0]
+    assert len(client.read(15500, 17)) == 17
+    assert client.read(15517, 1) == ("exc", ILLEGAL_ADDRESS)
 
 
 def test_nameplate(client, gateway):

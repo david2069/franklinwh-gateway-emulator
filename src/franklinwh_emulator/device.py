@@ -3,8 +3,8 @@
 Three regions are served (PDU addresses):
 
 * the SunSpec chain at 0..1127 (plus any profile ``base_aliases``),
-* FranklinWH extension registers 15000–15513 (15500–15513 documented, 15000–15039
-  undocumented diagnostics), and
+* FranklinWH extension registers 15000–15516 (15500–15513 documented, 15000–15043
+  undocumented diagnostics, 15514–15516 present on the reference aGate and read 0), and
 * the undocumented 16000–16499 block (16000 = high-resolution home load).
 
 Anything else raises ILLEGAL DATA ADDRESS, as 40000+ does on a real aGate. Writes
@@ -29,7 +29,7 @@ ILLEGAL_FUNCTION = 1
 ILLEGAL_ADDRESS = 2
 ILLEGAL_VALUE = 3
 
-EXT_START, EXT_END = 15000, 15514          # exclusive end
+EXT_START, EXT_END = 15000, 15517          # exclusive end; 15514-15516 read 0 (#3)
 HIRES_START, HIRES_END = 16000, 16500
 
 # 15000–15043 as dumped from a live aGate (FRANKLINWH_EXTENSIONS_MANIFEST.md); live
