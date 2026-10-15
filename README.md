@@ -48,6 +48,17 @@ with Fleet.from_yaml("examples/fleet.yaml") as fleet:
 Inside an asyncio app, use `await gw.start_async()` / `await gw.stop_async()` to serve on
 your own loop.
 
+Runnable examples (tested in `tests/test_examples.py`, standard library plus the emulator):
+
+| File | Shows |
+|---|---|
+| `examples/single_gateway.py` | one aGate: start, read SoC, battery, grid, solar and load over Modbus TCP, stop |
+| `examples/fleet_with_control.py` | every gateway in `examples/fleet.yaml`, plus the control API cutting the grid on one |
+| `examples/conftest_for_clients.py` | a pytest fixture for client repos that records the emulator version and profile |
+
+What an emulator run does and does not verify is listed in `CLAUDE.md` ("Critical changes need
+real verification").
+
 ## What is emulated
 
 **Register space (PDU addresses, any unit id):**
