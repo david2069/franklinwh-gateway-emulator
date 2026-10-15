@@ -67,7 +67,6 @@ of the reference aGate:
 | Direct Connect read payloads | substitute for V12R02B30D06 | captured from the reference site |
 | Live extension registers | partial model | 15003, 15011–15013, 15022, 15024/25, 15029–15036, 15040 and 16000 are live, following one site's evidence: candidates, not established (#2, #4); 15514–15516 served as 0, observed once while charging (#3); 15016, 16001/16002 and the rest static or candidate |
 | `spec` profile, US split phase, three phase, generator | model | not from a scan |
-| `span_unlock` | **withdrawn premise** | no evidence the state exists (owner, 2026-10-14) |
 | Connection limits | model | one client, newest refused; oldest-vs-newest behaviour on the aGate not established |
 | Timing: latency, ramps, settling, revert timers | model | answers instantly unless a fault is injected |
 | Firmware fault modes (0xFFFF values, broken sockets, partial replies, reboot recovery) | not covered | fault injection exists but is not calibrated |
