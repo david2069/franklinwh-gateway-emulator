@@ -4,6 +4,11 @@
 
 - History squashed for publication (2026-10-13). Earlier commit hashes cited in issues and results refer to the maintainer's private archive.
 
+### Drop-and-return-islanded episode (2026-10-21)
+- `episode {down_s, offgrid_s}` (control API, `ctl`, `Gateway.episode`): listeners down with RST,
+  back islanded, grid restored. Candidate profile `agate-v12r02b60d00-candidate` (15016 = 1
+  while islanded, observed twice on one site).
+
 ### Direct Connect 1207 and charge calibration (2026-10-08)
 - The emulator stores Direct Connect 1207 writes with no effect. 222 tests.
 - Morning force-charge staircase (1 / 2.5 / 5 kW): charging converter loss ≈ 70 W +

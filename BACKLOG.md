@@ -201,6 +201,25 @@ window agreed with the bridge's owner, never by competing for the session.
 
 ## P2: useful simulators
 
+### FAULT-EPISODES: firmware failure modes for the Modbus bridge's tests · `doing`
+Asked by the Modbus bridge session (2026-10-21) after failures on the reference aGate, fw
+V12R02B60D00 (one site). Order agreed with the bridge: 1, 3, 2, 5, 4.
+1. **Drop, return islanded, return on-grid** (`episode`): `done`. Both listeners go (open Modbus
+   sessions get an RST, connects refused) for `down_s`, the site comes back islanded
+   (`ConnSt` 0, `GRID_DISCONNECT`; 15016 = 1 on profile `agate-v12r02b60d00-candidate`, observed
+   twice, one site), then the utility returns after `offgrid_s`. The cause of the real
+   episodes is unknown; the emulator models them as a utility outage.
+2. **Partial failure**: a fault on an address range only (e.g. 15500–15509: exception, silence or
+   a short reply) for a set time. `todo`
+3. **Write rejection**: exception 3 on chosen M704 writes, by point and value range (bridge #323:
+   Force Discharge 50 %, `WSetPct` 500 raw at SF -1). Which write V12 refuses is unknown. `next`
+4. **V12 addressing**: base-40000 mirror switchable at run time (measured on V12R02B60D00, one site,
+   franklinwh-modbus `docs/SUNSPEC_SNAPSHOT_2026-10-20_V12R02B60D00.md`), plus writes accepted at
+   one base only. `todo`
+5. **Timing**: late replies on a fraction of requests (`slow_p`, `slow_ms`), past the client's
+   timeout on a shared socket. `todo`
+
+
 ### GENERATOR-SIM: generator and AGS · `done`
 **Done (2026-10-07):** `generator.py`:
 - the 1901 block with the real defaults and key set;

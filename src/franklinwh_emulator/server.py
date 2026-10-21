@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import socket
 import struct
 from dataclasses import dataclass
 
@@ -48,11 +49,19 @@ class ModbusServer:
         self.port = self._server.sockets[0].getsockname()[1]
         return self.host, self.port
 
-    async def stop(self) -> None:
+    async def stop(self, rst: bool = False) -> None:
+        """Stop listening (new connects are refused) and drop open sessions; ``rst``
+        aborts them with a TCP RST instead of a FIN."""
         if self._server is not None:
             self._server.close()
             for w in list(self._writers):
-                w.close()
+                if rst:
+                    sock = w.get_extra_info("socket")
+                    if sock is not None:
+                        sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+                    w.transport.abort()
+                else:
+                    w.close()
             await self._server.wait_closed()
             self._server = None
 
