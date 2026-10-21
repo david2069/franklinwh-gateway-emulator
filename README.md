@@ -100,7 +100,9 @@ works, LocRemCtl that follows VPP, writes that stick, read-only writes that rais
 and multiple clients.
 
 **Fault injection** (`gw.faults`, live): `latency_s`, `offline`, `session_held`,
-`drop_responses`, `reset_after`, `exception`. **Range faults** hit only requests that touch one
+`drop_responses`, `reset_after`, `exception`, and `slow_p` / `slow_ms` (Modbus only: delay a
+seeded fraction of replies, e.g. past a client's timeout so the late reply lands on its next read;
+`ctl <gw> fault slow_p=0.1 slow_ms=3000`). **Range faults** hit only requests that touch one
 address range, e.g. the extension block while SunSpec keeps answering:
 `gw.faults.fail_range(15500, 15509, "silent", for_s=30)` or `ctl <gw> range-fault 15500 15509 silent for=30`.
 Modes: `exception` (`code=N`, default 4), `silent` (no reply), `short` (a well-formed reply with half

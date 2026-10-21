@@ -221,7 +221,7 @@ V12R02B60D00 (one site). Order agreed with the bridge: 1, 3, 2, 5, 4.
    franklinwh-modbus `docs/SUNSPEC_SNAPSHOT_2026-10-20_V12R02B60D00.md`), plus writes accepted at
    one base only. `todo`
 5. **Timing**: late replies on a fraction of requests (`slow_p`, `slow_ms`), past the client's
-   timeout on a shared socket. `todo`
+   timeout on a shared socket. `done` (`slow_p`, `slow_ms`; Modbus only).
 
 
 ### GENERATOR-SIM: generator and AGS · `done`
