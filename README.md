@@ -100,7 +100,11 @@ works, LocRemCtl that follows VPP, writes that stick, read-only writes that rais
 and multiple clients.
 
 **Fault injection** (`gw.faults`, live): `latency_s`, `offline`, `session_held`,
-`drop_responses`, `reset_after`, `exception`.
+`drop_responses`, `reset_after`, `exception`. **Range faults** hit only requests that touch one
+address range, e.g. the extension block while SunSpec keeps answering:
+`gw.faults.fail_range(15500, 15509, "silent", for_s=30)` or `ctl <gw> range-fault 15500 15509 silent for=30`.
+Modes: `exception` (`code=N`, default 4), `silent` (no reply), `short` (a well-formed reply with half
+the registers asked for); `range-fault clear` ends it.
 
 ## Grid events, PV relays and alarms
 

@@ -14,6 +14,7 @@ import asyncio
 import logging
 import socket
 import struct
+import time
 from dataclasses import dataclass
 
 from .device import ILLEGAL_FUNCTION, ILLEGAL_VALUE, AGateDevice
@@ -30,6 +31,30 @@ class Faults:
     drop_responses: int = 0         # swallow the next N responses (client times out)
     reset_after: int | None = None  # drop the connection after N more requests
     exception: int | None = None    # answer every request with this exception code
+    # Requests touching [start, end] only: {"start", "end", "mode": "exception" | "silent" |
+    # "short", "code" (exception, default 4), "until" (time.monotonic(); None = until cleared)}.
+    range_fault: dict | None = None
+
+    def fail_range(self, start: int, end: int, mode: str = "exception", code: int = 4,
+                   for_s: float | None = None) -> None:
+        if mode not in ("exception", "silent", "short"):
+            raise ValueError("mode: exception | silent | short")
+        if not 0 <= int(start) <= int(end) <= 0xFFFF:
+            raise ValueError("need 0 <= start <= end <= 65535")
+        self.range_fault = {"start": int(start), "end": int(end), "mode": mode, "code": int(code),
+                            "until": None if for_s is None else time.monotonic() + float(for_s)}
+
+    def _range_hit(self, pdu: bytes) -> str | None:
+        rf = self.range_fault
+        if rf is None or pdu[0] not in (3, 4, 6, 16) or len(pdu) < 5:
+            return None
+        if rf.get("until") is not None and time.monotonic() >= rf["until"]:
+            self.range_fault = None
+            return None
+        address, n = struct.unpack(">HH", pdu[1:5])
+        if pdu[0] == 6:
+            n = 1
+        return rf.get("mode", "exception") if address <= rf["end"] and address + n - 1 >= rf["start"] else None
 
 
 class ModbusServer:
@@ -112,7 +137,18 @@ class ModbusServer:
                     f.reset_after = None
                     return
                 f.reset_after -= 1
-            reply = self._handle(pdu) if f.exception is None else bytes([pdu[0] | 0x80, f.exception])
+            hit = f._range_hit(pdu)
+            if hit == "silent":
+                continue                    # no reply: the client times out
+            if f.exception is not None:
+                reply = bytes([pdu[0] | 0x80, f.exception])
+            elif hit == "exception":
+                reply = bytes([pdu[0] | 0x80, f.range_fault.get("code", 4)])
+            else:
+                reply = self._handle(pdu)
+                if hit == "short" and pdu[0] in (3, 4) and len(reply) > 4:
+                    half = (reply[1] // 2) // 2 or 1      # well-formed frame, fewer registers
+                    reply = bytes([reply[0], half * 2]) + reply[2:2 + half * 2]
             if f.latency_s:
                 await asyncio.sleep(f.latency_s)
             if f.drop_responses > 0:
