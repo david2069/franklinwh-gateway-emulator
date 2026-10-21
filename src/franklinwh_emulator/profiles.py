@@ -49,6 +49,7 @@ class Profile:
     quantize_w: int = 100                    # 502.OutPw / 15506 / 714.DCW coarse steps
     soc_whole_percent: bool = True           # 713.SoC moves in 1 % steps (raw ×10, so 550, 560…)
     unused_phase_registers: str = "zero"     # 701 points of unwired legs: "zero" | "unimplemented"
+    islanded_15016: int | None = None        # 15016 while islanded; None = stays static
 
     # -- Direct Connect ----------------------------------------------------------
     dc_pload_dup_bug: bool = True            # 1304 p_load repeats p_fhp (DEF-1303-PLOAD-DUP)
@@ -56,6 +57,13 @@ class Profile:
 
 PROFILES: dict[str, Profile] = {
     "agate-v10r01b04d00": Profile(name="agate-v10r01b04d00"),
+    # Candidate: one site, read-only, 2026-10-21. 15016 read 1 while islanded and 2 on-grid
+    # in both off-grid episodes (Modbus bridge register watch). Not the default.
+    "agate-v12r02b60d00-candidate": Profile(
+        name="agate-v12r02b60d00-candidate",
+        firmware="V12R02B60D00",
+        islanded_15016=1,
+    ),
     "spec": Profile(
         name="spec",
         max_connections=None,

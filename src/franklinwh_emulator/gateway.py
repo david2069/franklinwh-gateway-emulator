@@ -136,6 +136,7 @@ class Gateway:
         self.modbus_enabled = True
         self.modbus_apply_delay_s = 3.0
         self.reboot_s = 20.0
+        self.episode_phase: str | None = None   # "down" | "offgrid" during episode()
 
     @property
     def address(self) -> tuple[str, int]:
@@ -190,6 +191,33 @@ class Gateway:
             if self.dc is not None:
                 await self.dc.start()
         loop.call_soon_threadsafe(lambda: asyncio.ensure_future(cycle()))
+
+    def episode(self, down_s: float, offgrid_s: float) -> None:
+        """Drop-and-return-islanded, as the reference aGate did twice on 2026-10-21 (fw
+        V12R02B60D00): the utility fails, both listeners go away (open Modbus sessions are
+        reset, new connects refused) for ``down_s`` wall seconds, then come back with the site
+        islanded; ``offgrid_s`` later the utility returns and the relay recloses after the
+        grid code's enter-service delay. Progress is in ``episode_phase``."""
+        loop = self._event_loop
+        if loop is None:
+            return
+
+        async def run():
+            self.episode_phase = "down"
+            self.site.set_grid(available=False)
+            await self.server.stop(rst=True)
+            if self.dc is not None:
+                await self.dc.stop()
+            await asyncio.sleep(down_s)
+            if self.modbus_enabled:
+                await self.server.start()
+            if self.dc is not None:
+                await self.dc.start()
+            self.episode_phase = "offgrid"
+            await asyncio.sleep(offgrid_s)
+            self.site.restore_grid()
+            self.episode_phase = None
+        loop.call_soon_threadsafe(lambda: asyncio.ensure_future(run()))
 
     async def _apply_modbus(self) -> None:
         running = self.server._server is not None

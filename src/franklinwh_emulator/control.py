@@ -6,6 +6,7 @@
                                         | {"hz": 51.2} | {"hz_offset": 1.2} | {"restore": true}
                                         add "phase": "L2" to change one leg only
     POST /gateways/<id>/offgrid         {"on": true}
+    POST /gateways/<id>/episode         {"down_s": 60, "offgrid_s": 120}  (drop, return islanded)
     POST /gateways/<id>/pv              {"input": "proximal", "relay": false} | {"solar_w": 3000|null}
     POST /gateways/<id>/load            {"w": 4500|null}
     POST /gateways/<id>/ambient         {"c": 48|null}
@@ -84,6 +85,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "faults": asdict(gw.faults),
         "dc_faults": asdict(gw.dc_faults),
         "modbus_enabled": gw.modbus_enabled,
+        "episode_phase": gw.episode_phase,
         "export_limit_enforced": site.export_limit_enforced,
         "export_breach_s": site.export_breach_s,
         "export_breach_wh": site.export_breach_wh,
@@ -129,6 +131,8 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
             site.set_grid(phase=body.get("phase"), **kw)
         elif action == "offgrid":
             site.request_offgrid(bool(body["on"]))
+        elif action == "episode":
+            gw.episode(float(body["down_s"]), float(body["offgrid_s"]))
         elif action == "pv":
             if "input" in body:
                 site.set_pv_relay(body["input"], bool(body.get("relay", True)))

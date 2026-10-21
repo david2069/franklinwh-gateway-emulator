@@ -261,6 +261,8 @@ class AGateDevice:
             15035: int(round(s.soc * 10)),                          # SoC x 10
         }.items():
             e[addr - EXT_START] = _u16(val)
+        if p.islanded_15016 is not None:
+            e[15016 - EXT_START] = p.islanded_15016 if not s.grid_connected else _DIAG_STATIC[15016]
         self.hires[0] = _u16(int(round(s.load_w)))
         self.hires[1] = _u16(site.self_reserve)
         # 16002: the reference read 20 with both reserves at 5 % and TOU at 15 %; 20 is

@@ -99,3 +99,50 @@ def test_serial_matches_direct_connect_emulator():
     # Same seed → same serial as franklinwh_local.synthetic.SyntheticSite(7).serial
     from franklinwh_emulator.gateway import mock_serial
     assert mock_serial(7) == "MOCK00073B1612DD272D"
+
+
+def _wait(pred, timeout=3.0):
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        if pred():
+            return True
+        time.sleep(0.02)
+    return False
+
+
+def _refused(addr) -> bool:
+    try:
+        socket.create_connection(addr, timeout=0.5).close()
+        return False
+    except ConnectionRefusedError:
+        return True
+
+
+@pytest.mark.parametrize("profile,islanded_15016", [
+    ("agate-v12r02b60d00-candidate", 1),   # observed twice, one site, 2026-10-21
+    ("agate-v10r01b04d00", 2),             # no islanded observation: stays static
+])
+def test_episode_drop_then_return_islanded(clock, profile, islanded_15016):
+    gw = make_gateway(clock, profile=profile, site={"initial_soc": 60})
+    with gw:
+        addr = gw.address
+        c = RawClient(*addr)
+        connst = gw.device.image.ref(701, "ConnSt").address
+        alrm = gw.device.image.ref(701, "Alrm").address
+        assert c.read(connst, 1) == [1] and c.read(15016, 1) == [2]
+        gw.episode(down_s=0.5, offgrid_s=0.5)
+        assert _wait(lambda: gw.episode_phase == "down")
+        with pytest.raises(ConnectionResetError):       # RST: recv raises; a FIN would read b""
+            c.sock.recv(1)
+        c.sock.close()
+        assert _refused(addr)                            # listener gone: connect refused
+        assert _wait(lambda: gw.episode_phase == "offgrid")
+        c = RawClient(*addr)                             # same port, back islanded
+        assert c.read(connst, 1) == [0]
+        a = c.read(alrm, 2)
+        assert (a[0] << 16 | a[1]) & (1 << 4)            # GRID_DISCONNECT
+        assert c.read(15016, 1) == [islanded_15016]
+        assert _wait(lambda: gw.episode_phase is None)
+        clock.advance(61)                                # enter-service delay (AS4777: 60 s)
+        assert c.read(connst, 1) == [1] and c.read(15016, 1) == [2]
+        c.close()
