@@ -142,3 +142,21 @@ def test_readonly_write_spec_profile_raises(clock):
         c = RawClient(*gw.address)
         assert c.write(80, 5) == ("exc", 2)            # 701.W is read-only
         c.close()
+
+
+def test_15507_only_modes_read_on_hardware(clock):
+    """15507 has only ever read 1, 2 and 3 (franklinwh-modbus#75); 0 and 4 are not modes."""
+    import pytest
+    from franklinwh_emulator.site import MODE_NAMES
+    assert sorted(MODE_NAMES) == [1, 2, 3]
+    gw = make_gateway(clock, span_unlock=True)
+    with gw:
+        c = RawClient(*gw.address)
+        for bad in (0, 4):
+            c.write(15507, bad)                       # acknowledged, not applied
+            assert c.read(15507, 1) == [2]
+        c.close()
+        with pytest.raises(ValueError):
+            gw.site.set_native_mode(4)
+    with pytest.raises(ValueError):
+        make_gateway(clock, site={"native_mode": 4})

@@ -76,7 +76,8 @@ generates from `AGATE_FULL_SCAN_2026-05-14.txt`.
 **Site model** (`site.py`): solar bell and load profile ported from the Direct Connect emulator's
 `SyntheticSite`. The battery is **integrated**: SoC moves with power, power is limited by SoC,
 reserves and 5 kW per aPower, and grid balances exactly. Lifetime counters only grow. Native
-modes are 1 Backup, 2 Self-Consumption, 3 TOU (discharges 17–21 h), and 4 Manual. Discharge
+modes are 1 Backup, 2 Self-Consumption, and 3 TOU (discharges 17–21 h); no other
+value has been read from 15507 (franklinwh-modbus#75). Discharge
 stops at the active mode's reserve, under VPP control too. The clock can be real, scaled
 (`time_scale`) or manual (tests).
 
@@ -270,7 +271,7 @@ battery discharging.
 | Topic | Docs say | Emulator follows | Why |
 |---|---|---|---|
 | 714.DCW sign | QUIRKS.md: positive = charging | positive = **discharging** | `controller.py` and the scan (DCW +500 W at night with 500 W load, no PV) |
-| 15507 values | QUIRKS.md: 0 Emergency, 1 TOU, 2 Self, 3 Manual | **1 Backup, 2 Self, 3 TOU, 4 Manual** | `controller.NATIVE_MODES`, extensions manifest |
+| 15507 values | older QUIRKS.md: 0 Emergency, 1 TOU, 2 Self, 3 Manual | **1 Backup, 2 Self, 3 TOU** only | each read with the app in that mode, V12R02B60D00, 2026-10-21, one site (franklinwh-modbus#75, #88); 0 and 4 were unsourced and removed |
 | 16001/16002 | manifest: 16002 = TmpAmb | 16001 self reserve; 16002 = 20 (`BBBackupSoc`) | 2026-10-07 scan: 16002 = 20 with TmpAmb 17.5 °C and TOU reserve 15 % |
 | FC 4 | unknown | same data as FC 3 | — |
 | 714 per-aPower ports | unknown | one aggregate port (`NPrt = 1`) | only single-aPower scans exist |

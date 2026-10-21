@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from franklinwh_local.synthetic import MODE_IDS, SyntheticSite
 
-from .site import MODE_BACKUP, MODE_MANUAL, MODE_SELF, MODE_TOU
+from .site import MODE_BACKUP, MODE_SELF, MODE_TOU
 
 if TYPE_CHECKING:
     from .gateway import Gateway
@@ -102,7 +102,7 @@ class DcPayloads:
 
     def programme(self) -> tuple[int, str, int]:
         mode = self.site.native_mode
-        return PROGRAMMES[MODE_SELF if mode == MODE_MANUAL else mode]
+        return PROGRAMMES[mode]
 
     def legs(self, s) -> tuple[float, float, float]:
         """(line V, leg-1 V, leg-2 V) as the aGate X reports them. Its power stage is split

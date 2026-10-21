@@ -80,10 +80,10 @@ MAX_STEP_S = 60.0               # integrate long gaps in sub-steps
 FINE_STEP_S = 0.1               # ...but finely while a trip or reconnect timer runs
 RESP_STEP_S = 0.5               # ...and in half seconds while a grid response is settling
 
-# Native operating modes (extension register 15507, 1-indexed).
-MODE_BACKUP, MODE_SELF, MODE_TOU, MODE_MANUAL = 1, 2, 3, 4
-MODE_NAMES = {MODE_BACKUP: "Emergency Backup", MODE_SELF: "Self-Consumption",
-              MODE_TOU: "TOU", MODE_MANUAL: "Manual"}
+# Native operating modes (extension register 15507). Each read on V12R02B60D00 with the app
+# in that mode (2026-10-21, one site; franklinwh-modbus#75). No other value has been read.
+MODE_BACKUP, MODE_SELF, MODE_TOU = 1, 2, 3
+MODE_NAMES = {MODE_BACKUP: "Emergency Backup", MODE_SELF: "Self-Consumption", MODE_TOU: "TOU"}
 TOU_PEAK = (17.0, 21.0)         # local hours the TOU mode discharges in
 
 PHASES = ("L1", "L2", "L3")
@@ -363,6 +363,8 @@ class Site:
             raise ValueError(f"unknown PV inputs {sorted(bad)}; choose from {PV_INPUTS}")
 
         self.soc = cfg.initial_soc if cfg.initial_soc is not None else default_soc
+        if cfg.native_mode not in MODE_NAMES:
+            raise ValueError(f"native_mode must be one of {sorted(MODE_NAMES)}")
         self.native_mode = cfg.native_mode
         self.self_reserve = cfg.self_reserve
         self.tou_reserve = cfg.tou_reserve
@@ -830,7 +832,7 @@ class Site:
             return min(0.0, net)                       # soak surplus, never discharge
         if mode == MODE_TOU and not (TOU_PEAK[0] <= hour < TOU_PEAK[1]):
             return min(0.0, net)                       # off-peak: charge from surplus only
-        return net                                     # self-consumption / TOU peak / manual
+        return net                                     # self-consumption / TOU peak
 
     def _limits(self, floor: float, dt: float) -> tuple[float, float]:
         """(max discharge W, max charge W) given rate, SoC, floor and step length."""
@@ -1216,6 +1218,8 @@ class Site:
 
     # -- control entry points (protocol frontends and the control API) ------------
     def set_native_mode(self, mode: int) -> None:
+        if int(mode) not in MODE_NAMES:
+            raise ValueError(f"mode must be one of {sorted(MODE_NAMES)}")
         with self.lock:
             self.step()
             self.native_mode = int(mode)

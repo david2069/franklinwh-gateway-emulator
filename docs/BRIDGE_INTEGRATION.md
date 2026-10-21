@@ -52,7 +52,7 @@ Files on the bridge side (theirs): `gateway/mock_gateway.py`, `gateway/instance.
 - `send_command(BatteryCommand(power_watts=W))`: positive = charge. The bridge then writes
   `WSetRvrtTms` to hold VPP. Release = `reset_control_state(handshake_wait_s=0)`, then
   `WSetRvrtTms=0`, `WSetEnaRvrt=0`.
-- Native modes: 1 Emergency Backup, 2 Self-Consumption, 3 TOU (4 Manual).
+- Native modes: 1 Emergency Backup, 2 Self-Consumption, 3 TOU. No other 15507 value has been read (franklinwh-modbus#75).
 - Bridge sample convention: `battery_power_w` negative = charging.
 - `ac_type`: 0 single (230 V / 50 Hz), 1 split L1+L2 (240 V / 60 Hz, US aGate), 2 three phase.
 - The bridge's planned LAN setup wizard should probe PDU 0, then 40000, then 50000, and cope
