@@ -20,7 +20,7 @@ import threading
 from dataclasses import dataclass
 
 from .profiles import Profile
-from .site import MODE_NAMES, Site, Snapshot
+from .site import MODE_BACKUP, MODE_NAMES, MODE_TOU, Site, Snapshot
 from .sunspec import SunSpecImage, _walk, load_baseline
 
 AU_A_CODES = ("as4777-au-a", "ausgrid")
@@ -264,7 +264,12 @@ class AGateDevice:
         if p.islanded_15016 is not None:
             e[15016 - EXT_START] = p.islanded_15016 if not s.grid_connected else _DIAG_STATIC[15016]
         self.hires[0] = _u16(int(round(s.load_w)))
-        self.hires[1] = _u16(site.self_reserve)
+        if p.reserve_16001 == "active":
+            r16001 = {MODE_BACKUP: 100, MODE_TOU: site.tou_reserve}.get(site.native_mode,
+                                                                       site.self_reserve)
+        else:
+            r16001 = site.self_reserve
+        self.hires[1] = _u16(r16001)
         # 16002: the reference read 20 with both reserves at 5 % and TOU at 15 %; 20 is
         # 1406 BBBackupSoc (candidate, franklinwh-modbus#18), not the TOU reserve.
         self.hires[2] = _u16(20)

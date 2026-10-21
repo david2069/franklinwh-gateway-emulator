@@ -160,3 +160,23 @@ def test_15507_only_modes_read_on_hardware(clock):
             gw.site.set_native_mode(4)
     with pytest.raises(ValueError):
         make_gateway(clock, site={"native_mode": 4})
+
+
+def test_v12_candidate_reserves_follow_mode(clock):
+    """V12R02B60D00, one site (franklinwh-modbus #63): 15509 = TOU reserve; 16001 = the
+    active mode's reserve (EB 100, SC self reserve, TOU TOU reserve)."""
+    gw = make_gateway(clock, profile="agate-v12r02b60d00-candidate",
+                      site={"self_reserve": 8, "tou_reserve": 15})
+    with gw:
+        c = RawClient(*gw.address)
+        for mode, want in ((2, 8), (3, 15), (1, 100)):
+            gw.site.set_native_mode(mode)
+            assert c.read(15507, 3) == [mode, 8, 15]
+            assert c.read(16001, 1) == [want], mode
+        c.close()
+    gw = make_gateway(clock, site={"self_reserve": 8, "tou_reserve": 15})   # V10 default
+    with gw:
+        c = RawClient(*gw.address)
+        gw.site.set_native_mode(3)
+        assert c.read(15508, 2) == [8, 8] and c.read(16001, 1) == [8]
+        c.close()

@@ -278,7 +278,7 @@ battery discharging.
 |---|---|---|---|
 | 714.DCW sign | QUIRKS.md: positive = charging | positive = **discharging** | `controller.py` and the scan (DCW +500 W at night with 500 W load, no PV) |
 | 15507 values | older QUIRKS.md: 0 Emergency, 1 TOU, 2 Self, 3 Manual | **1 Backup, 2 Self, 3 TOU** only | each read with the app in that mode, V12R02B60D00, 2026-10-21, one site (franklinwh-modbus#75, #88); 0 and 4 were unsourced and removed |
-| 16001/16002 | manifest: 16002 = TmpAmb | 16001 self reserve; 16002 = 20 (`BBBackupSoc`) | 2026-10-07 scan: 16002 = 20 with TmpAmb 17.5 °C and TOU reserve 15 % |
+| 16001/16002 | manifest: 16002 = TmpAmb | 16001 self reserve (on `agate-v12r02b60d00-candidate`: the active mode's reserve, 100 in Emergency Backup, as read 2026-10-21, one site, franklinwh-modbus #63); 16002 = 20 (`BBBackupSoc`) | 2026-10-07 scan: 16002 = 20 with TmpAmb 17.5 °C and TOU reserve 15 % |
 | FC 4 | unknown | same data as FC 3 | — |
 | 714 per-aPower ports | unknown | one aggregate port (`NPrt = 1`) | only single-aPower scans exist |
 | 713.WHRtg with 2+ aPowers | unknown | scales (13600 × units) | M702 rates are known *not* to scale |

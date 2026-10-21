@@ -4,6 +4,10 @@
 
 - History squashed for publication (2026-10-13). Earlier commit hashes cited in issues and results refer to the maintainer's private archive.
 
+### V12 reserves (2026-10-21)
+- Profile `agate-v12r02b60d00-candidate`: 15509 is the TOU reserve, and 16001 the active mode's
+  reserve (100 in Emergency Backup). Read with the app in each mode, one site (franklinwh-modbus #63).
+
 ### V12 addressing (2026-10-21)
 - Profile `agate-v12r02b60d00-candidate` serves the SunSpec map at 0 and 40000 (measured
   2026-10-20, one site). New `write_bases` quirk; `addressing` control action and `ctl` verb
