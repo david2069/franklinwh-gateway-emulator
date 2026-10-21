@@ -303,6 +303,8 @@ class AGateDevice:
 
     def _write_sunspec(self, address: int, offset: int, values: list[int]) -> int | None:
         p, site = self.profile, self.site
+        if p.write_bases is not None and address - offset not in p.write_bases:
+            return ILLEGAL_ADDRESS
         decoded = self.image.decode_write(offset, values)
         if p.readonly_write == "exception":
             for ref, _ in decoded:

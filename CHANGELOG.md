@@ -4,6 +4,11 @@
 
 - History squashed for publication (2026-10-13). Earlier commit hashes cited in issues and results refer to the maintainer's private archive.
 
+### V12 addressing (2026-10-21)
+- Profile `agate-v12r02b60d00-candidate` serves the SunSpec map at 0 and 40000 (measured
+  2026-10-20, one site). New `write_bases` quirk; `addressing` control action and `ctl` verb
+  switch the mirror and the write bases at run time.
+
 ### Slow replies (2026-10-21)
 - Faults `slow_p` / `slow_ms`: a seeded fraction of Modbus replies is delayed, so a reply can land
   after the client's timeout on the same socket.

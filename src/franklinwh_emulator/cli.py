@@ -14,6 +14,7 @@
     franklinwh-emulator ctl agate hz 51.3
     franklinwh-emulator ctl agate restore
     franklinwh-emulator ctl agate offgrid on
+    franklinwh-emulator ctl agate addressing alias=40000 write=0   # V12 mirror; writes at 0 only
     franklinwh-emulator ctl agate range-fault 15500 15509 silent for=30   # or: exception code=2, short; clear
     franklinwh-emulator ctl agate episode 60 120    # drop 60 s, back islanded, grid back after 120 s
     franklinwh-emulator ctl agate pv remote1 off
@@ -129,6 +130,19 @@ def _ctl_request(verb: str, args: list[str]) -> tuple[str, str, dict]:
     if verb == "offgrid":
         need(1)
         return "POST", "offgrid", {"on": bool(_parse_value(args[0]))}
+    if verb == "addressing":
+        need(1)
+        body: dict = {}
+        for a in args:
+            k, _, v = a.partition("=")
+            bases = None if v in ("all", "none", "") else [int(b) for b in v.split(",")]
+            if k == "alias":
+                body["base_aliases"] = bases or []
+            elif k == "write":
+                body["write_bases"] = bases
+            else:
+                raise SystemExit("addressing: alias=40000|none write=0|40000|all")
+        return "POST", "addressing", body
     if verb == "range-fault":
         need(1)
         if args[0] == "clear":
@@ -417,7 +431,7 @@ def main(argv: list[str] | None = None) -> int:
 
     c = sub.add_parser("ctl", help="steer a running emulator via its control API",
                        description="verbs: status | outage [L1|L2|L3] | restore | voltage <V|0.8pu> [leg] | "
-                                   "hz <Hz> | offgrid on|off | episode <down_s> <offgrid_s> | range-fault <start> <end> [mode] [code=N] [for=S] | clear | pv <proximal|remote1|remote2> on|off"
+                                   "hz <Hz> | offgrid on|off | episode <down_s> <offgrid_s> | addressing alias=..|none write=..|all | range-fault <start> <end> [mode] [code=N] [for=S] | clear | pv <proximal|remote1|remote2> on|off"
                                    " | solar <W|auto> | load <W|auto> | ambient <C|auto> | "
                                    "alarm <NAME...> [--persistent] | clear-alarm [NAME...] | "
                                    "reset-alarms | fault|dc-fault key=value... | vpp <W, +charge> | release | "

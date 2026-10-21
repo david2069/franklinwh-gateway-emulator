@@ -8,6 +8,7 @@
     POST /gateways/<id>/offgrid         {"on": true}
     POST /gateways/<id>/range-fault     {"start": 15500, "end": 15509, "mode": "exception",
                                          "code": 4, "for_s": 30} | {"clear": true}
+    POST /gateways/<id>/addressing      {"base_aliases": [40000], "write_bases": [0]}
     POST /gateways/<id>/episode         {"down_s": 60, "offgrid_s": 120}  (drop, return islanded)
     POST /gateways/<id>/pv              {"input": "proximal", "relay": false} | {"solar_w": 3000|null}
     POST /gateways/<id>/load            {"w": 4500|null}
@@ -70,6 +71,8 @@ def gateway_state(gw: "Gateway") -> dict:
         "address": list(gw.address),
         "dc_address": list(gw.dc_address) if gw.dc_address else None,
         "profile": gw.profile.name,
+        "base_aliases": list(gw.profile.base_aliases),
+        "write_bases": None if gw.profile.write_bases is None else list(gw.profile.write_bases),
         "span_unlock": gw.config.span_unlock,
         "utility": asdict(site.utility),
         "grid_code": site.grid.name,
@@ -133,6 +136,8 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
             site.set_grid(phase=body.get("phase"), **kw)
         elif action == "offgrid":
             site.request_offgrid(bool(body["on"]))
+        elif action == "addressing":
+            gw.set_addressing(**body)
         elif action == "episode":
             gw.episode(float(body["down_s"]), float(body["offgrid_s"]))
         elif action == "pv":
