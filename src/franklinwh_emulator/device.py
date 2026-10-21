@@ -74,6 +74,8 @@ class AGateDevice:
             self.ext[a - EXT_START] = v
         self.lock = threading.RLock()
         self.write_log: list[tuple[int, list[int], str]] = []   # (addr, values, outcome)
+        # Test rules: SunSpec writes refused with an exception, see :meth:`reject_writes`.
+        self.write_rejects: list[dict] = []
         img = self.image
         img.set(1, "SN", serial)
         img.set(1, "Vr", profile.firmware)
@@ -306,11 +308,44 @@ class AGateDevice:
                 outcome = "applied"
         self.write_log.append((address, [value], outcome))
 
+    REJECT_KEYS = {"model", "point", "abs_gt", "gt", "lt", "code"}
+
+    def reject_writes(self, model: int, point: str, *, abs_gt: int | None = None,
+                      gt: int | None = None, lt: int | None = None, code: int = ILLEGAL_VALUE) -> None:
+        """Refuse writes to ``model``.``point`` with exception ``code``: every write, or only
+        raw values with ``|v| > abs_gt``, ``v > gt`` or ``v < lt``."""
+        try:
+            self.image.ref(int(model), point)
+        except KeyError:
+            raise ValueError(f"no point {model}.{point}") from None
+        self.write_rejects.append({"model": int(model), "point": point, "abs_gt": abs_gt,
+                                   "gt": gt, "lt": lt, "code": int(code)})
+
+    def _rejected(self, mid: int, name: str, raw) -> int | None:
+        p = self.profile
+        if (mid, name) == (704, "WSetPct") and p.wsetpct_max_abs_raw is not None \
+                and raw is not None and abs(raw) > p.wsetpct_max_abs_raw:
+            return ILLEGAL_VALUE
+        for r in self.write_rejects:
+            if (r["model"], r["point"]) != (mid, name):
+                continue
+            limits = [k for k in ("abs_gt", "gt", "lt") if r.get(k) is not None]
+            if not limits or raw is not None and (
+                    (r.get("abs_gt") is not None and abs(raw) > r["abs_gt"])
+                    or (r.get("gt") is not None and raw > r["gt"])
+                    or (r.get("lt") is not None and raw < r["lt"])):
+                return r["code"]
+        return None
+
     def _write_sunspec(self, address: int, offset: int, values: list[int]) -> int | None:
         p, site = self.profile, self.site
         if p.write_bases is not None and address - offset not in p.write_bases:
             return ILLEGAL_ADDRESS
         decoded = self.image.decode_write(offset, values)
+        for ref, raw in decoded:
+            exc = self._rejected(ref.model_id, ref.path, raw)
+            if exc:
+                return exc
         if p.readonly_write == "exception":
             for ref, _ in decoded:
                 if ref.point.pdef.get("access", "R") != "RW":

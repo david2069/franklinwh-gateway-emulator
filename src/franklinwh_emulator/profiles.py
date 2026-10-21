@@ -53,6 +53,7 @@ class Profile:
     unused_phase_registers: str = "zero"     # 701 points of unwired legs: "zero" | "unimplemented"
     islanded_15016: int | None = None        # 15016 while islanded; None = stays static
     reserve_16001: str = "self"              # "self" reserve | the "active" mode's reserve
+    wsetpct_max_abs_raw: int | None = None   # 704.WSetPct writes beyond ±this raw: exception 3
 
     # -- Direct Connect ----------------------------------------------------------
     dc_pload_dup_bug: bool = True            # 1304 p_load repeats p_fhp (DEF-1303-PLOAD-DUP)
@@ -75,6 +76,11 @@ PROFILES: dict[str, Profile] = {
         # reserve (100 Emergency Backup, 8 Self-Consumption, 15 TOU).
         tou_reserve_mirrors_self=False,
         reserve_16001="active",
+        # Owner's test via the Modbus bridge, 2026-10-21, WSetPct_SF -1, discharge side: raw
+        # 10 and 100 accepted (100 delivered 500 W); 110 and 200 never latched; 500 refused
+        # with exception 3 (twice). The charge side and raw 101 are assumed symmetric,
+        # unverified. V10 accepted raw 1000 (2026-10-20), so the default has no limit.
+        wsetpct_max_abs_raw=100,
     ),
     "spec": Profile(
         name="spec",

@@ -8,6 +8,8 @@
     POST /gateways/<id>/offgrid         {"on": true}
     POST /gateways/<id>/range-fault     {"start": 15500, "end": 15509, "mode": "exception",
                                          "code": 4, "for_s": 30} | {"clear": true}
+    POST /gateways/<id>/write-reject    {"model": 704, "point": "WSetPct", "abs_gt": 100,
+                                         "code": 3} | {"clear": true}
     POST /gateways/<id>/addressing      {"base_aliases": [40000], "write_bases": [0]}
     POST /gateways/<id>/episode         {"down_s": 60, "offgrid_s": 120}  (drop, return islanded)
     POST /gateways/<id>/pv              {"input": "proximal", "relay": false} | {"solar_w": 3000|null}
@@ -72,6 +74,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "dc_address": list(gw.dc_address) if gw.dc_address else None,
         "profile": gw.profile.name,
         "base_aliases": list(gw.profile.base_aliases),
+        "write_rejects": list(gw.device.write_rejects),
         "write_bases": None if gw.profile.write_bases is None else list(gw.profile.write_bases),
         "span_unlock": gw.config.span_unlock,
         "utility": asdict(site.utility),
@@ -136,6 +139,14 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
             site.set_grid(phase=body.get("phase"), **kw)
         elif action == "offgrid":
             site.request_offgrid(bool(body["on"]))
+        elif action == "write-reject":
+            if body.get("clear"):
+                gw.device.write_rejects.clear()
+            else:
+                bad = set(body) - gw.device.REJECT_KEYS
+                if bad:
+                    raise ApiError(400, f"write-reject: unknown keys {sorted(bad)}")
+                gw.device.reject_writes(**body)
         elif action == "addressing":
             gw.set_addressing(**body)
         elif action == "episode":
