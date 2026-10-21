@@ -229,3 +229,22 @@ def test_slow_p_delays_only_a_fraction(gateway, client):
         client.read(0, 1)
         slow += time.monotonic() - t0 >= 0.045
     assert 4 <= slow <= 20                           # seeded: repeatable, neither none nor all
+
+
+def test_write_reject_over_control_api():
+    import json as _j
+    import urllib.request as _u
+    fleet = Fleet.from_dict({"gateways": [{"id": "a"}]})
+    fleet.start(control_port=0)
+    try:
+        def post(body):
+            req = _u.Request(f"http://127.0.0.1:{fleet.control.port}/gateways/a/write-reject",
+                             data=_j.dumps(body).encode(), method="POST")
+            return _j.load(_u.urlopen(req, timeout=2))
+        st = post({"model": 704, "point": "WSetPct", "abs_gt": 100, "code": 3})
+        assert st["write_rejects"][0]["abs_gt"] == 100
+        assert post({"clear": True})["write_rejects"] == []
+        with pytest.raises(_u.HTTPError):
+            post({"model": 704, "point": "WSetPct", "bogus": 1})
+    finally:
+        fleet.stop()

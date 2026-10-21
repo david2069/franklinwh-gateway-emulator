@@ -105,7 +105,12 @@ seeded fraction of replies, e.g. past a client's timeout so the late reply lands
 `ctl <gw> fault slow_p=0.1 slow_ms=3000`). **Range faults** hit only requests that touch one
 address range, e.g. the extension block while SunSpec keeps answering:
 `gw.faults.fail_range(15500, 15509, "silent", for_s=30)` or `ctl <gw> range-fault 15500 15509 silent for=30`.
-Modes: `exception` (`code=N`, default 4), `silent` (no reply), `short` (a well-formed reply with half
+**Write rejection**: `gw.device.reject_writes(704, "WSetPct", abs_gt=100, code=3)` or
+`ctl <gw> write-reject 704.WSetPct abs_gt=100` refuses matching SunSpec writes (no limit = every
+write; `gt`/`lt` for one side; `write-reject clear`). Profile `agate-v12r02b60d00-candidate` refuses
+`|WSetPct raw| > 100` with exception 3: raw 100 accepted and 500 refused on the owner's site
+(2026-10-21, SF -1, discharge side); the charge side is assumed symmetric, unverified.
+Range-fault modes: `exception` (`code=N`, default 4), `silent` (no reply), `short` (a well-formed reply with half
 the registers asked for); `range-fault clear` ends it.
 
 ## Grid events, PV relays and alarms

@@ -201,7 +201,7 @@ window agreed with the bridge's owner, never by competing for the session.
 
 ## P2: useful simulators
 
-### FAULT-EPISODES: firmware failure modes for the Modbus bridge's tests · `doing`
+### FAULT-EPISODES: firmware failure modes for the Modbus bridge's tests · `done`
 Asked by the Modbus bridge session (2026-10-21) after failures on the reference aGate, fw
 V12R02B60D00 (one site). Order agreed with the bridge: 1, 3, 2, 5, 4.
 1. **Drop, return islanded, return on-grid** (`episode`): `done`. Both listeners go (open Modbus
@@ -213,8 +213,9 @@ V12R02B60D00 (one site). Order agreed with the bridge: 1, 3, 2, 5, 4.
    a short reply) for a set time. `done` (`range-fault`; also covers refusing 16001 with exception 2
    for franklinwh-modbus-async's fallback test).
 3. **Write rejection**: exception 3 on chosen M704 writes, by point and value range (bridge #323:
-   Force Discharge 50 %, `WSetPct` 500 raw at SF -1). Which write V12 refuses is unknown. `next`,
-   on hold until the owner's V12 test settles the limit (so far raw 10 accepted, 500 refused).
+   Force Discharge 50 %, `WSetPct` 500 raw at SF -1). `done` (`write-reject`; v12-candidate
+   refuses |WSetPct raw| > 100: 10 and 100 accepted, 500 refused, discharge side measured;
+   charge side and 101 assumed symmetric, unverified).
 6. **16001 per mode** on the v12-candidate profile: 100 Emergency Backup, 8 Self-Consumption, 15 TOU
    (measured 2026-10-21, V12R02B60D00, one site; franklinwh-modbus #63). `done`, with 15509 as
    the TOU reserve on that profile.

@@ -180,3 +180,37 @@ def test_v12_candidate_reserves_follow_mode(clock):
         gw.site.set_native_mode(3)
         assert c.read(15508, 2) == [8, 8] and c.read(16001, 1) == [8]
         c.close()
+
+
+def test_v12_candidate_refuses_wsetpct_beyond_100_raw(clock):
+    """Owner's test, 2026-10-21, V12R02B60D00, SF -1: raw 100 accepted, 500 refused with
+    exception 3. The charge side (negative) is assumed symmetric, unverified."""
+    gw = make_gateway(clock, profile="agate-v12r02b60d00-candidate", site={"initial_soc": 60})
+    with gw:
+        c = RawClient(*gw.address)
+        for raw in (10, 100, -100):
+            assert c.write(WSETPCT, raw & 0xFFFF) == "ok", raw
+        for raw in (101, 110, 500, -101, -500):
+            assert c.write(WSETPCT, raw & 0xFFFF) == ("exc", 3), raw
+        assert s16(c.read(WSETPCT, 1)[0]) == -100                  # refused writes not stored
+        c.close()
+    gw = make_gateway(clock)                                       # V10: raw 1000 accepted
+    with gw:
+        c = RawClient(*gw.address)
+        assert c.write(WSETPCT, 1000) == "ok"
+        c.close()
+
+
+def test_write_reject_rules(gateway, client):
+    import pytest
+    gateway.device.reject_writes(704, "WSetMod", code=3)          # every write to WSetMod
+    gateway.device.reject_writes(704, "WSetPct", gt=500)
+    assert client.write(WSETMOD, 1) == ("exc", 3)
+    assert client.write(WSETPCT, 500) == "ok"
+    assert client.write(WSETPCT, 501) == ("exc", 3)
+    assert client.write(WSETPCT, (-900) & 0xFFFF) == "ok"
+    assert client.write(WSETENA, 1) == "ok"
+    gateway.device.write_rejects.clear()
+    assert client.write(WSETMOD, 1) == "ok"
+    with pytest.raises(ValueError):
+        gateway.device.reject_writes(704, "NoSuchPoint")

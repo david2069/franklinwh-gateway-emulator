@@ -4,6 +4,11 @@
 
 - History squashed for publication (2026-10-13). Earlier commit hashes cited in issues and results refer to the maintainer's private archive.
 
+### Write rejection (2026-10-21)
+- `write-reject {model, point, abs_gt|gt|lt, code}` (control API, `ctl`, `AGateDevice.reject_writes`).
+- Profile `agate-v12r02b60d00-candidate` refuses `|704.WSetPct raw| > 100` with exception 3
+  (owner's test 2026-10-21, discharge side; charge side assumed symmetric, unverified).
+
 ### V12 reserves (2026-10-21)
 - Profile `agate-v12r02b60d00-candidate`: 15509 is the TOU reserve, and 16001 the active mode's
   reserve (100 in Emergency Backup). Read with the app in each mode, one site (franklinwh-modbus #63).
