@@ -76,11 +76,9 @@ PROFILES: dict[str, Profile] = {
         # reserve (100 Emergency Backup, 8 Self-Consumption, 15 TOU).
         tou_reserve_mirrors_self=False,
         reserve_16001="active",
-        # Owner's test via the Modbus bridge, 2026-10-21, WSetPct_SF -1, discharge side: raw
-        # 10 and 100 accepted (100 delivered 500 W); 110 and 200 never latched; 500 refused
-        # with exception 3 (twice). The charge side and raw 101 are assumed symmetric,
-        # unverified. V10 accepted raw 1000 (2026-10-20), so the default has no limit.
-        wsetpct_max_abs_raw=100,
+        # No WSetPct limit: V12's is not concluded (franklinwh-modbus test plan pending). Each
+        # value measured once, 2026-10-21, discharge side: raw 100 latched, 110/200 didn't,
+        # 500 refused with exception 3. Opt in with quirks={"wsetpct_max_abs_raw": 100}.
     ),
     "spec": Profile(
         name="spec",

@@ -4,6 +4,10 @@
 
 - History squashed for publication (2026-10-13). Earlier commit hashes cited in issues and results refer to the maintainer's private archive.
 
+### WSetPct limit opt-in (2026-10-21)
+- The v12-candidate profile no longer refuses `|WSetPct raw| > 100`: the V12 limit is not
+  concluded. Opt in with `quirks={"wsetpct_max_abs_raw": 100}`.
+
 ### Write rejection (2026-10-21)
 - `write-reject {model, point, abs_gt|gt|lt, code}` (control API, `ctl`, `AGateDevice.reject_writes`).
 - Profile `agate-v12r02b60d00-candidate` refuses `|704.WSetPct raw| > 100` with exception 3

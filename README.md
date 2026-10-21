@@ -107,9 +107,9 @@ address range, e.g. the extension block while SunSpec keeps answering:
 `gw.faults.fail_range(15500, 15509, "silent", for_s=30)` or `ctl <gw> range-fault 15500 15509 silent for=30`.
 **Write rejection**: `gw.device.reject_writes(704, "WSetPct", abs_gt=100, code=3)` or
 `ctl <gw> write-reject 704.WSetPct abs_gt=100` refuses matching SunSpec writes (no limit = every
-write; `gt`/`lt` for one side; `write-reject clear`). Profile `agate-v12r02b60d00-candidate` refuses
-`|WSetPct raw| > 100` with exception 3: raw 100 accepted and 500 refused on the owner's site
-(2026-10-21, SF -1, discharge side); the charge side is assumed symmetric, unverified.
+write; `gt`/`lt` for one side; `write-reject clear`). The quirk `wsetpct_max_abs_raw: 100` refuses
+`|WSetPct raw| > 100` with exception 3. No profile sets it: V12R02B60D00's limit is not concluded
+(each value tested once on one site, 2026-10-21, discharge side: 100 latched, 500 refused).
 Range-fault modes: `exception` (`code=N`, default 4), `silent` (no reply), `short` (a well-formed reply with half
 the registers asked for); `range-fault clear` ends it.
 
