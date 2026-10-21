@@ -52,6 +52,7 @@ class Profile:
     soc_whole_percent: bool = True           # 713.SoC moves in 1 % steps (raw ×10, so 550, 560…)
     unused_phase_registers: str = "zero"     # 701 points of unwired legs: "zero" | "unimplemented"
     islanded_15016: int | None = None        # 15016 while islanded; None = stays static
+    reserve_16001: str = "self"              # "self" reserve | the "active" mode's reserve
 
     # -- Direct Connect ----------------------------------------------------------
     dc_pload_dup_bug: bool = True            # 1304 p_load repeats p_fhp (DEF-1303-PLOAD-DUP)
@@ -69,6 +70,11 @@ PROFILES: dict[str, Profile] = {
         # franklinwh-modbus docs/SUNSPEC_SNAPSHOT_2026-10-20_V12R02B60D00.md). Writes there
         # are unverified on hardware, so both bases accept them here.
         base_aliases=(40000,),
+        # Read with the app in each mode, 2026-10-21, one site (franklinwh-modbus #63):
+        # 15509 holds the TOU reserve (not a copy of 15508), and 16001 the active mode's
+        # reserve (100 Emergency Backup, 8 Self-Consumption, 15 TOU).
+        tou_reserve_mirrors_self=False,
+        reserve_16001="active",
     ),
     "spec": Profile(
         name="spec",

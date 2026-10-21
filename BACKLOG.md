@@ -216,7 +216,8 @@ V12R02B60D00 (one site). Order agreed with the bridge: 1, 3, 2, 5, 4.
    Force Discharge 50 %, `WSetPct` 500 raw at SF -1). Which write V12 refuses is unknown. `next`,
    on hold until the owner's V12 test settles the limit (so far raw 10 accepted, 500 refused).
 6. **16001 per mode** on the v12-candidate profile: 100 Emergency Backup, 8 Self-Consumption, 15 TOU
-   (measured 2026-10-21, V12R02B60D00, one site; franklinwh-modbus #63). `todo`
+   (measured 2026-10-21, V12R02B60D00, one site; franklinwh-modbus #63). `done`, with 15509 as
+   the TOU reserve on that profile.
 4. **V12 addressing**: base-40000 mirror switchable at run time (measured on V12R02B60D00, one site,
    franklinwh-modbus `docs/SUNSPEC_SNAPSHOT_2026-10-20_V12R02B60D00.md`), plus writes accepted at
    one base only. `done` (`addressing`; the v12-candidate profile serves 40000).
