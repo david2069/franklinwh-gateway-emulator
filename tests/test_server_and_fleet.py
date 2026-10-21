@@ -200,3 +200,32 @@ def test_range_fault_over_control_api():
             post({"start": 15500, "end": 15509, "mode": "bogus"})
     finally:
         fleet.stop()
+
+
+def test_slow_reply_lands_on_the_next_read(gateway):
+    """A reply delayed past the client's timeout arrives on the same socket later, where a
+    client that doesn't check the transaction id takes it as the answer to its next request."""
+    import struct as _s
+    gateway.faults.slow_p, gateway.faults.slow_ms = 1.0, 300
+    s = socket.create_connection(gateway.address, timeout=0.1)
+    s.sendall(_s.pack(">HHHBBHH", 1, 0, 6, 1, 3, 0, 1))
+    with pytest.raises(socket.timeout):
+        s.recv(64)                                   # client gives up on tid 1
+    gateway.faults.slow_p = 0.0
+    s.sendall(_s.pack(">HHHBBHH", 2, 0, 6, 1, 3, 2, 1))
+    s.settimeout(2)
+    buf = b""
+    while len(buf) < 11:
+        buf += s.recv(64)
+    assert _s.unpack(">H", buf[:2])[0] == 1          # the late tid-1 reply comes first
+    s.close()
+
+
+def test_slow_p_delays_only_a_fraction(gateway, client):
+    gateway.faults.slow_p, gateway.faults.slow_ms = 0.3, 50
+    slow = 0
+    for _ in range(40):
+        t0 = time.monotonic()
+        client.read(0, 1)
+        slow += time.monotonic() - t0 >= 0.045
+    assert 4 <= slow <= 20                           # seeded: repeatable, neither none nor all

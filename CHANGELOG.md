@@ -4,6 +4,10 @@
 
 - History squashed for publication (2026-10-13). Earlier commit hashes cited in issues and results refer to the maintainer's private archive.
 
+### Slow replies (2026-10-21)
+- Faults `slow_p` / `slow_ms`: a seeded fraction of Modbus replies is delayed, so a reply can land
+  after the client's timeout on the same socket.
+
 ### Range faults (2026-10-21)
 - `range-fault {start, end, mode, code, for_s}` (control API, `ctl`, `Faults.fail_range`): an
   exception, no reply, or a short reply only for requests touching that range, optionally timed.

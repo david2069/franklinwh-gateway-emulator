@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 import socket
 import struct
 import time
@@ -31,6 +32,8 @@ class Faults:
     drop_responses: int = 0         # swallow the next N responses (client times out)
     reset_after: int | None = None  # drop the connection after N more requests
     exception: int | None = None    # answer every request with this exception code
+    slow_p: float = 0.0             # fraction of replies delayed by an extra slow_ms
+    slow_ms: float = 0.0            # (past a client's timeout, the reply lands on its next read)
     # Requests touching [start, end] only: {"start", "end", "mode": "exception" | "silent" |
     # "short", "code" (exception, default 4), "until" (time.monotonic(); None = until cleared)}.
     range_fault: dict | None = None
@@ -65,6 +68,7 @@ class ModbusServer:
         self.port = port
         self.faults = faults or Faults()
         self.requests = 0
+        self._rng = random.Random(device.site.config.seed)   # which replies are slow: repeatable
         self._active = 0
         self._server: asyncio.base_events.Server | None = None
         self._writers: set[asyncio.StreamWriter] = set()
@@ -151,6 +155,8 @@ class ModbusServer:
                     reply = bytes([reply[0], half * 2]) + reply[2:2 + half * 2]
             if f.latency_s:
                 await asyncio.sleep(f.latency_s)
+            if f.slow_p and f.slow_ms and self._rng.random() < f.slow_p:
+                await asyncio.sleep(f.slow_ms / 1000.0)
             if f.drop_responses > 0:
                 f.drop_responses -= 1
                 continue
