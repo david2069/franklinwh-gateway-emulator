@@ -182,10 +182,16 @@ def test_v12_candidate_reserves_follow_mode(clock):
         c.close()
 
 
-def test_v12_candidate_refuses_wsetpct_beyond_100_raw(clock):
-    """Owner's test, 2026-10-21, V12R02B60D00, SF -1: raw 100 accepted, 500 refused with
-    exception 3. The charge side (negative) is assumed symmetric, unverified."""
-    gw = make_gateway(clock, profile="agate-v12r02b60d00-candidate", site={"initial_soc": 60})
+def test_wsetpct_limit_is_opt_in(clock):
+    """V12's WSetPct limit is not concluded (one test each, discharge side, 2026-10-21), so no
+    profile applies it; tests opt in with the quirk."""
+    gw = make_gateway(clock, profile="agate-v12r02b60d00-candidate")
+    with gw:
+        c = RawClient(*gw.address)
+        assert c.write(WSETPCT, 500) == "ok"
+        c.close()
+    gw = make_gateway(clock, profile="agate-v12r02b60d00-candidate", site={"initial_soc": 60},
+                      quirks={"wsetpct_max_abs_raw": 100})
     with gw:
         c = RawClient(*gw.address)
         for raw in (10, 100, -100):
