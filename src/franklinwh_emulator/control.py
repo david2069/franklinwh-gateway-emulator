@@ -6,6 +6,8 @@
                                         | {"hz": 51.2} | {"hz_offset": 1.2} | {"restore": true}
                                         add "phase": "L2" to change one leg only
     POST /gateways/<id>/offgrid         {"on": true}
+    POST /gateways/<id>/range-fault     {"start": 15500, "end": 15509, "mode": "exception",
+                                         "code": 4, "for_s": 30} | {"clear": true}
     POST /gateways/<id>/episode         {"down_s": 60, "offgrid_s": 120}  (drop, return islanded)
     POST /gateways/<id>/pv              {"input": "proximal", "relay": false} | {"solar_w": 3000|null}
     POST /gateways/<id>/load            {"w": 4500|null}
@@ -228,6 +230,12 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
                 raise ApiError(400, f"weather: sky must be one of {sorted(SKIES)}")
         elif action == "export":
             site.set_export_limit_enforced(bool(body["enforced"]))
+        elif action == "range-fault":
+            if body.get("clear"):
+                gw.faults.range_fault = None
+            else:
+                gw.faults.fail_range(body["start"], body["end"], body.get("mode", "exception"),
+                                     body.get("code", 4), body.get("for_s"))
         elif action in ("faults", "dc-faults"):
             target = gw.faults if action == "faults" else gw.dc_faults
             known = {f.name for f in fields(Faults)}

@@ -14,6 +14,7 @@
     franklinwh-emulator ctl agate hz 51.3
     franklinwh-emulator ctl agate restore
     franklinwh-emulator ctl agate offgrid on
+    franklinwh-emulator ctl agate range-fault 15500 15509 silent for=30   # or: exception code=2, short; clear
     franklinwh-emulator ctl agate episode 60 120    # drop 60 s, back islanded, grid back after 120 s
     franklinwh-emulator ctl agate pv remote1 off
     franklinwh-emulator ctl agate solar 6000        # or: solar auto
@@ -128,6 +129,19 @@ def _ctl_request(verb: str, args: list[str]) -> tuple[str, str, dict]:
     if verb == "offgrid":
         need(1)
         return "POST", "offgrid", {"on": bool(_parse_value(args[0]))}
+    if verb == "range-fault":
+        need(1)
+        if args[0] == "clear":
+            return "POST", "range-fault", {"clear": True}
+        need(2)
+        body = {"start": int(args[0]), "end": int(args[1])}
+        for a in args[2:]:
+            if "=" in a:
+                k, v = a.split("=", 1)
+                body[{"for": "for_s"}.get(k, k)] = _parse_value(v)
+            else:
+                body["mode"] = a
+        return "POST", "range-fault", body
     if verb == "episode":
         need(2)
         return "POST", "episode", {"down_s": float(args[0]), "offgrid_s": float(args[1])}
@@ -403,7 +417,7 @@ def main(argv: list[str] | None = None) -> int:
 
     c = sub.add_parser("ctl", help="steer a running emulator via its control API",
                        description="verbs: status | outage [L1|L2|L3] | restore | voltage <V|0.8pu> [leg] | "
-                                   "hz <Hz> | offgrid on|off | episode <down_s> <offgrid_s> | pv <proximal|remote1|remote2> on|off"
+                                   "hz <Hz> | offgrid on|off | episode <down_s> <offgrid_s> | range-fault <start> <end> [mode] [code=N] [for=S] | clear | pv <proximal|remote1|remote2> on|off"
                                    " | solar <W|auto> | load <W|auto> | ambient <C|auto> | "
                                    "alarm <NAME...> [--persistent] | clear-alarm [NAME...] | "
                                    "reset-alarms | fault|dc-fault key=value... | vpp <W, +charge> | release | "

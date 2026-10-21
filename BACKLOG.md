@@ -210,9 +210,13 @@ V12R02B60D00 (one site). Order agreed with the bridge: 1, 3, 2, 5, 4.
    twice, one site), then the utility returns after `offgrid_s`. The cause of the real
    episodes is unknown; the emulator models them as a utility outage.
 2. **Partial failure**: a fault on an address range only (e.g. 15500–15509: exception, silence or
-   a short reply) for a set time. `todo`
+   a short reply) for a set time. `done` (`range-fault`; also covers refusing 16001 with exception 2
+   for franklinwh-modbus-async's fallback test).
 3. **Write rejection**: exception 3 on chosen M704 writes, by point and value range (bridge #323:
-   Force Discharge 50 %, `WSetPct` 500 raw at SF -1). Which write V12 refuses is unknown. `next`
+   Force Discharge 50 %, `WSetPct` 500 raw at SF -1). Which write V12 refuses is unknown. `next`,
+   on hold until the owner's V12 test settles the limit (so far raw 10 accepted, 500 refused).
+6. **16001 per mode** on the v12-candidate profile: 100 Emergency Backup, 8 Self-Consumption, 15 TOU
+   (measured 2026-10-21, V12R02B60D00, one site; franklinwh-modbus #63). `todo`
 4. **V12 addressing**: base-40000 mirror switchable at run time (measured on V12R02B60D00, one site,
    franklinwh-modbus `docs/SUNSPEC_SNAPSHOT_2026-10-20_V12R02B60D00.md`), plus writes accepted at
    one base only. `todo`

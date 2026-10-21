@@ -146,3 +146,57 @@ def test_episode_drop_then_return_islanded(clock, profile, islanded_15016):
         clock.advance(61)                                # enter-service delay (AS4777: 60 s)
         assert c.read(connst, 1) == [1] and c.read(15016, 1) == [2]
         c.close()
+
+
+def test_range_fault_hits_only_that_range(gateway, client):
+    gateway.faults.fail_range(15500, 15509, "exception", code=2)
+    assert client.read(15500, 10) == ("exc", 2)
+    assert client.read(15505, 1) == ("exc", 2)
+    assert client.read(15495, 6) == ("exc", 2)                 # overlaps by one register
+    assert client.read(0, 2) == [0x5375, 0x6E53]                # SunSpec unaffected
+    assert isinstance(client.read(15510, 4), list)              # just past the range
+    gateway.faults.range_fault = None
+    assert isinstance(client.read(15500, 10), list)
+
+
+def test_range_fault_silent_short_and_expiry(gateway, client):
+    import struct as _s
+    gateway.faults.fail_range(16001, 16001, "silent")
+    client.sock.settimeout(0.3)
+    with pytest.raises(socket.timeout):
+        client.read(16001, 1)
+    gateway.faults.range_fault = None
+    client.sock.close()
+    c = RawClient(*gateway.address)
+    gateway.faults.fail_range(15500, 15509, "short")
+    c.sock.sendall(_s.pack(">HHHBBHH", 9, 0, 6, 1, 3, 15500, 10))
+    head = c._recv(7)
+    body = c._recv(_s.unpack(">HHHB", head)[2] - 1)
+    assert body[0] == 3 and body[1] == 10                      # 5 registers, not 10
+    gateway.faults.fail_range(15500, 15509, "exception", for_s=0.2)
+    assert c.read(15500, 1) == ("exc", 4)
+    time.sleep(0.25)
+    assert isinstance(c.read(15500, 1), list)
+    assert gateway.faults.range_fault is None
+    c.close()
+
+
+def test_range_fault_over_control_api():
+    import json as _j
+    import urllib.request as _u
+    fleet = Fleet.from_dict({"gateways": [{"id": "a"}]})
+    fleet.start(control_port=0)
+    try:
+        def post(body):
+            req = _u.Request(f"http://127.0.0.1:{fleet.control.port}/gateways/a/range-fault",
+                             data=_j.dumps(body).encode(), method="POST")
+            return _u.urlopen(req, timeout=2)
+        post({"start": 15500, "end": 15509, "mode": "silent", "for_s": 5})
+        rf = fleet["a"].faults.range_fault
+        assert (rf["start"], rf["end"], rf["mode"]) == (15500, 15509, "silent")
+        post({"clear": True})
+        assert fleet["a"].faults.range_fault is None
+        with pytest.raises(_u.HTTPError):
+            post({"start": 15500, "end": 15509, "mode": "bogus"})
+    finally:
+        fleet.stop()
