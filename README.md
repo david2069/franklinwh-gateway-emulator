@@ -68,7 +68,7 @@ real verification").
 | 0–1127 | `SunS`, then models 1, 701–715, 502 and the end marker. Each model is built from pysunspec2's definitions at the **exact lengths and repeating-group counts of the real scan**, so every offset matches (e.g. WSetEna = 318, ControllerHb = 1092). |
 | 15000–15516 | Extension registers: 15500–15513 (PV, home load, mode, reserves, PV Wh), 15514–15516 (read 0 on the reference aGate, charging; meaning unknown) and the 15000–15043 diagnostics dump, with live values (15003 solar, 15011 load, 15012:15013 battery W, 15017, 15020, 15022 grid W, 15024 Hz, 15025 V, 15029:15030 and 15033:15034 energy, 15035 SoC, 15036 SoH, 15040 solar term). |
 | 16000–16499 | 16000 high-resolution home load, 16001 self reserve, 16002 = 20 (1406 `BBBackupSoc`, candidate; franklinwh-modbus#18). |
-| anything else | ILLEGAL DATA ADDRESS (as the real aGate does at 40000+). `base_aliases: [40000]` also serves the chain there. |
+| anything else | ILLEGAL DATA ADDRESS (as the real aGate does at 40000+ on V10R01B04D00). `base_aliases: [40000]` also serves the chain there, as V12R02B60D00 does (profile `agate-v12r02b60d00-candidate`; measured 2026-10-20, one site). `write_bases: [0]` makes the other bases refuse SunSpec writes (exception 2); whether V12 accepts writes at 40000 is unverified. Both switch at run time: `ctl <gw> addressing alias=40000 write=0` or `gw.set_addressing(...)`. |
 
 Static values come from `baselines/agate_v10r01b04d00.json`, which `tools/gen_baseline.py`
 generates from `AGATE_FULL_SCAN_2026-05-14.txt`.

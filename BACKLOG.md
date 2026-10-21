@@ -219,7 +219,7 @@ V12R02B60D00 (one site). Order agreed with the bridge: 1, 3, 2, 5, 4.
    (measured 2026-10-21, V12R02B60D00, one site; franklinwh-modbus #63). `todo`
 4. **V12 addressing**: base-40000 mirror switchable at run time (measured on V12R02B60D00, one site,
    franklinwh-modbus `docs/SUNSPEC_SNAPSHOT_2026-10-20_V12R02B60D00.md`), plus writes accepted at
-   one base only. `todo`
+   one base only. `done` (`addressing`; the v12-candidate profile serves 40000).
 5. **Timing**: late replies on a fraction of requests (`slow_p`, `slow_ms`), past the client's
    timeout on a shared socket. `done` (`slow_p`, `slow_ms`; Modbus only).
 

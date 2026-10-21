@@ -219,6 +219,20 @@ class Gateway:
             self.episode_phase = None
         loop.call_soon_threadsafe(lambda: asyncio.ensure_future(run()))
 
+    ADDRESSING_KEYS = ("base_aliases", "write_bases")
+
+    def set_addressing(self, **kw) -> None:
+        """Change ``base_aliases`` / ``write_bases`` while serving (the V12 40000 mirror)."""
+        from dataclasses import replace
+        bad = set(kw) - set(self.ADDRESSING_KEYS)
+        if bad:
+            raise ValueError(f"unknown addressing keys {sorted(bad)}; known {list(self.ADDRESSING_KEYS)}")
+        if "base_aliases" in kw:
+            kw["base_aliases"] = tuple(int(b) for b in kw["base_aliases"])
+        if kw.get("write_bases") is not None:
+            kw["write_bases"] = tuple(int(b) for b in kw["write_bases"])
+        self.profile = self.device.profile = replace(self.profile, **kw)
+
     async def _apply_modbus(self) -> None:
         running = self.server._server is not None
         if self.modbus_enabled and not running:

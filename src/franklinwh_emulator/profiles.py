@@ -23,6 +23,8 @@ class Profile:
     busy_behaviour: str = "close"            # extra client: "close" | "hang"
     # Also answer the SunSpec chain at these bases (0 is always served).
     base_aliases: tuple[int, ...] = ()
+    # Bases that accept SunSpec writes (None = every served base). Elsewhere: exception 2.
+    write_bases: tuple[int, ...] | None = None
 
     # -- M704 sign conventions -------------------------------------------------
     wsetpct_positive_discharge: bool = True  # hardware: +WSetPct = discharge
@@ -63,6 +65,10 @@ PROFILES: dict[str, Profile] = {
         name="agate-v12r02b60d00-candidate",
         firmware="V12R02B60D00",
         islanded_15016=1,
+        # The SunSpec map is mirrored at 40000 (read-only re-scan 2026-10-20, one site;
+        # franklinwh-modbus docs/SUNSPEC_SNAPSHOT_2026-10-20_V12R02B60D00.md). Writes there
+        # are unverified on hardware, so both bases accept them here.
+        base_aliases=(40000,),
     ),
     "spec": Profile(
         name="spec",
@@ -101,4 +107,6 @@ def get_profile(name: str = DEFAULT_PROFILE, **overrides) -> Profile:
         raise ValueError(f"unknown profile overrides: {sorted(bad)}")
     if "base_aliases" in overrides:
         overrides["base_aliases"] = tuple(overrides["base_aliases"])
+    if overrides.get("write_bases") is not None:
+        overrides["write_bases"] = tuple(overrides["write_bases"])
     return replace(base, **overrides)

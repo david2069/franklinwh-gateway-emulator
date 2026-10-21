@@ -1,6 +1,8 @@
 import pytest
 """The register layout must match the real aGate scan (AGATE_FULL_SCAN_2026-05-14)."""
 
+import pytest
+from conftest import RawClient, make_gateway
 from franklinwh_emulator.device import ILLEGAL_ADDRESS
 
 # (model id, address of its ID register, L) from the scan, minus the 40000 display offset.
@@ -168,3 +170,34 @@ def test_live_diagnostic_registers(client, gateway, case):
     assert regs[35] == round(snap.soc * 10)
     w701 = gateway.device.image.get(701, "W")
     assert abs(_s16(regs[40]) + w701 + batt - hires) <= 3
+
+
+def test_v12_candidate_mirrors_at_40000(clock):
+    gw = make_gateway(clock, seed=1, profile="agate-v12r02b60d00-candidate")
+    with gw:
+        c = RawClient(*gw.address)
+        assert c.read(40000, 2) == [0x5375, 0x6E53]           # "SunS", as the 2026-10-20 re-scan
+        assert c.read(50000, 2) == ("exc", ILLEGAL_ADDRESS)
+        c.close()
+
+
+def test_addressing_switch_and_write_bases(clock):
+    gw = make_gateway(clock, seed=1)
+    wsetena = gw.device.image.ref(704, "WSetEna").address
+    with gw:
+        c = RawClient(*gw.address)
+        assert c.read(40000, 1) == ("exc", ILLEGAL_ADDRESS)
+        gw.set_addressing(base_aliases=[40000], write_bases=[0])
+        assert c.read(40000, 2) == [0x5375, 0x6E53]
+        assert c.write(40000 + wsetena, 1) == ("exc", ILLEGAL_ADDRESS)   # mirror refuses writes
+        assert gw.site.remote.enabled is False
+        assert c.write(wsetena, 1) == "ok"
+        assert gw.site.remote.enabled is True                           # base 0 accepts
+        gw.set_addressing(write_bases=None)
+        assert c.write(40000 + wsetena, 0) == "ok"
+        assert gw.site.remote.enabled is False
+        gw.set_addressing(base_aliases=[])
+        assert c.read(40000, 1) == ("exc", ILLEGAL_ADDRESS)
+        c.close()
+    with pytest.raises(ValueError):
+        gw.set_addressing(span_unlock=True)
