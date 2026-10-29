@@ -314,6 +314,9 @@ class AGateDevice:
         if (mid, name) == (704, "WSetPct") and p.wsetpct_max_abs_raw is not None \
                 and raw is not None and abs(raw) > p.wsetpct_max_abs_raw:
             return ILLEGAL_VALUE
+        if p.refuse_charge and (mid, name) in ((704, "WSet"), (704, "WSetPct")) \
+                and raw is not None and raw < 0:
+            return ILLEGAL_VALUE
         for r in self.write_rejects:
             if (r["model"], r["point"]) != (mid, name):
                 continue

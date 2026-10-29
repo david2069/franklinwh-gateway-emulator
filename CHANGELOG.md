@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Profiles checked against firmware_quirks.json (2026-10-30)
+- `tests/test_quirks_drift.py`: an `agate-*` profile may assert only what franklinwh-modbus
+  firmware_quirks.json (pinned v0.11.0) records as documented or measured for its firmware.
+  `QUIRK_BASIS` maps each firmware-specific setting to its behaviours; `QUIRK_ASSUMED` lists the
+  V10 sign assumptions, and the test fails once the file measures them.
+- V12 candidate: WSetPct limit raw +100 and charge refusal (negative WSet / WSetPct, exception 3)
+  are now on by default (`m704_wsetpct_accepted_range`, `m704_wset_negative_refused`, measured).
+  New profile field `refuse_charge`.
+- V12 candidate: 15016 = 1 while islanded is now opt-in (`quirks: {islanded_15016: 1}`); the file
+  grades it reported (`ext_15016_status`).
+- The Emergency Backup 16001 = 100 citation is franklinwh-modbus-async #16 G2, not
+  franklinwh-modbus #63.
+
 ### WSet sign; franklinwh-modbus 0.11.0 (2026-10-29)
 - M704 `WSet` (WSetMod = 1) is now positive = discharge in every profile, as measured on
   V12R02B60D00 (franklinwh-modbus firmware_quirks `m704_wset_sign`, #104) and as SunSpec defines.

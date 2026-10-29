@@ -118,12 +118,14 @@ def _refused(addr) -> bool:
         return True
 
 
-@pytest.mark.parametrize("profile,islanded_15016", [
-    ("agate-v12r02b60d00-candidate", 1),   # observed twice, one site, 2026-10-21
-    ("agate-v10r01b04d00", 2),             # no islanded observation: stays static
+@pytest.mark.parametrize("profile,quirks,islanded_15016", [
+    # 15016 = 1 during the 2026-10-21 episodes is "reported" (ext_15016_status): opt-in only.
+    ("agate-v12r02b60d00-candidate", {"islanded_15016": 1}, 1),
+    ("agate-v12r02b60d00-candidate", {}, 2),
+    ("agate-v10r01b04d00", {}, 2),
 ])
-def test_episode_drop_then_return_islanded(clock, profile, islanded_15016):
-    gw = make_gateway(clock, profile=profile, site={"initial_soc": 60})
+def test_episode_drop_then_return_islanded(clock, profile, quirks, islanded_15016):
+    gw = make_gateway(clock, profile=profile, quirks=quirks, site={"initial_soc": 60})
     with gw:
         addr = gw.address
         c = RawClient(*addr)

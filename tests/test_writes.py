@@ -189,28 +189,27 @@ def test_v12_candidate_reserves_follow_mode(clock):
         c.close()
 
 
-def test_wsetpct_limit_is_opt_in(clock):
-    """V12's WSetPct limit is not concluded (one test each, discharge side, 2026-10-21), so no
-    profile applies it; tests opt in with the quirk."""
-    gw = make_gateway(clock, profile="agate-v12r02b60d00-candidate")
+def test_v12_wsetpct_range_and_charge_refusal(clock):
+    """V12R02B60D00 (firmware_quirks m704_wsetpct_accepted_range, m704_wset_negative_refused;
+    measured, one site): WSetPct raw 0..+100 accepted, above +100 and every negative refused
+    with exception 3; negative WSet refused with exception 3."""
+    gw = make_gateway(clock, profile="agate-v12r02b60d00-candidate", site={"initial_soc": 60})
     with gw:
         c = RawClient(*gw.address)
-        assert c.write(WSETPCT, 500) == "ok"
-        c.close()
-    gw = make_gateway(clock, profile="agate-v12r02b60d00-candidate", site={"initial_soc": 60},
-                      quirks={"wsetpct_max_abs_raw": 100})
-    with gw:
-        c = RawClient(*gw.address)
-        for raw in (10, 100, -100):
-            assert c.write(WSETPCT, raw & 0xFFFF) == "ok", raw
-        for raw in (101, 110, 500, -101, -500):
+        for raw in (0, 10, 50, 100):
+            assert c.write(WSETPCT, raw) == "ok", raw
+        for raw in (101, 500, 1000, -10, -100, -500):
             assert c.write(WSETPCT, raw & 0xFFFF) == ("exc", 3), raw
-        assert s16(c.read(WSETPCT, 1)[0]) == -100                  # refused writes not stored
+        assert c.read(WSETPCT, 1) == [100]                        # refused writes not stored
+        assert c.write(WSET, [0xFFFF, 0x10000 - 500]) == ("exc", 3)   # WSet -500 W (charge)
+        assert c.write(WSET, [0, 5000]) == "ok"                       # +5000 W discharge
         c.close()
-    gw = make_gateway(clock)                                       # V10: raw 1000 accepted
+    gw = make_gateway(clock)                                       # V10: no limit, charge allowed
     with gw:
         c = RawClient(*gw.address)
         assert c.write(WSETPCT, 1000) == "ok"
+        assert c.write(WSETPCT, (-100) & 0xFFFF) == "ok"
+        assert c.write(WSET, [0xFFFF, 0x10000 - 500]) == "ok"
         c.close()
 
 
