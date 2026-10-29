@@ -58,10 +58,13 @@ def test_wsetpct_over_100_saturates(client, gateway, clock):
 def test_wset_watts_mode(client, gateway, clock):
     gateway.site.solar_override_w = gateway.site.load_override_w = 0
     client.write(WSETMOD, 1)
-    client.write(WSET, [0, 2000])                      # int32 +2000 = charge
+    client.write(WSET, [0xFFFF, 0x10000 - 2000])       # int32 -2000 = charge (m704_wset_sign)
     client.write(WSETENA, 1)
     clock.advance(1)
     assert s16(client.read(1048, 1)[0]) == -2000
+    client.write(WSET, [0, 1500])                      # +1500 = discharge
+    clock.advance(1)
+    assert s16(client.read(1048, 1)[0]) == 1500
 
 
 def test_reversion_countdown_is_cosmetic(client, gateway, clock):

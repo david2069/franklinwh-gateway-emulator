@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### WSet sign; franklinwh-modbus 0.11.0 (2026-10-29)
+- M704 `WSet` (WSetMod = 1) is now positive = discharge in every profile, as measured on
+  V12R02B60D00 (franklinwh-modbus firmware_quirks `m704_wset_sign`, #104) and as SunSpec defines.
+  It was positive = charge, with no recorded basis. Not measured on V10R01B04D00.
+- Test dependency pinned to franklinwh-modbus v0.11.0, which sends watts through `WSet` with
+  that sign and ships firmware_quirks.json.
+
 ### `span_unlock` removed (2026-10-29, #10)
 - There is no SPAN unlock: writes to 15507–15509 are always acknowledged and not applied, as
   franklinwh-modbus's firmware_quirks.json records (`ext_15507_15509_writes`). Removed from
