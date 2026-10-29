@@ -76,7 +76,6 @@ def gateway_state(gw: "Gateway") -> dict:
         "base_aliases": list(gw.profile.base_aliases),
         "write_rejects": list(gw.device.write_rejects),
         "write_bases": None if gw.profile.write_bases is None else list(gw.profile.write_bases),
-        "span_unlock": gw.config.span_unlock,
         "utility": asdict(site.utility),
         "grid_code": site.grid.name,
         "ac_type": site.config.ac_type,

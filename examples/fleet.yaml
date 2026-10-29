@@ -2,7 +2,7 @@
 #
 # Every key outside `gateways` is optional. Per gateway:
 #   id, seed, serial, host, port (or modbus: {host, port}), directconnect: {port} (needs the
-#   [dc] extra), profile, quirks, span_unlock,
+#   [dc] extra), profile, quirks,
 #   time_scale, and any site setting:
 #     apower_units, ac_type (0 single, 1 split, 2 three), phases ([L1, L2, ...]),
 #     load_split / gen_split ({L1: 2, L2: 1}), grid_code (as4777-au-a, ieee1547-cat2,
@@ -52,10 +52,9 @@ gateways:
     phases: [L1, L2]
     modbus: {port: 5023}
 
-  # Behaves like the bridge's mock gateways today: mode/reserve writes stick.
-  - id: span-unlocked
+  # 15509 holds the TOU reserve instead of repeating 15508.
+  - id: tou-reserve
     seed: 99
-    span_unlock: true
     quirks:
       tou_reserve_mirrors_self: false
     modbus: {port: 5024}

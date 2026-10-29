@@ -200,4 +200,4 @@ def test_addressing_switch_and_write_bases(clock):
         assert c.read(40000, 1) == ("exc", ILLEGAL_ADDRESS)
         c.close()
     with pytest.raises(ValueError):
-        gw.set_addressing(span_unlock=True)
+        gw.set_addressing(bogus=True)

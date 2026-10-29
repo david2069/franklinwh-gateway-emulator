@@ -74,7 +74,7 @@ def test_fleet_isolated_and_distinct():
         "defaults": {"tz_offset_hours": 0},
         "gateways": [
             {"id": "site", "seed": 7, "apower_units": 2, "ac_type": 1},
-            {"id": "shed", "seed": 42, "span_unlock": True},
+            {"id": "shed", "seed": 42},
         ],
     })
     with fleet:
@@ -85,7 +85,7 @@ def test_fleet_isolated_and_distinct():
         assert a.read(72, 1) == [1]                    # 701.ACType split phase
         assert b.read(72, 1) == [0]
         assert a.read(1035, 1) == [27200]              # 713.WHRtg for two aPowers
-        b.write(15507, 1)
+        shed.site.set_native_mode(1)
         assert b.read(15507, 1) == [1] and a.read(15507, 1) == [2]
         a.close(), b.close()
 
