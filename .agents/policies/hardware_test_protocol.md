@@ -54,3 +54,18 @@ anyone else (issue comments, gists, other repos) are tested first, with the resu
 
 Bridge logins come from the owner for the session. Never store them in files, commits, memory
 or logs.
+
+## Rule 9: ask before exclusive access
+
+Owner, 2026-10-30: each repo session tells the others when it needs exclusive access to the aGate
+for testing. Before any live test or capture, ask every FranklinWH repo session:
+
+1. its **current state**: connected, polling or writing now (Modbus TCP Server (aGate :502), Direct
+   Connect or the cloud);
+2. any **scheduled testing**, with its date and window;
+3. any active **scheduler jobs** (cron, loops, wakeups, pollers, bridge schedules) and their
+   operating windows.
+
+Don't start while anything overlaps. Silence is no answer, not agreement. Answer the same three
+questions when another session asks. This adds to Rules 1 and 3; it never replaces the owner's
+go-ahead.
