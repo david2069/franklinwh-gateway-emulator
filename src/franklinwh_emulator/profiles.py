@@ -56,6 +56,7 @@ class Profile:
     islanded_15016: int | None = None        # 15016 while islanded; None = stays static
     reserve_16001: str = "self"              # "self" reserve | the "active" mode's reserve
     wsetpct_max_abs_raw: int | None = None   # 704.WSetPct writes beyond ±this raw: exception 3
+    refuse_charge: bool = False              # negative 704.WSet / WSetPct writes: exception 3
 
     # -- Direct Connect ----------------------------------------------------------
     dc_pload_dup_bug: bool = True            # 1304 p_load repeats p_fhp (DEF-1303-PLOAD-DUP)
@@ -63,24 +64,20 @@ class Profile:
 
 PROFILES: dict[str, Profile] = {
     "agate-v10r01b04d00": Profile(name="agate-v10r01b04d00"),
-    # Candidate: one site, read-only, 2026-10-21. 15016 read 1 while islanded and 2 on-grid
-    # in both off-grid episodes (Modbus bridge register watch). Not the default.
+    # Candidate: one site. Every firmware-specific setting below is measured for V12R02B60D00
+    # in franklinwh-modbus firmware_quirks.json (see QUIRK_BASIS). Not the default.
+    # 15016 = 1 during the 2026-10-21 episodes is only "reported" (ext_15016_status), so it
+    # is opt-in: quirks={"islanded_15016": 1}.
     "agate-v12r02b60d00-candidate": Profile(
         name="agate-v12r02b60d00-candidate",
         firmware="V12R02B60D00",
-        islanded_15016=1,
-        # The SunSpec map is mirrored at 40000 (read-only re-scan 2026-10-20, one site;
-        # franklinwh-modbus docs/SUNSPEC_SNAPSHOT_2026-10-20_V12R02B60D00.md). Writes there
-        # are unverified on hardware, so both bases accept them here.
-        base_aliases=(40000,),
-        # Read with the app in each mode, 2026-10-21, one site (franklinwh-modbus #63):
-        # 15509 holds the TOU reserve (not a copy of 15508), and 16001 the active mode's
-        # reserve (100 Emergency Backup, 8 Self-Consumption, 15 TOU).
-        tou_reserve_mirrors_self=False,
+        base_aliases=(40000,),           # sunspec_map_at_pdu_40000; both bases accept writes
+        tou_reserve_mirrors_self=False,  # ext_15509_tou_reserve: 15509 holds the TOU reserve
+        # ext_16001_reserve: the active mode's reserve, 100 in Emergency Backup
+        # (franklinwh-modbus#63; EB read in franklinwh-modbus-async#16 G2).
         reserve_16001="active",
-        # No WSetPct limit: V12's is not concluded (franklinwh-modbus test plan pending). Each
-        # value measured once, 2026-10-21, discharge side: raw 100 latched, 110/200 didn't,
-        # 500 refused with exception 3. Opt in with quirks={"wsetpct_max_abs_raw": 100}.
+        wsetpct_max_abs_raw=100,         # m704_wsetpct_accepted_range: raw 0..+100 accepted
+        refuse_charge=True,              # m704_wset_negative_refused, m704_wsetpct_accepted_range
     ),
     "spec": Profile(
         name="spec",
@@ -105,6 +102,29 @@ PROFILES: dict[str, Profile] = {
     ),
 }
 DEFAULT_PROFILE = "agate-v10r01b04d00"
+
+# Profile fields that assert firmware behaviour: the value at which a field asserts nothing
+# (ALWAYS = every value asserts something) and the franklinwh-modbus firmware_quirks.json
+# behaviours that must back it. tests/test_quirks_drift.py checks every agate-* profile.
+ALWAYS = object()
+QUIRK_BASIS: dict[str, tuple[object, tuple[str, ...]]] = {
+    "base_aliases": ((), ("sunspec_map_at_pdu_40000",)),
+    "wsetpct_positive_discharge": (ALWAYS, ("m704_wsetpct_sign",)),
+    "wset_positive_charge": (ALWAYS, ("m704_wset_sign",)),
+    "tou_reserve_mirrors_self": (ALWAYS, ("ext_15509_tou_reserve",)),
+    "reserve_16001": (ALWAYS, ("ext_16001_reserve",)),
+    "islanded_15016": (None, ("ext_15016_status",)),
+    "wsetpct_max_abs_raw": (None, ("m704_wsetpct_accepted_range",)),
+    "refuse_charge": (False, ("m704_wset_negative_refused", "m704_wsetpct_accepted_range")),
+}
+
+# Settings a profile asserts without a measurement in the file, and why.
+QUIRK_ASSUMED: dict[tuple[str, str], str] = {
+    ("agate-v10r01b04d00", "wset_positive_charge"):
+        "no V10 measurement; SunSpec's sign, as measured on V12",
+    ("agate-v10r01b04d00", "wsetpct_positive_discharge"):
+        "franklinwh-modbus FRANKLINWH_SUNSPEC_QUIRKS.md (V10 era); not in firmware_quirks.json",
+}
 
 
 def get_profile(name: str = DEFAULT_PROFILE, **overrides) -> Profile:

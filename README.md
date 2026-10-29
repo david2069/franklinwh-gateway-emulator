@@ -70,6 +70,8 @@ real verification").
 | 16000–16499 | 16000 high-resolution home load, 16001 self reserve, 16002 = 20 (1406 `BBBackupSoc`, candidate; franklinwh-modbus#18). |
 | anything else | ILLEGAL DATA ADDRESS (as the real aGate does at 40000+ on V10R01B04D00). `base_aliases: [40000]` also serves the chain there, as V12R02B60D00 does (profile `agate-v12r02b60d00-candidate`; measured 2026-10-20, one site). `write_bases: [0]` makes the other bases refuse SunSpec writes (exception 2); whether V12 accepts writes at 40000 is unverified. Both switch at run time: `ctl <gw> addressing alias=40000 write=0` or `gw.set_addressing(...)`. |
 
+**Profiles follow franklinwh-modbus firmware_quirks.json**: `tests/test_quirks_drift.py` fails if an `agate-*` profile asserts a behaviour that the file doesn't record as documented or measured for its firmware (`QUIRK_BASIS` in `profiles.py`); "reported" behaviour is opt-in, and the few unmeasured assumptions are listed in `QUIRK_ASSUMED` with reasons.
+
 Static values come from `baselines/agate_v10r01b04d00.json`, which `tools/gen_baseline.py`
 generates from `AGATE_FULL_SCAN_2026-05-14.txt`.
 
@@ -109,9 +111,10 @@ address range, e.g. the extension block while SunSpec keeps answering:
 `gw.faults.fail_range(15500, 15509, "silent", for_s=30)` or `ctl <gw> range-fault 15500 15509 silent for=30`.
 **Write rejection**: `gw.device.reject_writes(704, "WSetPct", abs_gt=100, code=3)` or
 `ctl <gw> write-reject 704.WSetPct abs_gt=100` refuses matching SunSpec writes (no limit = every
-write; `gt`/`lt` for one side; `write-reject clear`). The quirk `wsetpct_max_abs_raw: 100` refuses
-`|WSetPct raw| > 100` with exception 3. No profile sets it: V12R02B60D00's limit is not concluded
-(each value tested once on one site, 2026-10-21, discharge side: 100 latched, 500 refused).
+write; `gt`/`lt` for one side; `write-reject clear`). Profile
+`agate-v12r02b60d00-candidate` refuses WSetPct beyond raw +100 and every negative WSetPct or WSet
+(charge) with exception 3 (`wsetpct_max_abs_raw: 100`, `refuse_charge: true`), as franklinwh-modbus
+firmware_quirks.json measures for V12R02B60D00 (one site).
 Range-fault modes: `exception` (`code=N`, default 4), `silent` (no reply), `short` (a well-formed reply with half
 the registers asked for); `range-fault clear` ends it.
 
@@ -126,7 +129,7 @@ The site has a utility you can break, plus the aGate's protection around it:
 | Brown-out / swell | `ctl <gw> voltage 195 [L3]` or `0.85pu` | `701.LNV`/`V<leg>` sag. Each trip stage of the grid code fires after its own delay, with `AC_UNDER/OVER_VOLT` raised while the condition lasts. Shorter excursions ride through. |
 | Frequency excursion | `ctl <gw> hz 51.3` | Frequency-watt: over-frequency curtails generation and moves storage towards charging, and under-frequency does the reverse (`ThrotPct`, `InvSt` THROTTLED). It trips per the grid code's frequency stages. |
 | Restore | `ctl <gw> restore` | The relay recloses only after the grid has spent the code's enter-service delay inside its window. |
-| Drop and return islanded | `ctl <gw> episode 60 120` / `gw.episode(down_s, offgrid_s)` | Utility fails; Modbus and Direct Connect go away for `down_s` (open Modbus sessions get a TCP RST, connects are refused), then come back on the same ports with the site islanded (`ConnSt` 0, `GRID_DISCONNECT`). The utility returns `offgrid_s` later and the relay recloses after the enter-service delay. `episode_phase` in the status shows `down` / `offgrid`. 15016 reads 1 while islanded on profile `agate-v12r02b60d00-candidate` (observed twice, one site, 2026-10-21) and stays 2 on the others. |
+| Drop and return islanded | `ctl <gw> episode 60 120` / `gw.episode(down_s, offgrid_s)` | Utility fails; Modbus and Direct Connect go away for `down_s` (open Modbus sessions get a TCP RST, connects are refused), then come back on the same ports with the site islanded (`ConnSt` 0, `GRID_DISCONNECT`). The utility returns `offgrid_s` later and the relay recloses after the enter-service delay. `episode_phase` in the status shows `down` / `offgrid`. 15016 stays 2 unless you opt in with `quirks: {islanded_15016: 1}`: 1 was seen during the two 2026-10-21 episodes on one V12R02B60D00 site, which firmware_quirks.json grades "reported" (`ext_15016_status`). |
 | Requested off-grid | `ctl <gw> offgrid on` | Islands without `GRID_DISCONNECT`, like Direct Connect `1723 offgridSet`. |
 | PV relays | `ctl <gw> pv remote1 off` | That input drops to 0 W (15503 proximal, 15504/15505 remote). Split solar across inputs with `pv_inputs: {proximal: 0.6, remote1: 0.4}`. |
 | Alarms | `ctl <gw> alarm OVER_TEMP [--persistent]` | Sets the `701.Alrm` bit. GROUND_FAULT, DC_OVER_VOLT, MANUAL_SHUTDOWN, OVER_TEMP and HW_TEST_FAILURE fault the inverter (battery 0 W; dark if islanded). Latched alarms clear on a `715.AlarmReset` write (`controller.clear_alarms()`). Persistent ones need `clear-alarm`. Raw DC-port bits are set with `dc_bits` (`714.PrtAlrms`). |
@@ -285,7 +288,7 @@ battery discharging.
 |---|---|---|---|
 | 714.DCW sign | QUIRKS.md: positive = charging | positive = **discharging** | `controller.py` and the scan (DCW +500 W at night with 500 W load, no PV) |
 | 15507 values | older QUIRKS.md: 0 Emergency, 1 TOU, 2 Self, 3 Manual | **1 Backup, 2 Self, 3 TOU** only | each read with the app in that mode, V12R02B60D00, 2026-10-21, one site (franklinwh-modbus#75, #88); 0 and 4 were unsourced and removed |
-| 16001/16002 | manifest: 16002 = TmpAmb | 16001 self reserve (on `agate-v12r02b60d00-candidate`: the active mode's reserve, 100 in Emergency Backup, as read 2026-10-21, one site, franklinwh-modbus #63); 16002 = 20 (`BBBackupSoc`) | 2026-10-07 scan: 16002 = 20 with TmpAmb 17.5 °C and TOU reserve 15 % |
+| 16001/16002 | manifest: 16002 = TmpAmb | 16001 self reserve (on `agate-v12r02b60d00-candidate`: the active mode's reserve, 100 in Emergency Backup; firmware_quirks `ext_16001_reserve`, one site: franklinwh-modbus #63 for SC/TOU, franklinwh-modbus-async #16 G2 for EB); 16002 = 20 (`BBBackupSoc`) | 2026-10-07 scan: 16002 = 20 with TmpAmb 17.5 °C and TOU reserve 15 % |
 | FC 4 | unknown | same data as FC 3 | — |
 | 714 per-aPower ports | unknown | one aggregate port (`NPrt = 1`) | only single-aPower scans exist |
 | 713.WHRtg with 2+ aPowers | unknown | scales (13600 × units) | M702 rates are known *not* to scale |
