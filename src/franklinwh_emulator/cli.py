@@ -1,7 +1,7 @@
 """``franklinwh-emulator`` command line.
 
     franklinwh-emulator serve --port 5020 --seed 7
-    franklinwh-emulator serve --profile spec --span-unlock --time-scale 60
+    franklinwh-emulator serve --profile spec --time-scale 60
     franklinwh-emulator fleet fleet.yaml
     franklinwh-emulator scenario list
     franklinwh-emulator scenario run outage-during-vpp --out results/
@@ -60,7 +60,7 @@ async def _run(gateways: list[Gateway], control_port: int | None) -> None:
         p = gw.profile
         print(f"{gw.config.id}: Modbus TCP on {host}:{port}  serial={gw.serial}  "
               f"profile={p.name}  grid={gw.site.grid.name}  legs={','.join(gw.site.phases)}  "
-              f"span_unlock={gw.config.span_unlock}  max_connections={p.max_connections}",
+              f"max_connections={p.max_connections}",
               flush=True)
         if gw.dc is not None:
             dh, dp = gw.dc_address
@@ -396,8 +396,6 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--seed", type=int, default=0)
     s.add_argument("--serial")
     s.add_argument("--profile", default=DEFAULT_PROFILE, choices=sorted(PROFILES))
-    s.add_argument("--span-unlock", action="store_true",
-                   help="extension writes (mode, reserves) take effect")
     s.add_argument("--apower-units", type=int, default=1)
     s.add_argument("--ac-type", type=int, default=0, choices=(0, 1, 2),
                    help="0 single, 1 split (US), 2 three phase")
@@ -476,7 +474,7 @@ def main(argv: list[str] | None = None) -> int:
             quirks["base_aliases"] = (40000,)
         cfg = GatewayConfig(
             id=args.id, seed=args.seed, serial=args.serial, host=args.host, port=args.port,
-            profile=args.profile, quirks=quirks, span_unlock=args.span_unlock,
+            profile=args.profile, quirks=quirks,
             time_scale=args.time_scale, dc_port=args.dc_port,
             site=SiteConfig(seed=args.seed, apower_units=args.apower_units,
                             ac_type=args.ac_type, initial_soc=args.soc,

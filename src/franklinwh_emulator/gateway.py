@@ -72,7 +72,6 @@ class GatewayConfig:
     port: int = 0                       # 0 → ephemeral
     profile: str = DEFAULT_PROFILE
     quirks: dict[str, Any] = field(default_factory=dict)   # profile overrides
-    span_unlock: bool = False           # extension 15507–15509 writes take effect
     time_scale: float = 1.0             # >1 fast-forwards the site clock
     # Direct Connect (TCP/9000) frontend on the same site; None = off, 0 = ephemeral.
     dc_port: int | None = None
@@ -119,8 +118,7 @@ class Gateway:
             clock = ScaledClock(cfg.time_scale) if cfg.time_scale != 1.0 else SystemClock()
         self.site = Site(cfg.site, clock)
         self.site.serial = self.serial
-        self.device = AGateDevice(self.site, self.profile, serial=self.serial,
-                                  span_unlock=cfg.span_unlock)
+        self.device = AGateDevice(self.site, self.profile, serial=self.serial)
         self.faults = Faults()
         self.server = ModbusServer(self.device, cfg.host, cfg.port, self.faults)
         self.dc_faults = Faults()

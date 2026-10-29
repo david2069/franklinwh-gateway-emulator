@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### `span_unlock` removed (2026-10-29, #10)
+- There is no SPAN unlock: writes to 15507–15509 are always acknowledged and not applied, as
+  franklinwh-modbus's firmware_quirks.json records (`ext_15507_15509_writes`). Removed from
+  `GatewayConfig`, `AGateDevice`, `serve --span-unlock`, the control-API state, the example
+  fleet and the docs. A config that still passes it fails at load. Set mode and reserves from
+  the test side (`Site.set_native_mode`, `set_reserves`, site config, control API).
+
 - History squashed for publication (2026-10-13). Earlier commit hashes cited in issues and results refer to the maintainer's private archive.
 
 ### WSetPct limit opt-in (2026-10-21)
@@ -33,7 +40,7 @@
 ### 15507: modes 1–3 only (2026-10-21)
 - Removed mode 4 (Manual), following franklinwh-modbus #88 (#75): 15507 has only read 1, 2 and 3.
   Mode 4 is refused by the control API, site config and Direct Connect; an extension write of 0
-  or 4 is acknowledged and not applied, even with `span_unlock`.
+  or 4 is acknowledged and not applied.
 
 ### Drop-and-return-islanded episode (2026-10-21)
 - `episode {down_s, offgrid_s}` (control API, `ctl`, `Gateway.episode`): listeners down with RST,

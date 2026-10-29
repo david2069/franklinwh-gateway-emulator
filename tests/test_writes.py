@@ -102,31 +102,35 @@ def test_locremctl_stays_local_during_vpp(client):
     assert client.read(LOCREMCTL, 1) == [1]
 
 
-def test_extension_writes_discarded_without_span_unlock(client):
-    assert client.write(15507, 3) == "ok"
-    assert client.read(15507, 1) == [2]
-    assert client.write(15508, 40) == "ok"
-    assert client.read(15508, 1) == [20]
-
-
-def test_span_unlock_applies_mode_and_reserves(clock):
-    gw = make_gateway(clock, span_unlock=True, quirks={"tou_reserve_mirrors_self": False})
+def test_extension_writes_never_applied(clock):
+    """15507–15509 writes are acknowledged and not applied (franklinwh-modbus firmware_quirks
+    ext_15507_15509_writes); there is no option that makes them take effect (#10)."""
+    gw = make_gateway(clock, quirks={"tou_reserve_mirrors_self": False})
     with gw:
         c = RawClient(*gw.address)
-        c.write(15507, 3)
-        c.write(15509, 40)
-        assert c.read(15507, 3) == [3, 20, 40]
-        assert gw.site.native_mode == 3 and gw.site.tou_reserve == 40
+        assert c.write(15507, 3) == "ok"
+        assert c.write(15508, 40) == "ok"
+        assert c.write(15509, 50) == "ok"
+        assert c.read(15507, 3) == [2, 20, 20]
+        assert (gw.site.native_mode, gw.site.self_reserve, gw.site.tou_reserve) == (2, 20, 20)
+        assert [o for a, _, o in gw.device.write_log if a in (15507, 15508, 15509)] == ["discarded"] * 3
         c.close()
 
 
-def test_span_unlock_tou_reserve_mirror_quirk(clock):
-    gw = make_gateway(clock, span_unlock=True)
+def test_span_unlock_option_is_gone(clock):
+    import pytest
+    from franklinwh_emulator.gateway import GatewayConfig
+    with pytest.raises(TypeError):
+        GatewayConfig.from_dict({"id": "x", "span_unlock": True})
+    with pytest.raises(TypeError):
+        make_gateway(clock, span_unlock=True)
+
+
+def test_tou_reserve_mirror_quirk_on_reads(clock):
+    gw = make_gateway(clock, site={"self_reserve": 20, "tou_reserve": 40})
     with gw:
         c = RawClient(*gw.address)
-        c.write(15509, 40)
-        assert gw.site.tou_reserve == 40
-        assert c.read(15509, 1) == [20]                # still reads 15508
+        assert c.read(15509, 1) == [20]                # mirrors 15508
         c.close()
 
 
@@ -149,7 +153,7 @@ def test_15507_only_modes_read_on_hardware(clock):
     import pytest
     from franklinwh_emulator.site import MODE_NAMES
     assert sorted(MODE_NAMES) == [1, 2, 3]
-    gw = make_gateway(clock, span_unlock=True)
+    gw = make_gateway(clock)
     with gw:
         c = RawClient(*gw.address)
         for bad in (0, 4):

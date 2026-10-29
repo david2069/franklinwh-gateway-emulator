@@ -70,15 +70,12 @@ def test_send_command_and_reset(controller, gateway, clock):
     assert gateway.site.step().battery_w == 0
 
 
-def test_native_mode_with_span_unlock(clock):
-    gw = make_gateway(clock, span_unlock=True, quirks={"tou_reserve_mirrors_self": False})
+def test_native_mode_writes_not_applied(clock):
+    gw = make_gateway(clock, quirks={"tou_reserve_mirrors_self": False})
     with gw:
         c = FranklinWHController(*gw.address, unit_id=2, timeout=3)
         assert c.connect()
-        c.test_extension_writability()
-        assert c.get_extension_write_status()["ongrid_mode"]["writable"]
-        ok, _ = c.set_native_mode(3)
-        assert ok and gw.site.native_mode == 3
-        ok, _ = c.set_tou_reserve(40)
-        assert ok and gw.site.tou_reserve == 40
+        c.set_native_mode(3)
+        c.set_tou_reserve(40)
+        assert gw.site.native_mode == 2 and gw.site.tou_reserve != 40
         c.disconnect()

@@ -19,8 +19,7 @@ from franklinwh_emulator import Gateway, GatewayConfig, SiteConfig
 
 gw = Gateway(GatewayConfig(
     id=gw_id, seed=n,
-    span_unlock=True,                                   # mode/reserve writes take effect
-    quirks={"tou_reserve_mirrors_self": False},          # TOU reserve round-trips
+    quirks={"tou_reserve_mirrors_self": False},          # 15509 holds the TOU reserve
     site=SiteConfig(ac_type=ac_type, apower_units=units)))
 host, port = gw.start()          # register 127.0.0.1:<port> as the gateway host
 ...
@@ -33,9 +32,10 @@ Files on the bridge side (theirs): `gateway/mock_gateway.py`, `gateway/instance.
 
 ## Acceptance checks (behaviour the bridge's mock has today, which must be kept)
 
-1. HA select/number controls round-trip: mode (TOU), TOU reserve (40) and self reserve.
-   This needs `span_unlock=True` and `tou_reserve_mirrors_self=False`. Without them the faithful
-   profile acknowledges and discards these writes, as real firmware does.
+1. HA select/number controls for mode and reserves: the emulator acknowledges and discards the
+   15507–15509 writes, as the aGate does (franklinwh-modbus firmware_quirks
+   `ext_15507_15509_writes`), so the bridge must show the setting as not applied. To test a
+   mode or reserve change, set it from the test side (`gw.site.set_native_mode`, `set_reserves`).
 2. Force Charge reaches −5 kW at max power (WSetPct −1000 → `714.DCW` −5000 → bridge
    `battery_power_w` −5000).
 3. Force Release results in no dispatch: WSetEna 0, and the battery returns to native behaviour.

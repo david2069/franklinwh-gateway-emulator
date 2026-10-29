@@ -9,8 +9,8 @@ Three regions are served (PDU addresses):
 
 Anything else raises ILLEGAL DATA ADDRESS, as 40000+ does on a real aGate. Writes
 are decoded to SunSpec points and given the profile's semantics: some drive the
-site (M704 VPP control, SPAN-unlocked mode/reserves), some are accepted and
-silently discarded, the rest are stored as written.
+site (M704 VPP control), some are accepted and silently discarded (including 15507–15509,
+as on the aGate), the rest are stored as written.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ import threading
 from dataclasses import dataclass
 
 from .profiles import Profile
-from .site import MODE_BACKUP, MODE_NAMES, MODE_TOU, Site, Snapshot
+from .site import MODE_BACKUP, MODE_TOU, Site, Snapshot
 from .sunspec import SunSpecImage, _walk, load_baseline
 
 AU_A_CODES = ("as4777-au-a", "ausgrid")
@@ -61,12 +61,10 @@ class WriteResult:
 
 
 class AGateDevice:
-    def __init__(self, site: Site, profile: Profile, *, serial: str,
-                 span_unlock: bool = False):
+    def __init__(self, site: Site, profile: Profile, *, serial: str):
         self.site = site
         self.profile = profile
         self.serial = serial
-        self.span_unlock = span_unlock
         self.image = SunSpecImage(load_baseline(profile.baseline))
         self.ext = [0] * (EXT_END - EXT_START)
         self.hires = [0] * (HIRES_END - HIRES_START)
@@ -294,19 +292,9 @@ class AGateDevice:
             return ILLEGAL_ADDRESS
 
     def _write_ext(self, address: int, value: int) -> None:
-        site = self.site
-        outcome = "discarded"
-        if self.span_unlock and address in (15507, 15508, 15509):
-            if address == 15507 and value in MODE_NAMES:
-                site.set_native_mode(value)
-                outcome = "applied"
-            elif address == 15508 and 0 <= value <= 100:
-                site.set_reserves(self_reserve=value)
-                outcome = "applied"
-            elif address == 15509 and 0 <= value <= 100:
-                site.set_reserves(tou_reserve=value)
-                outcome = "applied"
-        self.write_log.append((address, [value], outcome))
+        # Acknowledged and never applied, 15507–15509 included (franklinwh-modbus
+        # firmware_quirks ext_15507_15509_writes). Mode and reserves change from the test side.
+        self.write_log.append((address, [value], "discarded"))
 
     REJECT_KEYS = {"model", "point", "abs_gt", "gt", "lt", "code"}
 

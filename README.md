@@ -35,7 +35,7 @@ In-process (the same pattern franklinwh-local-bridge uses for its Direct Connect
 ```python
 from franklinwh_emulator import Gateway, GatewayConfig, Fleet
 
-gw = Gateway(GatewayConfig(id="site", seed=7, span_unlock=True))
+gw = Gateway(GatewayConfig(id="site", seed=7))
 host, port = gw.start()                 # background thread, ephemeral port
 gw.site.load_override_w = 4000          # steer the scenario
 gw.faults.session_held = True           # inject faults
@@ -90,8 +90,9 @@ stops at the active mode's reserve, under VPP control too. The clock can be real
 - `WSetRvrtTms` counts down in `WSetRvrtRem`, but expiry does **not** release control (PICS Issue 4).
 - Accepted but discarded: `715.ControllerHb`, `715.LocRemCtl` (always 1 = Local, even during
   VPP), M702 rate settings (stay 0xFFFF), `WMaxLimPctEna`, `VarSetEna`, and extension writes.
-- Extension 15507–15509 writes take effect only with `span_unlock: true`. 15509 still
-  **mirrors 15508** unless `tou_reserve_mirrors_self: false`.
+- Extension 15507–15509 writes are acknowledged and never applied. Change mode and reserves from
+  the test side (`gw.site.set_native_mode`, `set_reserves`, site config or the control API).
+  15509 **mirrors 15508** unless `tou_reserve_mirrors_self: false`.
 - `713.Sta` is always 0, `714.DCA` is always 0, `702.WMaxRtg` is 0, and 502.OutPw / 15506 are
   quantised to 100 W.
 

@@ -150,8 +150,8 @@ Details are in [DIRECT_CONNECT.md](DIRECT_CONNECT.md).
   the same instant. The `franklinwh-local` CLI was also run live against the emulator.
 - The **unmodified `FranklinWHController`** connects, scans all 17 models, reads the nameplate,
   battery, grid, solar and native mode, concludes its extension-write probe is "read-only",
-  sends `+3000 W` (WSetPct −600 on the wire, battery −3000 W) and resets. With `span_unlock` it
-  sets mode and TOU reserve.
+  sends `+3000 W` (WSetPct −600 on the wire, battery −3000 W) and resets. Its mode and reserve
+  writes are acknowledged and not applied.
 - Live CLI runs: fleet of 6 layouts; outage, alarm and reset via `ctl`; Ausgrid export clipping
   and breach tracking; CSIP registration and a 1.5 kW event curtailing a Modbus VPP dispatch;
   `modbus off` closing the port.
