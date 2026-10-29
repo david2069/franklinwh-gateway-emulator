@@ -23,7 +23,7 @@ dev = [
     "franklinwh-direct-connect-api>=0.3.0",
     "pytest>=7.0",
     "pymodbus>=3.6",
-    "franklinwh-modbus @ git+https://github.com/david2069/franklinwh-modbus.git@8af83011755a538fb5c0020817d19569c8e48278",  # develop after #23/#25: connect() never writes
+    "franklinwh-modbus @ git+https://github.com/david2069/franklinwh-modbus.git@38a80f8b3f24e573f5ee3c5c0bca3e0526d4566b",  # v0.11.0: ships firmware_quirks.json
 ]
 
 [project.scripts]

@@ -86,7 +86,8 @@ stops at the active mode's reserve, under VPP control too. The clock can be real
 - One Modbus client at a time. An extra client is closed, or with `busy_behaviour: hang` it is
   left open and never answered.
 - M704 `WSetPct`: hardware sign, **positive = discharge**, as a percentage of the 5 kW rating
-  (`WSetPct_SF = -1`), saturating beyond ±100 %. `WSet` (WSetMod = 1): positive = charge.
+  (`WSetPct_SF = -1`), saturating beyond ±100 %. `WSet` (WSetMod = 1): positive = discharge too
+  (measured on V12R02B60D00, franklinwh-modbus `m704_wset_sign`; assumed on V10R01B04D00).
 - `WSetRvrtTms` counts down in `WSetRvrtRem`, but expiry does **not** release control (PICS Issue 4).
 - Accepted but discarded: `715.ControllerHb`, `715.LocRemCtl` (always 1 = Local, even during
   VPP), M702 rate settings (stay 0xFFFF), `WMaxLimPctEna`, `VarSetEna`, and extension writes.

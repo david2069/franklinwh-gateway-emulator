@@ -28,7 +28,9 @@ class Profile:
 
     # -- M704 sign conventions -------------------------------------------------
     wsetpct_positive_discharge: bool = True  # hardware: +WSetPct = discharge
-    wset_positive_charge: bool = True        # hardware: +WSet = charge
+    # +WSet = discharge: measured on V12R02B60D00 (franklinwh-modbus firmware_quirks
+    # m704_wset_sign) and SunSpec's sign. Not measured on V10R01B04D00; the same is assumed.
+    wset_positive_charge: bool = False
 
     # -- writes accepted at the protocol level but silently discarded ---------
     discard_controller_hb: bool = True       # 715.ControllerHb reads back 0
@@ -83,7 +85,6 @@ PROFILES: dict[str, Profile] = {
     "spec": Profile(
         name="spec",
         max_connections=None,
-        wset_positive_charge=False,
         discard_controller_hb=False,
         discard_m702_settings=False,
         discard_wmaxlimpct_ena=False,
