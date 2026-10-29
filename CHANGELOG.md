@@ -40,7 +40,7 @@
 ### 15507: modes 1–3 only (2026-10-21)
 - Removed mode 4 (Manual), following franklinwh-modbus #88 (#75): 15507 has only read 1, 2 and 3.
   Mode 4 is refused by the control API, site config and Direct Connect; an extension write of 0
-  or 4 is acknowledged and not applied.
+  or 4 is acknowledged and not applied, even with `span_unlock`.
 
 ### Drop-and-return-islanded episode (2026-10-21)
 - `episode {down_s, offgrid_s}` (control API, `ctl`, `Gateway.episode`): listeners down with RST,
