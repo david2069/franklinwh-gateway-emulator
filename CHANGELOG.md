@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Breaking: Direct Connect always on, Modbus TCP off on a factory aGate (2026-10-30, #40)
+- As on a real aGate (owner, 2026-10-30): every aGate profile runs a Direct Connect listener (a
+  free port unless `directconnect: {port: N}` is given), and Modbus TCP starts **off** until a
+  Direct Connect `1205` `sunsMdEn` write enables it (about 3 s later).
+- New `setup`: `factory` (default; as above) or `in-service` (already set up: Modbus TCP on).
+  `modbus_enabled: true|false` overrides either. `serve --setup`. The non-aGate `spec` profile is
+  unchanged (Modbus TCP on, Direct Connect only when a port is given).
+- `franklinwh-direct-connect-api` is now a standard dependency (was the `[dc]` extra).
+- **Migrating:** code and fleets that expect Modbus TCP from the start add
+  `setup: in-service` (the example fleet now sets it under `defaults`).
+- Example fleet: Direct Connect ports 9020–9026 for every aGate, a factory aGate `fresh`
+  (Modbus 5026), and `loads: sydney-family` on `site` so smart circuits and appliances work.
+- The UI card says "Modbus TCP off"; start-up output says how to enable it.
+
 ### Web UI: forced values are marked (2026-10-30, #38)
 - Solar, load or ambient set through the pv / load / ambient actions replaces the model at any
   hour (solar at night included). Cards now get an amber "solar forced 6.00 kW" tag, the

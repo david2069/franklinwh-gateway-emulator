@@ -29,7 +29,7 @@ def test_single_gateway_example():
 
 def test_fleet_with_control_example():
     out = _load("fleet_with_control").main()
-    assert "site" in out["gateways"] and len(out["gateways"]) == 6
+    assert "site" in out["gateways"] and len(out["gateways"]) == 7       # incl. the factory `fresh`
     assert out["before"] is True and out["after"] is False
 
 

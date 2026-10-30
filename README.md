@@ -1,10 +1,15 @@
 # franklinwh-gateway-emulator
 
-An emulator of the FranklinWH **aGate** for testing without hardware. It serves **Modbus TCP**
-(SunSpec chain plus FranklinWH extension registers) and, optionally, the **Direct Connect**
-local protocol (TCP/9000), both in front of one **closed-loop site model**, so control
-commands actually move the battery and both ports always agree. It can run one gateway or a
-**fleet** of them.
+An emulator of the FranklinWH **aGate** for testing without hardware. It serves the **Direct
+Connect** local protocol (TCP/9000) and **Modbus TCP** (SunSpec chain plus FranklinWH
+extension registers), both in front of one **closed-loop site model**, so control commands
+actually move the battery and both ports always agree. It can run one gateway or a **fleet** of
+them.
+
+**As on a real aGate, Modbus TCP starts off.** Every aGate runs a Direct Connect listener; Modbus
+TCP comes on when a Direct Connect `1205` `sunsMdEn` write enables it (about 3 s later). That is
+`setup: factory`, the default. A gateway that is already set up is `setup: in-service`: Modbus TCP
+on from the start. `modbus_enabled: true|false` overrides either.
 
 Built for [franklinwh-modbus](https://github.com/david2069/franklinwh-modbus) and
 [franklinwh-modbus-bridge](https://github.com/david2069/franklinwh-modbus-bridge). The
@@ -23,8 +28,8 @@ libraries](docs/FINDINGS.md) · [Bridge integration plan](docs/BRIDGE_INTEGRATIO
 
 ```bash
 python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev]"
-.venv/bin/franklinwh-emulator serve --port 5020 --seed 7
-.venv/bin/franklinwh-emulator serve --port 5020 --dc-port 9000 --grid-code ausgrid   # + Direct Connect
+.venv/bin/franklinwh-emulator serve --port 5020 --dc-port 9000 --seed 7   # factory: Modbus off until 1205
+.venv/bin/franklinwh-emulator serve --port 5020 --dc-port 9000 --setup in-service --grid-code ausgrid
 .venv/bin/franklinwh-emulator fleet examples/fleet.yaml
 .venv/bin/franklinwh-emulator scenario run outage-during-vpp --out results/   # timed + checked
 .venv/bin/python -m pytest
@@ -35,8 +40,8 @@ In-process (the same pattern franklinwh-local-bridge uses for its Direct Connect
 ```python
 from franklinwh_emulator import Gateway, GatewayConfig, Fleet
 
-gw = Gateway(GatewayConfig(id="site", seed=7))
-host, port = gw.start()                 # background thread, ephemeral port
+gw = Gateway(GatewayConfig(id="site", seed=7, setup="in-service"))   # Modbus TCP on
+host, port = gw.start()                 # background thread, ephemeral ports
 gw.site.load_override_w = 4000          # steer the scenario
 gw.faults.session_held = True           # inject faults
 gw.stop()

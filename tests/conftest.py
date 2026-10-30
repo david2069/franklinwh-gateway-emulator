@@ -18,6 +18,7 @@ def clock():
 def make_gateway(clock=None, **kw) -> Gateway:
     site_kw = kw.pop("site", {})
     site_kw.setdefault("tz_offset_hours", 0)
+    kw.setdefault("setup", "in-service")      # Modbus on from the start, unless a test says otherwise
     cfg = GatewayConfig(**kw)
     cfg.site = SiteConfig(seed=cfg.seed, **site_kw)
     return Gateway(cfg, clock=clock)

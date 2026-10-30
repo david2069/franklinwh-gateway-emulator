@@ -1,8 +1,9 @@
 # franklinwh-emulator fleet ./examples/fleet.yaml
 #
 # Every key outside `gateways` is optional. Per gateway:
-#   id, seed, serial, host, port (or modbus: {host, port}), directconnect: {port} (needs the
-#   [dc] extra), profile, quirks,
+#   id, seed, serial, host, port (or modbus: {host, port}), directconnect: {port} (every aGate
+#   runs one; a free port if not given), setup (factory: Modbus TCP off until a Direct Connect
+#   1205 write enables it; in-service: Modbus TCP on), modbus_enabled, profile, quirks,
 #   time_scale, and any site setting:
 #     apower_units, ac_type (0 single, 1 split, 2 three), phases ([L1, L2, ...]),
 #     load_split / gen_split ({L1: 2, L2: 1}), grid_code (as4777-au-a, ieee1547-cat2,
@@ -16,6 +17,7 @@
 #     offgrid_floor_soc.
 defaults:
   host: 127.0.0.1
+  setup: in-service          # already set up, Modbus TCP on; `fresh` below is a factory aGate
 
 gateways:
   # Sydney single-phase home on Ausgrid (the reference aGate): Australia A + 10 kW export.
@@ -25,6 +27,7 @@ gateways:
     grid_code: ausgrid
     location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}
     weather: {model: synthetic, kwp: 6.6, tilt: 20, sky: broken}
+    loads: sydney-family     # appliances on smart circuits 1-3 (hot water, EV, aircon)
     modbus: {port: 5020}
     directconnect: {port: 9020}
 
@@ -44,6 +47,7 @@ gateways:
     load_split: {L1: 3, L2: 1, L3: 1}
     pv_inputs: {proximal: 0.6, remote1: 0.4}
     modbus: {port: 5022}
+    directconnect: {port: 9022}
 
   # Two legs of a three-phase supply, in Adelaide (UTC+9:30/+10:30).
   - id: au-2phase
@@ -52,6 +56,7 @@ gateways:
     location: {latitude: -34.93, longitude: 138.60, timezone: Australia/Adelaide}
     phases: [L1, L2]
     modbus: {port: 5023}
+    directconnect: {port: 9023}
 
   # 15509 holds the TOU reserve instead of repeating 15508.
   - id: tou-reserve
@@ -59,8 +64,19 @@ gateways:
     quirks:
       tou_reserve_mirrors_self: false
     modbus: {port: 5024}
+    directconnect: {port: 9024}
 
-  # A spec-compliant SunSpec DER on Rule 21-style Category III ride-through.
+  # Fresh from the installer: Modbus TCP is off until a Direct Connect 1205 sunsMdEn write
+  # (the UI's "Enable Modbus TCP", or a Direct Connect client) turns it on.
+  - id: fresh
+    seed: 21
+    setup: factory
+    location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney}
+    modbus: {port: 5026}
+    directconnect: {port: 9026}
+
+  # A spec-compliant SunSpec DER on Rule 21-style Category III ride-through (not an aGate: no
+  # Direct Connect, Modbus TCP on).
   - id: spec
     seed: 3
     profile: spec

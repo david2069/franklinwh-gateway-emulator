@@ -60,7 +60,7 @@ def test_direct_connect_1202_reports_location():
     pytest.importorskip("franklinwh_local")
     from franklinwh_local.client import LocalClient
     from franklinwh_emulator.gateway import Gateway, GatewayConfig
-    gw = Gateway(GatewayConfig(seed=7, dc_port=0, site=SiteConfig(location=SYD)),
+    gw = Gateway(GatewayConfig(setup="in-service", seed=7, dc_port=0, site=SiteConfig(location=SYD)),
                  clock=ManualClock(JAN_NOON_UTC))
     with gw:
         c = LocalClient(*gw.dc_address, timeout=2, retries=0)
@@ -78,7 +78,7 @@ def test_direct_connect_1202_reports_location():
 def test_control_state_has_local_time():
     from franklinwh_emulator.control import gateway_state
     from franklinwh_emulator.gateway import Gateway, GatewayConfig
-    gw = Gateway(GatewayConfig(seed=7, site=SiteConfig(location=SYD)),
+    gw = Gateway(GatewayConfig(setup="in-service", seed=7, site=SiteConfig(location=SYD)),
                  clock=ManualClock(JAN_NOON_UTC))
     st = gateway_state(gw)
     assert st["local_time"] == "2026-01-15T23:00:00+11:00" and st["dst"] is True

@@ -12,7 +12,7 @@ from franklinwh_emulator import Gateway, GatewayConfig
 
 
 def main() -> dict:
-    gw = Gateway(GatewayConfig(id="site", seed=7))
+    gw = Gateway(GatewayConfig(id="site", seed=7, setup="in-service"))
     host, port = gw.start()                    # background thread, ephemeral port
     try:
         ext = read_holding(host, port, 15000, 44)

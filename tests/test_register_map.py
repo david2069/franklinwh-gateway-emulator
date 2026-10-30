@@ -80,7 +80,7 @@ def test_faithful_profile_quantises_soc_and_battery_power():
     from franklinwh_emulator.gateway import Gateway, GatewayConfig
     from franklinwh_emulator.site import SiteConfig
     for profile, exact in (("agate-v10r01b04d00", False), ("spec", True)):
-        gw = Gateway(GatewayConfig(seed=7, profile=profile,
+        gw = Gateway(GatewayConfig(setup="in-service", seed=7, profile=profile,
                                    site=SiteConfig(seed=7, initial_soc=55.37)),
                      clock=ManualClock(1_767_225_600 + 2 * 3600))
         soc = gw.device.read(1037, 1)[0]
@@ -108,7 +108,7 @@ def test_faithful_profile_matches_reference_scan_static_points():
     from franklinwh_emulator.gateway import Gateway, GatewayConfig
     ref = json.loads((pathlib.Path(__file__).parent / "data"
                       / "reference_scan_static_2026-10-07.json").read_text())
-    gw = Gateway(GatewayConfig(seed=7))
+    gw = Gateway(GatewayConfig(setup="in-service", seed=7))
     assert [[m, gw.device.image.model_addr[m], gw.device.image.models[m].model_len]
             for m in gw.device.image.models] == ref["layout"]
     emu = _decode_image(gw)
@@ -120,18 +120,18 @@ def test_faithful_profile_matches_reference_scan_static_points():
 def test_curves_unimplemented_for_non_au_grid_codes():
     from franklinwh_emulator.gateway import Gateway, GatewayConfig
     from franklinwh_emulator.site import SiteConfig
-    au = _decode_image(Gateway(GatewayConfig(seed=7)))
+    au = _decode_image(Gateway(GatewayConfig(setup="in-service", seed=7)))
     assert au["705"]["Crv[0].Pt[0].V"] == 20700 and au["706"]["Crv[0].RspTms"] == 1
-    us = _decode_image(Gateway(GatewayConfig(seed=7, site=SiteConfig(seed=7, ac_type=1))))
+    us = _decode_image(Gateway(GatewayConfig(setup="in-service", seed=7, site=SiteConfig(seed=7, ac_type=1))))
     assert us["705"]["Crv[0].Pt[0].V"] is None and us["711"]["Ctl[0].DbOf"] is None
 
 
 def test_714_port_block_and_throtpct_per_profile():
     from franklinwh_emulator.gateway import Gateway, GatewayConfig
-    real = _decode_image(Gateway(GatewayConfig(seed=7)))
+    real = _decode_image(Gateway(GatewayConfig(setup="in-service", seed=7)))
     assert real["714"]["Prt[0].DCW"] == 0 and real["714"]["Prt[0].IDStr"] == "ID_String"
     assert real["701"]["ThrotPct"] is None
-    spec = _decode_image(Gateway(GatewayConfig(seed=7, profile="spec")))
+    spec = _decode_image(Gateway(GatewayConfig(setup="in-service", seed=7, profile="spec")))
     assert spec["714"]["Prt[0].DCW"] == spec["714"]["DCW"] and spec["701"]["ThrotPct"] == 0
 
 

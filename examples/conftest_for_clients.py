@@ -16,7 +16,7 @@ from franklinwh_emulator import Gateway, GatewayConfig
 
 @pytest.fixture
 def agate(record_property):
-    gw = Gateway(GatewayConfig(id="t", seed=7))
+    gw = Gateway(GatewayConfig(id="t", seed=7, setup="in-service"))
     host, port = gw.start()
     record_property("emulator_version", version("franklinwh-gateway-emulator"))
     record_property("emulator_profile", gw.profile.name)

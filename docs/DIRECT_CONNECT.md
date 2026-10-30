@@ -2,16 +2,18 @@
 
 The aGate's local broker protocol ("sendMqtt" cmdType frames), served from the **same `Site`**
 as Modbus. Framing (cipher, len/crc) comes from `franklinwh_local.protocol`, so the emulator and
-the client library cannot disagree about the wire format. Install the extra with
-`pip install -e ".[dc]"`.
+the client library cannot disagree about the wire format. It is a standard dependency: **every
+aGate profile runs a Direct Connect listener** (a free port unless one is given). On a factory
+aGate (`setup: factory`, the default) Modbus TCP is off until a `1205` `sunsMdEn` write turns it
+on; `setup: in-service` starts with it on (#40).
 
 ```bash
-franklinwh-emulator serve --port 5020 --dc-port 9000
+franklinwh-emulator serve --port 5020 --dc-port 9000      # factory: Modbus TCP off
 franklinwh-local --host 127.0.0.1 --port 9000 power_flow
 ```
 
 ```python
-gw = Gateway(GatewayConfig(id="home", seed=7, dc_port=0))   # 0 = ephemeral
+gw = Gateway(GatewayConfig(id="home", seed=7, dc_port=0))   # 0 = ephemeral; Modbus off until 1205
 gw.start(); gw.dc_address                                   # ('127.0.0.1', 5xxxx)
 ```
 
