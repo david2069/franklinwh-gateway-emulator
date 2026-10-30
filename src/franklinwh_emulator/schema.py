@@ -165,7 +165,8 @@ ACTIONS: dict[str, dict[str, Any]] = {
     "vpp": {
         "doc": "A VPP dispatch as franklinwh-modbus sends it: watts or pct_hw.",
         "fields": {
-            "watts": _f("number", "+ = charge, - = discharge", unit="W"),
+            "watts": _f("number", "+ = charge, - = discharge; used if pct_hw is also sent",
+                        unit="W"),
             "pct_hw": _f("number", "of the hardware rating", unit="%"),
         },
         "examples": [{"watts": -5000}, {"pct_hw": 100}],

@@ -85,7 +85,7 @@ def test_schema_over_http(fleet):
     with urllib.request.urlopen(base + "/schema", timeout=3) as r:
         served = json.load(r)
     assert set(served["actions"]) == set(ACTIONS)
-    assert served["actions"]["vpp"]["fields"]["watts"]["doc"] == "+ = charge, - = discharge"
+    assert served["actions"]["vpp"]["fields"]["watts"]["doc"].startswith("+ = charge, - = discharge")
     req = urllib.request.Request(base + "/gateways/site/grid", method="POST",
                                  data=json.dumps({"voltage": 230, "leg": "L1"}).encode())
     with pytest.raises(urllib.error.HTTPError) as e:

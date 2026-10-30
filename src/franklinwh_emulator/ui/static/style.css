@@ -30,7 +30,27 @@ header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px;
          padding: 16px; border-bottom: 1px solid var(--line); }
 header h1 { margin: 0; font-size: 18px; font-weight: 600; }
 header .meta { color: var(--muted); font-size: 13px; }
+header .version { font: 12px var(--mono); color: var(--text-2); border: 1px solid var(--line);
+                  border-radius: 999px; padding: 1px 8px; }
+.layout-toggle { margin-left: auto; font: 13px var(--sans); color: var(--text-2); background: var(--panel);
+                 border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; min-height: 36px; cursor: pointer; }
+.layout-toggle:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
 main { max-width: 1280px; margin: 0 auto; padding: 16px; }
+.col-main { min-width: 0; }
+/* Actions beside the gateways on wide screens: their own scrolling column. */
+@media (min-width: 1100px) {
+  main.layout-right { max-width: none; display: grid; gap: 20px;
+                      grid-template-columns: minmax(0, 1fr) minmax(380px, 36%); align-items: start; }
+  main.layout-right > .status { grid-column: 1 / -1; }
+  main.layout-right .col-side { margin-top: 0; position: sticky; top: 0; max-height: 100vh;
+                                overflow-y: auto; padding-bottom: 16px; }
+  main.layout-right .forms { grid-template-columns: 1fr; }
+}
+.actions-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; position: sticky; top: 0;
+               z-index: 1; background: var(--bg); padding: 8px 0; }
+.actions-top h2 { margin: 0; }
+.actions-top select { font: 600 15px var(--mono); color: var(--ok); background: var(--panel);
+                      border: 1px solid var(--ok); border-radius: 8px; padding: 6px 10px; min-height: 40px; }
 .status { margin: 0 0 16px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line);
           background: var(--panel-2); color: var(--text-2); font-size: 14px; }
 .status.bad { border-color: var(--bad); color: var(--bad); }
@@ -124,3 +144,4 @@ main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 .result { margin: 0; font: 12px var(--mono); padding: 6px 8px; border-radius: 6px; word-break: break-word; }
 .result.ok { color: var(--ok); background: var(--ok-bg); }
 .result.bad { color: var(--bad); border: 1px solid var(--bad); }
+@media (max-width: 1099px) { .layout-toggle { display: none; } }   /* narrow screens always stack */
