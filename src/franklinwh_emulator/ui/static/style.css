@@ -67,3 +67,25 @@ main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 .detail td { padding: 3px 0; border-bottom: 1px solid var(--line); }
 .detail td:last-child { text-align: right; font-family: var(--mono); }
 .empty { color: var(--muted); font-size: 13px; }
+
+/* Energy diagram */
+.diagram-head { margin: 0 0 6px; color: var(--muted); font-size: 13px; }
+.diagram-wrap { overflow-x: auto; margin-bottom: 8px; }   /* narrow screens scroll, text stays legible */
+.diagram { display: block; width: 100%; min-width: 720px; height: auto; }
+.diagram .node rect { fill: var(--panel-2); stroke: var(--ok); stroke-width: 1.5; }
+.diagram .node.agate rect { fill: var(--ok-bg); stroke-width: 2.5; }
+.diagram .node.agate .v { font: 600 14px var(--sans); }
+.diagram .node.dim rect { stroke: var(--line); }
+.diagram .node.bad rect { stroke: var(--bad); }
+.diagram text { text-anchor: middle; fill: var(--text); font-family: var(--sans); }
+.diagram .t { font-size: 13px; fill: var(--text-2); }
+.diagram .v { font: 600 18px var(--mono); fill: var(--text); }
+.diagram .s { font-size: 12px; fill: var(--muted); }
+.diagram .node.dim text { fill: var(--muted); }
+.diagram .flow { fill: none; stroke-width: 2.5; stroke-dasharray: 8 6; stroke-linejoin: round; }
+.diagram .flow.idle { stroke: var(--line); }
+.diagram .flow.fwd, .diagram .flow.rev { stroke: var(--ok); animation: dash 1s linear infinite; }
+.diagram .flow.rev { animation-direction: reverse; }
+@keyframes dash { to { stroke-dashoffset: -14; } }
+@media (prefers-reduced-motion: reduce) { .diagram .flow { animation: none; } }
+.diagram-note { margin: 0 0 16px; color: var(--muted); font-size: 12px; }
