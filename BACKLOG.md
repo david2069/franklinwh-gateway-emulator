@@ -281,6 +281,22 @@ only one protocol.
 **Scope:** [docs/UI_PLAN.md](docs/UI_PLAN.md), phases 1–5. Waits for the owner's answers to its
 open questions.
 
+### HARDWARE-TOPOLOGIES: other FranklinWH systems · `todo` (later)
+**Why:** the owner (2026-10-30) wants fleets that include FranklinWH systems other than aGate +
+aPower: today every gateway is an aGate with AC-coupled aPowers (and the non-aGate `spec` DER).
+**Scope** (one item each, in this order unless the owner says otherwise):
+1. **aPower S with an aGate:** the DC-coupled hybrid aPower S, with its MPPT PV inputs, behind an
+   aGate.
+2. **aPower S with MPPT PV and a MAC-1** (meter collar adaptor) **with Modbus TCP enabled, in
+   place of an aGate.**
+3. **aPower or aPower S with an aHub:** generator, smart circuits and remote solar.
+
+**Before building each:** a documented or measured source for what it serves (FranklinWH
+spec sheets and Modbus/Direct Connect documentation, or a capture from a real system): register
+map, ratings, which protocols it answers, and how its readings differ from an aGate's. Ratings
+and behaviours are not inferred from the aGate's. The UI's "not modelled" list already names
+aPower S. Related: the Direct Connect API quirks file is keyed by aGate/aPower model.
+
 ### DOCKER-IPS: one IP per gateway · `todo`
 **Why:** LAN discovery (the bridge's planned setup wizard, `franklinwh-local scan`) needs
 real addresses on :502/:9000, not port offsets.
