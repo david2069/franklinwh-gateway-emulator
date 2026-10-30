@@ -41,6 +41,7 @@ def test_login_manifest(dc, gw):
     fw = dc.firmware()
     assert dc.equip_no == gw.serial
     assert fw.get("IBG_VER") and fw.get("protocolVer") == "V1.11.03"
+    assert "SUNSPEC_FW" not in dc.login()       # #74: no source for it; the raw manifest, unfiltered
 
 
 def test_power_flow_matches_modbus(dc, gw, clock):
