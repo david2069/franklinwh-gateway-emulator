@@ -276,7 +276,9 @@ curl -s -X POST localhost:8502/gateways/site/grid -d '{"hz": 51.3}'
 curl -s -X POST localhost:8502/gateways/site/grid -d '{"voltage": 170, "phase": "L3"}'
 ```
 
-The endpoints are listed in `src/franklinwh_emulator/control.py`. In-process code calls the
+Every action, with its fields, units, allowed values and examples, is in
+`src/franklinwh_emulator/schema.py`, and a running emulator serves the same table at
+`GET /schema`. Unknown actions get 404; unknown or missing required body keys get 400. In-process code calls the
 same methods on `gw.site`, and `Fleet.start(control_port=0)` starts the API alongside a fleet.
 
 **Sign conventions on the wire:** `701.W` positive = grid import; `714.DCW` positive =

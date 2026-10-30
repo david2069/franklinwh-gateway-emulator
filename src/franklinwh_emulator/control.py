@@ -1,38 +1,11 @@
 """HTTP control API for steering running gateways (stdlib only, JSON in/out).
 
+    GET  /schema                        every action, its fields and examples (schema.py)
     GET  /gateways                      list gateways
     GET  /gateways/<id>                 live state
-    POST /gateways/<id>/grid            {"available": false} | {"voltage": 195} | {"v_pu": 0.85}
-                                        | {"hz": 51.2} | {"hz_offset": 1.2} | {"restore": true}
-                                        add "phase": "L2" to change one leg only
-    POST /gateways/<id>/offgrid         {"on": true}
-    POST /gateways/<id>/range-fault     {"start": 15500, "end": 15509, "mode": "exception",
-                                         "code": 4, "for_s": 30} | {"clear": true}
-    POST /gateways/<id>/write-reject    {"model": 704, "point": "WSetPct", "abs_gt": 100,
-                                         "code": 3} | {"clear": true}
-    POST /gateways/<id>/addressing      {"base_aliases": [40000], "write_bases": [0]}
-    POST /gateways/<id>/episode         {"down_s": 60, "offgrid_s": 120}  (drop, return islanded)
-    POST /gateways/<id>/pv              {"input": "proximal", "relay": false} | {"solar_w": 3000|null}
-    POST /gateways/<id>/load            {"w": 4500|null}
-    POST /gateways/<id>/ambient         {"c": 48|null}
-    POST /gateways/<id>/alarms          {"set": ["OVER_TEMP"], "latched": true} | {"clear": ["OVER_TEMP"]|"all"}
-                                        | {"reset": true} | {"dc_bits": 3}
-    POST /gateways/<id>/faults          {"latency_s": 0.5, "session_held": true, ...}
-    POST /gateways/<id>/export          {"enforced": true}   (default: declared limit only tracked)
-    POST /gateways/<id>/vpp             {"watts": -5000} (+ = charge) | {"pct_hw": 100}
-    POST /gateways/<id>/release         {}
-    POST /gateways/<id>/mode            {"mode": 3}          (1 backup, 2 self, 3 TOU, 4 manual)
-    POST /gateways/<id>/reserve         {"self": 20, "tou": 40}
-    POST /gateways/<id>/soc             {"value": 55}        (scenario setup)
-    POST /gateways/<id>/weather         {"sky": "storm"} | {"flicker": false}
-    POST /gateways/<id>/circuit         {"n": 2, "on": false}     (smart circuit 1–3)
-    POST /gateways/<id>/appliance       {"name": "kettle", "on": true|false|null}  (null = auto)
-    POST /gateways/<id>/der-comms       {"modbus": false} | {"csip": true}   (1205 sunsMdEn / enable)
-    POST /gateways/<id>/csip            the CSIP-AUS utility server:
-                                        {"enable": true, "uri": "...", "pin": "..."}
-                                        | {"server_up": false}
-                                        | {"control": {"opModExpLimW": 1500}, "duration_s": 1800}
-                                        | {"default": {"opModExpLimW": 5000}} | {"clear": true}
+    POST /gateways/<id>/<action>        an action from schema.ACTIONS; returns the new state
+
+Unknown actions get 404; unknown body keys and missing required ones get 400.
 
 Binds to 127.0.0.1 by default: it can black out an emulated house, not a real one, but
 there is no authentication.
@@ -46,6 +19,7 @@ import logging
 from dataclasses import asdict, fields
 from typing import TYPE_CHECKING
 
+from .schema import ACTIONS, check_body, schema
 from .server import Faults
 from .site import ALARMS, W_PER_APOWER
 from .weather import SKIES
@@ -121,6 +95,11 @@ def _num_or_none(body: dict, key: str):
 
 
 def apply(gw: "Gateway", action: str, body: dict) -> None:
+    if action not in ACTIONS:
+        raise ApiError(404, f"unknown action {action!r}")
+    problem = check_body(action, body)
+    if problem:
+        raise ApiError(400, problem)
     site = gw.site
     try:
         if action == "grid":
@@ -285,6 +264,8 @@ class ControlApi:
 
     def _route(self, method: str, path: str, body: dict):
         parts = [p for p in path.split("?")[0].split("/") if p]
+        if parts == ["schema"] and method == "GET":
+            return schema()
         if parts == ["gateways"] and method == "GET":
             return [{"id": g.config.id, "serial": g.serial, "address": list(g.address)}
                     for g in self.gateways.values()]

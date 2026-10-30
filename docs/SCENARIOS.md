@@ -47,11 +47,15 @@ checks: [energy_balance, soc_bounds, export_limit, reserve_floor, islanded_no_fl
          reconnect_delay]                                     # default: all of them
 ```
 
-- **`do`** is any control-API action, the same vocabulary as `ctl` and `POST /gateways/<id>/<action>`:
+- **`do`** is any control-API action, the same vocabulary as `ctl` and `POST /gateways/<id>/<action>`
+  (every action and field: `schema.py`, or `GET /schema`). A step with an unknown key in `with`
+  is recorded as an action error. The actions:
   - grid and phases: `grid` (`available`, `voltage`, `v_pu`, `hz`, `phase`, `restore`), `offgrid`;
   - inputs: `pv` (`solar_w`, `input`/`relay`), `load` (`w`), `ambient` (`c`), `weather`
     (`sky`, `flicker`);
-  - alarms and faults: `alarms`, `faults`, `dc-faults`;
+  - alarms and faults: `alarms`, `faults`, `dc-faults`, `range-fault`, `write-reject`,
+    `addressing`, `episode`;
+  - generator: `generator`;
   - CSIP and comms: `csip`, `der-comms`, `export`;
   - battery and modes: `vpp` (`watts`, + = charge, or `pct_hw`), `release`, `mode`, `reserve`,
     and `soc` (setup);
