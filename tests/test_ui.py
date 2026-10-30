@@ -179,7 +179,7 @@ def test_version_endpoint(ui):
     from franklinwh_emulator import __version__
     _, base = ui
     v = json.loads(get(base + "/version")[2])
-    assert v["version"] == __version__
+    assert v["version"] == __version__ and "T" in v["started"]
     assert v["commit"] is None or re.fullmatch(r"[0-9a-f]{7,12}", v["commit"])
 
 

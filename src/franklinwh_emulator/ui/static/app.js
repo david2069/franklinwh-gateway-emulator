@@ -5,6 +5,7 @@
  * Results and errors show on the page; no toasts.
  */
 const POLL_MS = 1000;
+const VERSION_CHECK_MS = 5000;
 
 function running() {
   return {
@@ -14,6 +15,8 @@ function running() {
     error: '',
     schema: null,
     version: null,
+    stale: '',          // why this page is out of date (the emulator restarted or changed)
+    staleNewCode: false,
     layout: 'right',  // where the actions go: 'right' (beside, on wide screens) or 'below'
     forms: {},        // action -> {field: raw string}
     results: {},      // "<gateway>/<action>" -> {ok, text}
@@ -30,6 +33,7 @@ function running() {
         this.layout = localStorage.getItem('emulator.layout') || 'right';
       } catch (e) { /* private mode */ }
       this._get('/version').then(v => { this.version = v; }).catch(() => {});
+      this._versionTimer = setInterval(() => this.checkVersion(), VERSION_CHECK_MS);
       await this.poll();
       this._timer = setInterval(() => this.poll(), POLL_MS);
       try {
@@ -111,6 +115,21 @@ function running() {
       }
     },
 
+    // The emulator restarted, or now runs other code: this page (and its state) is out of date.
+    async checkVersion() {
+      let v;
+      try { v = await this._get('/version'); } catch (e) { return; }   // down: the poll says so
+      if (!this.version) { this.version = v; return; }
+      const was = this.version;
+      if (v.started === was.started && v.version === was.version && v.commit === was.commit) return;
+      const newCode = v.version !== was.version || v.commit !== was.commit;
+      this.stale = newCode
+        ? 'The emulator now runs a new version (' + this.versionText() + ' → v' + v.version +
+          (v.commit ? ' · ' + v.commit : '') + '). Reload this page to use it.'
+        : 'The emulator restarted. Its gateways started fresh, so earlier actions (overrides, ' +
+          'alarms, modes) were not kept.';
+      this.staleNewCode = newCode;
+    },
     versionText() {
       if (!this.version) return '';
       return 'v' + this.version.version + (this.version.commit ? ' · ' + this.version.commit : '');

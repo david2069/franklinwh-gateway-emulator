@@ -38,8 +38,13 @@ class Raw:
     body: bytes
 
 
+import datetime as _dt
+_STARTED = _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds")   # this process
+
+
 def version_info() -> dict:
-    """Package version, plus the short commit when running from a git checkout."""
+    """Package version, the short commit when running from a git checkout, and when this
+    process started (so a page can tell the emulator restarted)."""
     import subprocess
     from pathlib import Path
     from . import __version__
@@ -51,7 +56,7 @@ def version_info() -> dict:
                                     capture_output=True, text=True, timeout=2).stdout.strip() or None
         except (OSError, subprocess.SubprocessError):
             commit = None
-    return {"version": __version__, "commit": commit}
+    return {"version": __version__, "commit": commit, "started": _STARTED}
 
 
 class ApiError(Exception):
