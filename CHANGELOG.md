@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Web UI testing guide (2026-10-30)
+- `docs/UI_TESTING.md`: start the UI on the example fleet, then check the cards, the energy
+  diagram and the actions step by step, with what each should show; with a bridge; undoing.
+
 ### Web UI: actions panel (2026-10-30, #25)
 - Every control action as a form on the active gateway, built from `GET /schema`: fields by
   type, required ones marked, units and docs shown, "fill from example". Only filled fields are

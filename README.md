@@ -289,7 +289,7 @@ panel, tariffs and more) is listed under the diagram rather than drawn. Under it
 has a form (built from `GET /schema`, grouped as in SCENARIOS.md); only the fields you fill are
 sent, and the emulator's answer (applied, or its error) stays in the form. The control API below
 runs on the same port, so `ctl` works unchanged. Loopback only, no login, no internet. Plan:
-[docs/UI_PLAN.md](docs/UI_PLAN.md).
+[docs/UI_PLAN.md](docs/UI_PLAN.md); a hands-on walk-through: [docs/UI_TESTING.md](docs/UI_TESTING.md).
 
 ### Control API and `ctl`
 
