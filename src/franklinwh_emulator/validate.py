@@ -63,6 +63,9 @@ DOCS: dict[str, str] = {
     "circuits": "smart circuits 1-3: {1: {name, on, soc_low_cutoff}}",
     "pv_inputs": "share of solar per PV input: proximal (aGate), remote1/remote2 (aPbox)",
     "offgrid_floor_soc": "islanded discharge floor, %",
+    "tou_schedule": "TOU blocks (franklinwh-cloud format): name, startHourTime, endHourTime, "
+                    "waveType, dispatchId; default: solar-charge off-peak, self-consumption 17-21",
+    "tou_rates": "prices per tariff period, {waveType: {buy, sell}} in $/kWh (display only)",
     "cap_forced_solar": "forced solar (pv solar_w) can't exceed the solar model's value now, 0 at "
                         "night (default true); false = use it as given (lab tests)",
     "export_limit_enforced": "enforce the grid code's export limit (default: tracked only)",

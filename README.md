@@ -347,6 +347,37 @@ battery discharging.
 refreshing (stale `check_blocking_alarms()`) and `ac_type` being guessed from voltage. See
 [docs/FINDINGS.md](docs/FINDINGS.md).
 
+## TOU schedule
+
+In TOU mode (`mode` 3) the battery follows a schedule of time blocks in the FranklinWH cloud
+format ([franklinwh-cloud TOU guide](https://david2069.github.io/franklinwh-cloud/TOU_SCHEDULE_GUIDE/)):
+
+```yaml
+    tou_schedule:
+      - {name: Super Off-Peak, startHourTime: "00:00", endHourTime: "10:00", waveType: 4, dispatchId: 1}
+      - {name: Solar, startHourTime: "10:00", endHourTime: "12:00", waveType: 4, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "12:00", endHourTime: "19:00", waveType: 2, dispatchId: 6}
+      - {name: Export, startHourTime: "19:00", endHourTime: "20:00", waveType: 0, dispatchId: 7}
+    tou_rates: {2: {buy: 0.54, sell: 0.03}}      # $/kWh per waveType, shown only
+```
+
+| dispatchId | Code | Battery |
+|---|---|---|
+| 1 | HOME | covers home loads; surplus solar goes to the grid |
+| 2 | STANDBY | idle |
+| 3 | SOLAR | charges from surplus solar only |
+| 6 | SELF | self-consumption |
+| 7 | GRID_EXPORT | discharges at its rating |
+| 8 | GRID_CHARGE | charges at its rating from grid and solar |
+
+`waveType`: 0 off-peak, 1 mid-peak, 2 on-peak, 4 super off-peak. Gaps are SELF, off-peak. The
+active reserve still applies. The guide's limit fields (`maxChargeSoc`, `minDischargeSoc`,
+`gridChargeMax`, …) are kept and shown but not applied: the guide says `minDischargeSoc` is ignored
+by the aGate and the others aren't verified in all firmware. One schedule covers every day
+(seasons and weekdays: not yet). Without one, TOU charges from surplus solar except
+17:00–21:00, when it self-consumes (the emulator's model before schedules). The `tou` action
+replaces it at run time; it never changes the mode.
+
 ## Energy totals and history
 
 Lifetime totals are served as SunSpec 701 `TotWhAbs`/`TotWhInj` (grid import/export, split

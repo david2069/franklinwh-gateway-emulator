@@ -12,7 +12,7 @@ function typesOf(spec) { return [].concat(spec.type); }
 function fieldKind(spec) {
   const t = typesOf(spec);
   if (spec.options_from) return 'choice';            // options come from the gateway's state
-  if (t.includes('array')) return 'list';
+  if (t.includes('array')) return spec.items === 'object' ? 'json' : 'list';   // a list of objects: JSON
   if (t.includes('object')) return 'json';
   if (t.includes('boolean') || spec.enum) return 'choice';
   if (t.includes('number') || t.includes('integer')) return 'number';
@@ -65,7 +65,9 @@ function convert(action, field, raw) {
     case 'json': {
       let v;
       try { v = JSON.parse(raw); } catch (e) { throw new Error(field + ': not valid JSON'); }
-      if (v === null || typeof v !== 'object' || Array.isArray(v)) throw new Error(field + ': needs a JSON object');
+      const wantList = typesOf(spec).includes('array');
+      if (v === null || typeof v !== 'object' || Array.isArray(v) !== wantList)
+        throw new Error(field + (wantList ? ': needs a JSON list' : ': needs a JSON object'));
       return v;
     }
     default:
@@ -90,7 +92,7 @@ function formFromBody(action, body) {
   for (const field of Object.keys(action.fields)) raw[field] = '';
   for (const [field, v] of Object.entries(body)) {
     if (v === null) raw[field] = 'null';
-    else if (Array.isArray(v)) raw[field] = v.join(', ');
+    else if (Array.isArray(v) && fieldKind(action.fields[field]) !== 'json') raw[field] = v.join(', ');
     else if (typeof v === 'object') raw[field] = JSON.stringify(v);
     else raw[field] = String(v);
   }

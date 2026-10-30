@@ -83,6 +83,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "firmware": gw.profile.firmware + (" (candidate)" if gw.profile.name.endswith("-candidate") else "")
                     if gw.profile.name != "spec" else "SunSpec DER (spec)",
         "active_reserve": site.active_reserve(),          # the reserve held now, by mode
+        "tou": site.tou_now(snap.ts),
         "offgrid_floor_soc": site.config.offgrid_floor_soc,
         "native_mode_name": MODE_NAMES.get(snap.native_mode, str(snap.native_mode)),
         "run_status_name": RUN_NAMES.get(snap.run_status, str(snap.run_status)),
@@ -237,6 +238,12 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
             site.update_remote(enabled=False, pct_hw=0.0, watts=0)
         elif action == "mode":
             site.set_native_mode(int(body["mode"]))
+        elif action == "tou":
+            if body.get("reset"):
+                site.set_tou_schedule(None, {})
+            if "schedule" in body or "rates" in body:
+                site.set_tou_schedule(body["schedule"] if "schedule" in body else False,
+                                      body.get("rates"))
         elif action == "reserve":
             site.set_reserves(self_reserve=body.get("self"), tou_reserve=body.get("tou"))
         elif action == "soc":
