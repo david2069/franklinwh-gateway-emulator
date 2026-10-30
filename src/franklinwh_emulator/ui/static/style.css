@@ -65,6 +65,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 .card .id { font-weight: 600; font-size: 16px; }
 .card .soc { font: 600 20px var(--mono); color: var(--ok); }
 .card .addr { margin: 4px 0 10px; font: 12px var(--mono); color: var(--muted); }
+.card .addr .off { opacity: .7; font-style: italic; }
 .flows { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 16px; margin: 0; }
 .flows div { display: flex; justify-content: space-between; gap: 8px; }
 .flows dt { color: var(--muted); font-size: 13px; }

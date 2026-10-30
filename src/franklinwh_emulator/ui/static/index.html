@@ -32,7 +32,9 @@
         </div>
         <div class="addr">
           <div x-text="'Modbus TCP ' + addr(g.address)"></div>
-          <div x-show="g.dc_address" x-text="'Direct Connect ' + addr(g.dc_address)"></div>
+          <div x-text="g.dc_address ? 'Direct Connect ' + addr(g.dc_address) : 'Direct Connect off'"
+               :class="{ off: !g.dc_address }"
+               :title="g.dc_address ? '' : 'No directconnect: entry for this gateway in the fleet file'"></div>
         </div>
         <dl class="flows">
           <div><dt>Solar</dt><dd x-text="kw(g.solar_w)"></dd></div>
