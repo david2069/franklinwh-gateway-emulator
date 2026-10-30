@@ -103,6 +103,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "pv_relays": dict(site.pv_relays),
         "pv_inputs": dict(site.config.pv_inputs),
         "apower_units": site.config.apower_units,
+        "apower_off": sorted(site.apower_off),                # switched off at the unit (#71)
         "apower_rating": {"wh": WH_PER_APOWER, "w": W_PER_APOWER},   # per aPower, emulator constants
         "forced_alarms": dict(site.forced_alarms),
         "remote_control": asdict(site.remote),
@@ -260,6 +261,8 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
                 site.soc = max(0.0, min(100.0, float(body["value"])))
         elif action == "circuit":
             site.set_circuit(int(body["n"]), bool(body["on"]))
+        elif action == "apower":
+            site.set_apower(int(body["n"]), bool(body["on"]))
         elif action == "appliance":
             state = body.get("on", None)
             site.force_appliance(body["name"], None if state in (None, "auto") else bool(state))
