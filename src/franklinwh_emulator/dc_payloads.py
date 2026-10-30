@@ -142,7 +142,7 @@ class DcPayloads:
         n, pa, extra = self.units, fw["per_apower"], fw["extra"]
         sns = [self.fhp_sn(i + 1) for i in range(n)]
         hw = {k: v * n for k, v in extra.items() if isinstance(v, list)}     # one per aPower
-        return _ok(IBG_SN=self.gw.serial,
+        return _ok(**fw.get("login_status", {}), IBG_SN=self.gw.serial,
                    **({"deviceType": extra["deviceType"]} if "deviceType" in extra else {}),
                    protocolVer=fw["protocolVer"], IBG_VER=ibg, AWS_VER=fw["AWS_VER"],
                    APP_VER=fw["APP_VER"], SL_VER=fw["SL_VER"], FHP_NUM=n, FHP_SN=sns,

@@ -133,6 +133,9 @@ DC_FIRMWARE: dict[str, dict] = {
                        "BMS_VER": "V11R50B07D00", "BL_VER": "V11R06B00D00", "TH_VER": "V11R02B01D00"},
         "extra": {"deviceType": 0, "threePhasePvPower": 0, "PE_HW_VER": [2], "BMS_MAIN_HW_VER": [0],
                   "BMS_BL_HW_VER": [0], "BMS_TH_HW_VER": [0]},
+        # The recorded reply to franklinwh-direct-connect-api's login request carried the full
+        # manifest with result 1, reason -2 (meaning not known; #80).
+        "login_status": {"result": 1, "reason": -2},
     },
 }
 
