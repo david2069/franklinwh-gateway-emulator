@@ -62,7 +62,7 @@ checks: [energy_balance, soc_bounds, export_limit, reserve_floor, islanded_no_fl
   - loads: `circuit` (`n`, `on`), `appliance` (`name`, `on`: true/false/null).
   
   Unquoted `on:`/`off:` keys are fine; YAML 1.1 would read them as booleans, and the loader
-  maps them back.
+  maps them back. The same holds for fleet files and saved sessions.
   
   `null` hands an override back to the built-in curve (`{solar_w: null}`).
 - **`gateway`** targets one gateway; by default a step applies to every gateway in the fleet.
