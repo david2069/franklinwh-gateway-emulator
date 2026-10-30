@@ -179,3 +179,15 @@ def test_version_endpoint(ui):
     v = json.loads(get(base + "/version")[2])
     assert v["version"] == __version__
     assert v["commit"] is None or re.fullmatch(r"[0-9a-f]{7,12}", v["commit"])
+
+
+def test_overrides_are_in_the_state(ui):
+    from franklinwh_emulator.control import apply
+    fleet, _ = ui
+    gw = fleet["us-split"]
+    assert gateway_state(gw)["overrides"] == {"solar_w": None, "load_w": None, "ambient_c": None}
+    apply(gw, "pv", {"solar_w": 6000})
+    s = gateway_state(gw)
+    assert s["overrides"]["solar_w"] == 6000 and s["solar_w"] == pytest.approx(6000, abs=1)
+    apply(gw, "pv", {"solar_w": None})
+    assert gateway_state(gw)["overrides"]["solar_w"] is None

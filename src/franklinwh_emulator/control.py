@@ -75,6 +75,9 @@ def gateway_state(gw: "Gateway") -> dict:
         "run_status_name": RUN_NAMES.get(snap.run_status, str(snap.run_status)),
         "inverter_state_name": INV_NAMES.get(snap.inverter_state, str(snap.inverter_state)),
         "sun": _sun(site, snap.ts),
+        # Values forced through the pv / load / ambient actions; null = the model's own.
+        "overrides": {"solar_w": site.solar_override_w, "load_w": site.load_override_w,
+                      "ambient_c": site.ambient_override_c},
         "base_aliases": list(gw.profile.base_aliases),
         "write_rejects": list(gw.device.write_rejects),
         "write_bases": None if gw.profile.write_bases is None else list(gw.profile.write_bases),

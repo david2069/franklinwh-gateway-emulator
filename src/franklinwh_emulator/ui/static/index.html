@@ -48,6 +48,7 @@
           <span class="tag warn" x-show="g.remote_control && g.remote_control.enabled">VPP</span>
           <template x-for="a in g.alarm_names" :key="a"><span class="tag bad" x-text="a"></span></template>
           <template x-for="f in faultList(g)" :key="f"><span class="tag warn" x-text="'fault: ' + f"></span></template>
+          <template x-for="o in overrideList(g)" :key="o"><span class="tag warn" x-text="o"></span></template>
           <span class="tag" x-show="g.episode_phase" x-text="'episode: ' + g.episode_phase"></span>
         </div>
       </button>

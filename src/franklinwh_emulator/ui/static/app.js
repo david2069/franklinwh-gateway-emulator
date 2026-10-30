@@ -142,6 +142,15 @@ function running() {
       if (f.range_fault) on.push('range ' + f.range_fault.start + '–' + f.range_fault.end);
       return on;
     },
+    // Values forced through pv / load / ambient (null = the model's own).
+    overrideList(g) {
+      const o = g.overrides || {};
+      const out = [];
+      if (o.solar_w != null) out.push('solar forced ' + this.kw(o.solar_w));
+      if (o.load_w != null) out.push('load forced ' + this.kw(o.load_w));
+      if (o.ambient_c != null) out.push('ambient forced ' + o.ambient_c + ' °C');
+      return out;
+    },
     detailLine(g) {
       const parts = [g.profile, g.grid_code, g.legs.join(' '), g.local_time];
       if (g.location && g.location.timezone) parts.push(g.location.timezone);

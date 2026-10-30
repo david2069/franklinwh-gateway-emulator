@@ -52,6 +52,8 @@ function renderDiagram(g) {
   if (!g) return '';
   const out = [];
   const links = [];
+  const ov = g.overrides || {};
+  const forced = k => ov[k] != null;   // a value set by pv / load / ambient, not the model
   const agate = [500, 300];
 
   // Grid → service meter → aGate (+ = import, towards the aGate).
@@ -68,7 +70,8 @@ function renderDiagram(g) {
   links.push(link([[500, 240], [500, 160]], g.load_w, +1));
   links.push(link([[440, 110], [360, 110]], g.load_w, +1));
   out.push(node(500, 110, 120, 80, 'Main panel', '', 'backed up'));
-  out.push(node(290, 110, 130, 86, 'Home', kwText(g.load_w), 'load'));
+  out.push(node(290, 110, 130, 86, 'Home', kwText(g.load_w), forced('load_w') ? 'load · forced' : 'load',
+    forced('load_w') ? 'forced' : ''));
 
   // PV: the aGate's own input, and remote inputs through an aPbox.
   const inputs = Object.keys(g.pv_inputs || {}).filter(k => g.pv_inputs[k] > 0);
@@ -76,8 +79,9 @@ function renderDiagram(g) {
   if (inputs.includes('proximal')) {
     const w = g.pv_by_input.proximal || 0;
     links.push(link([[700, 150], [700, 270], [570, 270]], w, +1));
-    out.push(node(700, 105, 130, 86, 'PV · aGate', kwText(w), g.pv_relays.proximal ? 'relay closed' : 'relay open',
-      g.pv_relays.proximal ? '' : 'dim'));
+    out.push(node(700, 105, 130, 86, 'PV · aGate', kwText(w),
+      (g.pv_relays.proximal ? 'relay closed' : 'relay open') + (forced('solar_w') ? ' · forced' : ''),
+      g.pv_relays.proximal ? (forced('solar_w') ? 'forced' : '') : 'dim'));
   }
   if (remote.length) {
     const total = remote.reduce((s, k) => s + (g.pv_by_input[k] || 0), 0);
@@ -86,7 +90,8 @@ function renderDiagram(g) {
       const w = g.pv_by_input[k] || 0;
       links.push(link([[x, 150], [x, 175], [880, 175], [880, 195]], w, +1));
       out.push(node(x, 105, 120, 86, 'Remote PV ' + k.replace('remote', ''), kwText(w),
-        g.pv_relays[k] ? 'relay closed' : 'relay open', g.pv_relays[k] ? '' : 'dim'));
+        (g.pv_relays[k] ? 'relay closed' : 'relay open') + (forced('solar_w') ? ' · forced' : ''),
+        g.pv_relays[k] ? (forced('solar_w') ? 'forced' : '') : 'dim'));
     });
     links.push(link([[880, 235], [880, 255], [570, 255]], total, +1));
     out.push(node(880, 215, 90, 40, 'aPbox', '', ''));
@@ -131,7 +136,8 @@ function renderDiagram(g) {
     sun ? (sun.up ? 'Day' : 'Night') + ' · sun ' + sun.elevation_deg + '°' : 'No location, so no sun position',
     w ? skyLabel(w.sky || w.model) : 'bell curve (no weather model)',
     w && w.poa_w_m2 != null ? w.poa_w_m2 + ' W/m² on the array' : null,
-    'ambient ' + g.ambient_c.toFixed(1) + ' °C',
+    'ambient ' + g.ambient_c.toFixed(1) + ' °C' + (forced('ambient_c') ? ' (forced)' : ''),
+    forced('solar_w') ? 'solar forced to ' + kwText(ov.solar_w) + ', not the sun' : null,
     'cabinet ' + g.cabinet_c.toFixed(1) + ' °C (modelled)'].filter(Boolean).join(' · ');
   const label = `Energy flow for ${g.id}: grid ${kwText(g.grid_w)}, home ${kwText(g.load_w)}, ` +
     `solar ${kwText(g.solar_w)}, battery ${Math.round(g.soc)}% ${kwText(g.battery_w)}`;

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Web UI: forced values are marked (2026-10-30, #38)
+- Solar, load or ambient set through the pv / load / ambient actions replaces the model at any
+  hour (solar at night included). Cards now get an amber "solar forced 6.00 kW" tag, the
+  diagram's PV / Home boxes turn amber and dashed with "forced", and the header says "solar
+  forced to …, not the sun". Sending null hands the value back to the model.
+- Control state gains `overrides` (`solar_w`, `load_w`, `ambient_c`; null = the model).
+
 ### Web UI: "Direct Connect off" (2026-10-30, #36)
 - A card says "Direct Connect off" when its gateway has no `directconnect:` entry, rather than
   showing nothing. In the example fleet only `site` and `us-split` have a listener
