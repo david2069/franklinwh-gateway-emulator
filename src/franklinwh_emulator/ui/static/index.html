@@ -240,8 +240,10 @@
   <section class="actions col-side" x-show="current && schema" aria-labelledby="actions-h">
     <div class="actions-top">
       <h2 id="actions-h"><label for="active-gw">Actions on</label></h2>
-      <select id="active-gw" :value="active" @change="select($event.target.value)">
-        <template x-for="g in gateways" :key="g.id"><option :value="g.id" x-text="g.id"></option></template>
+      <select id="active-gw" @change="select($event.target.value)">
+        <!-- :selected per option, not :value on the select: the options render after `active` is
+             set (from localStorage), so a select-level value would fall back to the first (#62) -->
+        <template x-for="g in gateways" :key="g.id"><option :value="g.id" x-text="g.id" :selected="g.id === active"></option></template>
       </select>
     </div>
     <p class="sub">Each form sends only the fields you fill. The emulator checks them; its answer stays in the form.</p>

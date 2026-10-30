@@ -296,3 +296,12 @@ print(JSON.stringify({{same, edited: touBody(edited), segs: touSegments(T.schedu
     edited["schedule"][1]["startHourTime"] = "20:00"          # overlaps: the server's answer
     status, err = post(edited)
     assert status == 400 and err["error"].startswith("tou: 'Peak' (17:00-21:00) overlaps")   # one prefix
+
+
+def test_active_gateway_select_marks_the_option():
+    """#62: the select's options render after `active` is restored, so each option carries
+    :selected; a select-level :value showed the first gateway after a reload."""
+    page = (STATIC / "index.html").read_text()
+    select = re.search(r'<select id="active-gw"[^>]*>(.*?)</select>', page, re.S)
+    assert select and ":value" not in select.group(0).split(">", 1)[0]
+    assert ':selected="g.id === active"' in select.group(1)
