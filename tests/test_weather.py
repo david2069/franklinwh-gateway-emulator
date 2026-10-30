@@ -113,3 +113,11 @@ def test_weather_control_action():
     assert gw.site.weather.cfg.sky == "storm"
     with pytest.raises(ApiError):
         apply(gw, "weather", {"sky": "hail"})
+
+
+def test_weather_action_without_a_model_says_how_to_add_one():
+    from franklinwh_emulator.control import ApiError, apply
+    from franklinwh_emulator.gateway import Gateway, GatewayConfig
+    gw = Gateway(GatewayConfig(setup="in-service", seed=7))
+    with pytest.raises(ApiError, match=r"this gateway has no weather model.*weather: \{model: synthetic\}"):
+        apply(gw, "weather", {"sky": "storm"})

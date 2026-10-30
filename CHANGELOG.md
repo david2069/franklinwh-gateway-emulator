@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Weather error says how to add a weather model (2026-10-31)
+- The weather action on a gateway without a weather model said "site uses the bell curve";
+  it now says to add `weather: {model: synthetic}` to the gateway's fleet entry.
+
 ### Factory vs in-service energy: totals, commissioning, history (2026-10-31, #53)
 - A factory aGate starts with lifetime totals at 0 and is commissioned the day it starts
   (Direct Connect `sno` 0). An in-service one keeps the reference aGate's totals and its
