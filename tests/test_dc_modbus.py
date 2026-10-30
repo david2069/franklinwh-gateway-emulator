@@ -1,4 +1,5 @@
-"""Modbus TCP on/off through the gateway's own Direct Connect listener (#63)."""
+"""Direct Connect writes the control API sends to a gateway's own listener: Modbus TCP on/off
+(#63) and reboot (#68)."""
 
 import asyncio
 import json
@@ -103,6 +104,43 @@ def test_not_in_process_and_not_on_the_loop(fleet):
         apply(fleet["fresh"], "dc-modbus", {"on": True})
 
     async def on_loop():
-        ControlApi.dc_modbus(fleet["fresh"], {"on": True})
+        ControlApi.dc_write(fleet["fresh"], "dc-modbus", {"on": True})
     with pytest.raises(RuntimeError, match="worker thread"):
         asyncio.run(on_loop())
+
+
+def test_reboot_over_direct_connect(fleet, tmp_path):
+    gw = fleet["fresh"]
+    gw.reboot_s = 0.5
+    post(fleet, "/gateways/fresh/dc-modbus", {"on": True})
+    s = wait_listening(fleet, "fresh", True)
+    modbus, dc = tuple(s["address"]), tuple(s["dc_address"])
+    status, s = post(fleet, "/gateways/fresh/dc-reboot", {})
+    assert status == 200 and s["rebooting"] is True
+    time.sleep(0.2)
+    for addr in (modbus, dc):                                   # both listeners are down
+        with pytest.raises(ConnectionRefusedError):
+            socket.create_connection(addr, timeout=1)
+    end = time.monotonic() + 3
+    while state(fleet, "fresh")["rebooting"] and time.monotonic() < end:
+        time.sleep(0.05)
+    s = state(fleet, "fresh")
+    assert s["rebooting"] is False and s["modbus_listening"] is True
+    for addr in (modbus, dc):                                   # back on the same ports
+        socket.create_connection(addr, timeout=1).close()
+    assert [e["action"] for e in fleet.control.log] == ["dc-modbus", "dc-reboot"]
+    status, saved = post(fleet, "/session/save", {"name": "after-reboot"})
+    text = (tmp_path / "sessions" / "after-reboot.yaml").read_text()
+    assert "dc-modbus" in text and "dc-reboot" not in text      # a restore doesn't reboot
+
+
+def test_reboot_goes_over_the_wire(fleet):
+    gw = fleet["fresh"]
+    fleet._loop.run(gw.dc.stop())
+    status, err = post(fleet, "/gateways/fresh/dc-reboot", {})
+    assert status == 400 and err["error"].startswith("dc-reboot: the Direct Connect write failed")
+    assert gw.rebooting is False
+    status, err = post(fleet, "/gateways/nodc/dc-reboot", {})
+    assert status == 400 and err["error"] == "dc-reboot: nodc has no Direct Connect listener"
+    with pytest.raises(ApiError, match="sent over Direct Connect"):
+        apply(gw, "dc-reboot", {})

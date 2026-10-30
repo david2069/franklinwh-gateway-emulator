@@ -116,6 +116,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "dc_faults": asdict(gw.dc_faults),
         "modbus_enabled": gw.modbus_enabled,
         "modbus_listening": gw.server._server is not None,   # :502 open now (lags a 1205 write ~3 s)
+        "rebooting": gw.rebooting,                          # both listeners down for a 1721 reboot
         "episode_phase": gw.episode_phase,
         "export_limit_enforced": site.export_limit_enforced,
         "export_breach_s": site.export_breach_s,
@@ -159,9 +160,9 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
     problem = check_body(action, body)
     if problem:
         raise ApiError(400, problem)
-    if action == "dc-modbus":                  # a network write: ControlApi.dc_modbus sends it
-        raise ApiError(400, "dc-modbus: sent over Direct Connect by the control API "
-                            "(POST /gateways/<id>/dc-modbus), not applied in-process")
+    if action in DC_ACTIONS:                   # network writes: ControlApi.dc_write sends them
+        raise ApiError(400, f"{action}: sent over Direct Connect by the control API "
+                            f"(POST /gateways/<id>/{action}), not applied in-process")
     site = gw.site
     try:
         if action == "grid":
@@ -321,7 +322,8 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
 
 
 # Actions not replayed by a restore: they are events, not settings.
-TRANSIENT = {"episode"}
+TRANSIENT = {"episode", "dc-reboot"}      # not replayed on restore
+DC_ACTIONS = {"dc-modbus", "dc-reboot"}    # sent over the gateway's Direct Connect port
 LOG_MAX = 10_000
 _NAME_OK = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
 
@@ -358,8 +360,8 @@ class ControlApi:
                  "gateway": gw.config.id, "action": action, "body": body, "source": source,
                  "ok": True, "error": None}
         try:
-            if action == "dc-modbus":
-                self.dc_modbus(gw, body)
+            if action in DC_ACTIONS:
+                self.dc_write(gw, action, body)
             else:
                 apply(gw, action, body)
         except ApiError as e:
@@ -370,11 +372,12 @@ class ControlApi:
             del self.log[:-LOG_MAX]
 
     @staticmethod
-    def dc_modbus(gw: "Gateway", body: dict) -> None:
-        """Send a 1205 sunsMdEn write to the gateway's own Direct Connect listener, as an
-        installer's tool would. Blocking: call it off the event loop that serves the gateway
-        (``_client`` and the CLI's restore use a worker thread)."""
-        problem = check_body("dc-modbus", body)
+    def dc_write(gw: "Gateway", action: str, body: dict) -> None:
+        """Send a Direct Connect write to the gateway's own listener, as an installer's tool
+        would: dc-modbus = 1205 sunsMdEn, dc-reboot = 1721 reboot. Blocking: call it off the
+        event loop that serves the gateway (``_client`` and the CLI's restore use a worker
+        thread)."""
+        problem = check_body(action, body)
         if problem:
             raise ApiError(400, problem)
         try:
@@ -382,16 +385,19 @@ class ControlApi:
         except RuntimeError:
             pass
         else:
-            raise RuntimeError("dc-modbus blocks: call it from a worker thread, not the event loop")
+            raise RuntimeError(f"{action} blocks: call it from a worker thread, not the event loop")
         if gw.dc_address is None:
-            raise ApiError(400, f"dc-modbus: {gw.config.id} has no Direct Connect listener")
+            raise ApiError(400, f"{action}: {gw.config.id} has no Direct Connect listener")
         from franklinwh_local.client import LocalClient
         try:
             with LocalClient(*gw.dc_address, timeout=5, retries=0) as c:
                 c.login()
-                c.set_der_comms(sunspec_modbus=bool(body["on"]))
+                if action == "dc-modbus":
+                    c.set_der_comms(sunspec_modbus=bool(body["on"]))
+                else:                          # the aGate drops the socket: the library's "dropped"
+                    c.reboot()
         except Exception as e:                 # the library's transport errors, refusals
-            raise ApiError(400, f"dc-modbus: the Direct Connect write failed: {e}") from None
+            raise ApiError(400, f"{action}: the Direct Connect write failed: {e}") from None
 
     def _sessions_dir(self):
         from pathlib import Path
@@ -488,9 +494,9 @@ class ControlApi:
     @staticmethod
     def _blocking(method: str, path: str) -> bool:
         """Requests that may send Direct Connect frames to a gateway served by this event
-        loop, so must run in a worker thread: dc-modbus, and a restore that may replay it."""
+        loop, so must run in a worker thread: the DC_ACTIONS, and a restore that may replay one."""
         p = path.split("?")[0].rstrip("/")
-        return method == "POST" and (p.endswith("/dc-modbus") or p == "/session/restore")
+        return method == "POST" and (p.rsplit("/", 1)[-1] in DC_ACTIONS or p == "/session/restore")
 
     async def _client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         try:

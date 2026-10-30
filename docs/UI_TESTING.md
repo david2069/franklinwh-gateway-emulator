@@ -27,6 +27,9 @@ package isn't installed in it: `pip install -e .` once).
   and press **Enable Modbus TCP via Direct Connect** (under its name): the emulator sends that
   write to `fresh`'s own Direct Connect port, the line reads "opening…", and about 3 s later
   "Modbus TCP Server on" with the address (the card too). **Disable …** closes it again.
+- **Reboot via Direct Connect** sends a `1721` reboot the same way: the line reads "Rebooting…",
+  both ports refuse connections for about 20 s, then come back on the same ports with
+  everything as it was. Reboots are not saved in sessions.
 - `site` has appliances (`loads: sydney-family`): hot water on SW1, EV on SW2, aircon on SW3.
 - Each shows SoC, solar, home, battery and grid power, changing every second, and the addresses
   to point a bridge at.
