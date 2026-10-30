@@ -5,6 +5,7 @@ import json
 import re
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 import pytest
 
@@ -41,7 +42,7 @@ def test_page_and_its_files(ui):
     assert status == 200 and ctype.startswith("text/html")
     page = body.decode()
     refs = re.findall(r'(?:src|href)="/static/([^"]+)"', page)
-    assert set(refs) == {"style.css", "app.js", "diagram.js", "alpinejs-3.14.1.min.js"}
+    assert set(refs) == {"style.css", "app.js", "diagram.js", "actions.js", "alpinejs-3.14.1.min.js"}
     for name in refs:
         status, ctype, _ = get(f"{base}/static/{name}")
         assert status == 200
@@ -77,7 +78,7 @@ def test_page_reads_only_fields_the_state_has(ui):
     """Every g.<field> / current.<field> the page uses exists in the control API's state."""
     fleet, _ = ui
     state = gateway_state(fleet["site"])
-    text = "".join((STATIC / n).read_text() for n in ("index.html", "app.js", "diagram.js"))
+    text = "".join((STATIC / n).read_text() for n in ("index.html", "app.js", "diagram.js", "actions.js"))
     used = set(re.findall(r"\b(?:g|current)\.([a-z_]+)", text))
     assert used and used <= set(state), sorted(used - set(state))
     leg_fields = set(re.findall(r"\bleg\.([a-z_]+)", text))
@@ -101,3 +102,54 @@ def test_state_carries_what_the_diagram_draws(ui):
     assert state["apower_units"] == 1
     assert state["apower_rating"] == {"wh": 13600, "w": 5000}    # emulator constants
     assert set(state["pv_by_input"]) >= set(state["pv_inputs"])
+
+
+# -- actions panel -----------------------------------------------------------------------------
+JSC = Path("/System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Helpers/jsc")
+
+
+def test_every_action_has_one_group():
+    from franklinwh_emulator.schema import ACTIONS, GROUPS
+    listed = [a for names in GROUPS.values() for a in names]
+    assert sorted(listed) == sorted(ACTIONS) and len(listed) == len(set(listed))
+    assert all(ACTIONS[a]["group"] for a in ACTIONS)
+
+
+def test_page_handles_every_field_type():
+    from franklinwh_emulator.schema import ACTIONS
+    kinds = json.loads(re.search(r"const FIELD_KINDS = (\[.*?\]);",
+                                 (STATIC / "actions.js").read_text()).group(1).replace("'", '"'))
+    used = {t for a in ACTIONS.values() for f in a["fields"].values()
+            for t in (f["type"] if isinstance(f["type"], list) else [f["type"]])}
+    assert used <= set(kinds), sorted(used - set(kinds))
+
+
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_forms_rebuild_every_example(tmp_path):
+    """Each schema example, entered as form values, builds the same request body again."""
+    from franklinwh_emulator.schema import schema
+    harness = tmp_path / "harness.js"
+    harness.write_text((STATIC / "actions.js").read_text() + f"""
+const S = {json.dumps(schema()["actions"])};
+const out = [];
+for (const [name, a] of Object.entries(S)) {{
+  for (const ex of a.examples) {{
+    let got;
+    try {{ got = buildBody(a, formFromBody(a, ex)); }} catch (e) {{ got = 'ERROR ' + e.message; }}
+    out.push([name, ex, got]);
+  }}
+}}
+const bad = [];
+for (const [n, f] of [['load', {{w: 'abc'}}], ['csip', {{control: '[1]'}}], ['csip', {{control: '{{'}}]]) {{
+  try {{ buildBody(S[n], f); bad.push('accepted'); }} catch (e) {{ bad.push(e.message); }}
+}}
+print(JSON.stringify({{out, bad, blank: buildBody(S.grid, formFromBody(S.grid, {{}}))}}));
+""")
+    import subprocess
+    res = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True,
+                                    check=True).stdout)
+    mismatches = [(n, ex, got) for n, ex, got in res["out"] if got != ex]
+    assert not mismatches, mismatches
+    assert len(res["out"]) == sum(len(a["examples"]) for a in schema()["actions"].values())
+    assert res["bad"] == ["w: not a number", "control: needs a JSON object", "control: not valid JSON"]
+    assert res["blank"] == {}

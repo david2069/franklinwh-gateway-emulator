@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="/static/style.css">
 <script src="/static/app.js"></script>
 <script src="/static/diagram.js"></script>
+<script src="/static/actions.js"></script>
 <script defer src="/static/alpinejs-3.14.1.min.js"></script>
 </head>
 <body x-data="running()" x-init="start()">
@@ -90,6 +91,60 @@
           </div>
         </div>
       </div>
+    </template>
+  </section>
+
+  <section class="actions" x-show="current && schema" aria-labelledby="actions-h">
+    <h2 id="actions-h" x-text="'Actions on ' + active"></h2>
+    <p class="sub">Each form sends only the fields you fill. The emulator checks them; its answer stays in the form.</p>
+    <template x-for="group in groupNames()" :key="group">
+      <details class="group">
+        <summary x-text="group"></summary>
+        <div class="forms">
+          <template x-for="name in actionsIn(group)" :key="name">
+            <form class="action" @submit.prevent="submit(name)">
+              <div class="action-head">
+                <h3 x-text="name"></h3>
+                <label class="example" x-show="action(name).examples.length">
+                  <span>Example</span>
+                  <select @change="fillExample(name, $event.target.value); $event.target.value = ''">
+                    <option value="">fill from…</option>
+                    <template x-for="(ex, i) in action(name).examples" :key="i">
+                      <option :value="i" x-text="JSON.stringify(ex)"></option>
+                    </template>
+                  </select>
+                </label>
+              </div>
+              <p class="doc" x-text="action(name).doc"></p>
+              <template x-for="[field, spec] in fieldsOf(name)" :key="field">
+                <div class="field">
+                  <label :for="fieldId(name, field)">
+                    <span x-text="field"></span><span class="req" x-show="required(name, field)" aria-label="required"> *</span>
+                  </label>
+                  <template x-if="kind(spec) === 'choice'">
+                    <select :id="fieldId(name, field)" x-model="forms[name][field]">
+                      <template x-for="[v, l] in options(spec)" :key="v"><option :value="v" x-text="l"></option></template>
+                    </select>
+                  </template>
+                  <template x-if="kind(spec) === 'json'">
+                    <textarea :id="fieldId(name, field)" rows="2" x-model="forms[name][field]" placeholder="{ }"></textarea>
+                  </template>
+                  <template x-if="kind(spec) === 'number' || kind(spec) === 'text' || kind(spec) === 'list'">
+                    <input :id="fieldId(name, field)" type="text" x-model="forms[name][field]"
+                           :inputmode="kind(spec) === 'number' ? 'decimal' : 'text'" autocomplete="off">
+                  </template>
+                  <small x-text="hint(spec)"></small>
+                </div>
+              </template>
+              <div class="submit">
+                <button type="submit" :disabled="busy === name" x-text="busy === name ? 'Sending…' : 'Send'"></button>
+              </div>
+              <p class="result" x-show="result(name)" :class="result(name) && (result(name).ok ? 'ok' : 'bad')"
+                 x-text="result(name) && result(name).text" role="status"></p>
+            </form>
+          </template>
+        </div>
+      </details>
     </template>
   </section>
 </main>

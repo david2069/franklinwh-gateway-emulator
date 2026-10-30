@@ -89,3 +89,35 @@ main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 @keyframes dash { to { stroke-dashoffset: -14; } }
 @media (prefers-reduced-motion: reduce) { .diagram .flow { animation: none; } }
 .diagram-note { margin: 0 0 16px; color: var(--muted); font-size: 12px; }
+
+/* Actions */
+.actions { margin-top: 20px; }
+.actions h2 { margin: 0 0 4px; font-size: 16px; }
+.actions .sub { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+.group { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px; }
+.group summary { cursor: pointer; padding: 12px 16px; font-weight: 600; min-height: 44px; box-sizing: border-box; }
+.forms { display: grid; gap: 12px; padding: 0 16px 16px;
+         grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.action { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px;
+          display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.action-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.action h3 { margin: 0; font: 600 14px var(--mono); color: var(--text); text-transform: none; letter-spacing: 0; }
+.action .doc { margin: 0; color: var(--text-2); font-size: 13px; }
+.example { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.example select { max-width: 160px; }
+.field { display: flex; flex-direction: column; gap: 3px; }
+.field label { font: 13px var(--mono); color: var(--text-2); }
+.field .req { color: var(--warn); }
+.field small { color: var(--muted); font-size: 12px; }
+.action input, .action select, .action textarea {
+  font: 14px var(--mono); color: var(--text); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 6px; padding: 7px 8px; min-height: 36px; width: 100%; }
+.action input:focus-visible, .action select:focus-visible, .action textarea:focus-visible,
+.action button:focus-visible { outline: 2px solid var(--ok); outline-offset: 1px; }
+.submit { display: flex; justify-content: flex-end; }
+.action button { font: 600 14px var(--sans); color: var(--bg); background: var(--ok); border: 0;
+                 border-radius: 8px; padding: 0 18px; min-height: 40px; cursor: pointer; }
+.action button:disabled { opacity: .6; cursor: progress; }
+.result { margin: 0; font: 12px var(--mono); padding: 6px 8px; border-radius: 6px; word-break: break-word; }
+.result.ok { color: var(--ok); background: var(--ok-bg); }
+.result.bad { color: var(--bad); border: 1px solid var(--bad); }

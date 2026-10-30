@@ -245,6 +245,22 @@ ACTIONS: dict[str, dict[str, Any]] = {
 }
 
 
+# How the UI and docs group the actions, in display order.
+GROUPS: dict[str, list[str]] = {
+    "Grid and phases": ["grid", "offgrid"],
+    "Inputs": ["pv", "load", "ambient", "weather"],
+    "Battery and modes": ["vpp", "release", "mode", "reserve", "soc"],
+    "Loads": ["circuit", "appliance"],
+    "Generator": ["generator"],
+    "CSIP and comms": ["csip", "der-comms", "export"],
+    "Alarms and faults": ["alarms", "faults", "dc-faults", "range-fault", "write-reject",
+                          "addressing", "episode"],
+}
+for _group, _names in GROUPS.items():
+    for _name in _names:
+        ACTIONS[_name]["group"] = _group
+
+
 def check_body(action: str, body: dict) -> str | None:
     """The problem with ``body`` for ``action``, or None. Unknown actions are the caller's."""
     spec = ACTIONS[action]
@@ -260,4 +276,4 @@ def check_body(action: str, body: dict) -> str | None:
 def schema() -> dict:
     """What ``GET /schema`` serves: the actions, and the keys a fleet's gateway may hold."""
     from .validate import config_schema
-    return {"actions": ACTIONS, "gateway_config": config_schema()}
+    return {"actions": ACTIONS, "groups": GROUPS, "gateway_config": config_schema()}
