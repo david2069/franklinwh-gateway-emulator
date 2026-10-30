@@ -21,7 +21,11 @@ package isn't installed in it: `pip install -e .` once).
 
 ## 2. Cards
 
-- There are 6 cards: `site`, `us-split`, `au-3phase`, `au-2phase`, `tou-reserve`, `spec`.
+- There are 7 cards: `site`, `us-split`, `au-3phase`, `au-2phase`, `tou-reserve`, `fresh`, `spec`.
+- `fresh` is a factory aGate: its card says **Modbus TCP off**. Like a real one, it serves only
+  Direct Connect until a Direct Connect `1205` `sunsMdEn` write turns Modbus TCP on (the
+  **der-comms** form with modbus `true` does the same through the control API).
+- `site` has appliances (`loads: sydney-family`): hot water on SW1, EV on SW2, aircon on SW3.
 - Each shows SoC, solar, home, battery and grid power, changing every second, and the addresses
   to point a bridge at.
 - Click a card: it gets a green border, and the panel below switches to it (the **active
@@ -55,9 +59,8 @@ its result stays in the form until that form is used again.
 ## 5. With a bridge (optional)
 
 Point the Modbus bridge at a card's Modbus TCP address (for `site`, `127.0.0.1:5020`), or the
-Direct Connect bridge at its Direct Connect address. In `examples/fleet.yaml` only `site` (9020)
-and `us-split` (9021) have one; the others show "Direct Connect off". Add
-`directconnect: {port: <port>}` to a gateway's entry to give it a listener. Fire actions here and watch the bridge
+Direct Connect bridge at its Direct Connect address (every aGate has one: 9020–9026 in the
+example; `spec` is not an aGate). For `fresh`, enable Modbus TCP through Direct Connect first. Fire actions here and watch the bridge
 react. The `ctl` command works against the same port (`franklinwh-emulator ctl site status`).
 
 ## 6. Undo

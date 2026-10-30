@@ -270,3 +270,47 @@ def test_1829_device_alarms_counts_active_alarms(gw):
     assert p.handlers[1829]({"opt": 0}) == {"opt": 0, "result": 0, "reason": 0, "num": 0}
     gw.site.force_alarm("OVER_TEMP")
     assert p.handlers[1829]({"opt": 0})["num"] >= 1
+
+
+# -- factory default (#40): Direct Connect always on, Modbus TCP off until 1205 enables it ------
+def test_factory_agate_has_dc_and_no_modbus_until_1205(clock):
+    g = make_gateway(clock, seed=7, setup="factory", port=0)       # dc_port not given
+    with g:
+        assert g.dc_address is not None and g.dc_address[1] > 0    # listener by default
+        assert g.modbus_enabled is False
+        assert g.server._server is None                             # :502 not listening
+        g.modbus_apply_delay_s = 0.2
+        c = LocalClient(*g.dc_address, timeout=2, retries=0)
+        c.transport.connect()
+        c.login()
+        c.set_der_comms(sunspec_modbus=True)                        # the real 1205 write
+        time.sleep(0.6)
+        host, port = g.address
+        assert port > 0
+        socket.create_connection((host, port), timeout=1).close()   # now serving
+        c.transport.close()
+
+
+def test_default_setup_is_factory():
+    from franklinwh_emulator.gateway import Gateway, GatewayConfig
+    g = Gateway(GatewayConfig(seed=7))
+    assert g.config.setup == "factory" and g.modbus_enabled is False and g.dc is not None
+
+
+@pytest.mark.parametrize("cfg,modbus,dc", [
+    ({"setup": "in-service"}, True, True),
+    ({"setup": "factory", "modbus_enabled": True}, True, True),
+    ({"setup": "in-service", "modbus_enabled": False}, False, True),
+    ({"profile": "spec"}, True, False),                    # not an aGate: as before
+    ({"profile": "spec", "dc_port": 0}, True, True),
+])
+def test_setup_and_overrides(cfg, modbus, dc):
+    from franklinwh_emulator.gateway import Gateway, GatewayConfig
+    g = Gateway(GatewayConfig.from_dict({"id": "x", "seed": 7, **cfg}))
+    assert g.modbus_enabled is modbus and (g.dc is not None) is dc
+
+
+def test_unknown_setup_is_refused():
+    from franklinwh_emulator.gateway import GatewayConfig
+    with pytest.raises(ValueError, match="setup must be one of"):
+        GatewayConfig.from_dict({"id": "x", "setup": "commissioned"})

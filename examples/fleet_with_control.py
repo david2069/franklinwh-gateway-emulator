@@ -37,7 +37,8 @@ def main() -> dict:
     addresses = fleet.start(control_port=0)
     try:
         for gid, (host, port) in addresses.items():
-            print(f"{gid:14} Modbus {host}:{port}")
+            on = fleet[gid].modbus_enabled
+            print(f"{gid:14} Modbus " + (f"{host}:{port}" if on else "off (factory: enable via Direct Connect 1205)"))
         api = fleet.control.port
         before = call(api, "GET", "/gateways/site")["grid_connected"]
         call(api, "POST", "/gateways/site/grid", {"available": False})   # black-out

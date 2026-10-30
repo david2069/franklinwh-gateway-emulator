@@ -139,7 +139,7 @@ def test_operating_windows_gate_auto_start():
 
 
 def test_kwh_gen_and_direct_connect_payloads():
-    gw = Gateway(GatewayConfig(seed=7, site=SiteConfig(
+    gw = Gateway(GatewayConfig(setup="in-service", seed=7, site=SiteConfig(
         seed=7, tz_offset_hours=10, initial_soc=10,
         generator={"installed": True, "rated_w": 6000, "startDelTime": 0, "charge1En": 0,
                    "crank_s": 5, "warmup_s": 5})), clock=ManualClock(NIGHT))
@@ -171,7 +171,7 @@ def test_reference_1902_key_set():
             "charge1En", "charge1StartTime", "charge1EndTime", "charge2En", "charge2StartTime",
             "charge2EndTime", "charge3En", "charge3StartTime", "charge3EndTime", "oilmanoEn",
             "manoFre", "manoDate", "manoStartTime", "manoTime", "manoManExit"}
-    gw = Gateway(GatewayConfig(seed=7))
+    gw = Gateway(GatewayConfig(setup="in-service", seed=7))
     out = DcPayloads(gw).handlers[1901]({"opt": 0})
     assert set(out) == real
     assert (out["genEn"], out["genStartElec"], out["genCloseElec"], out["startDelTime"]) == (0, 20, 80, 1800)

@@ -107,7 +107,7 @@ def test_invalid_weather_config():
 def test_weather_control_action():
     from franklinwh_emulator.control import ApiError, apply
     from franklinwh_emulator.gateway import Gateway, GatewayConfig
-    gw = Gateway(GatewayConfig(seed=7, site=SiteConfig(
+    gw = Gateway(GatewayConfig(setup="in-service", seed=7, site=SiteConfig(
         weather={"model": "synthetic", **SYD})), clock=ManualClock(NOON_AEST))
     apply(gw, "weather", {"sky": "storm"})
     assert gw.site.weather.cfg.sky == "storm"

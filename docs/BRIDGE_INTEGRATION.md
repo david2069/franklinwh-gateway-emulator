@@ -19,6 +19,7 @@ from franklinwh_emulator import Gateway, GatewayConfig, SiteConfig
 
 gw = Gateway(GatewayConfig(
     id=gw_id, seed=n,
+    setup="in-service",                                   # Modbus TCP on from the start (#40)
     quirks={"tou_reserve_mirrors_self": False},          # 15509 holds the TOU reserve
     site=SiteConfig(ac_type=ac_type, apower_units=units)))
 host, port = gw.start()          # register 127.0.0.1:<port> as the gateway host
@@ -29,6 +30,10 @@ gw.stop()
 
 Files on the bridge side (theirs): `gateway/mock_gateway.py`, `gateway/instance.py`,
 `gateway/registry.py`, and possibly `api/gateways_api.py` and `main.py`.
+
+**Modbus TCP starts off on a factory aGate (2026-10-30, #40).** Use `setup="in-service"` for a
+gateway that is already set up, or test the real path: a factory gateway serves only Direct
+Connect until a `1205` `sunsMdEn` write turns Modbus TCP on (about 3 s later).
 
 ## Acceptance checks (behaviour the bridge's mock has today, which must be kept)
 

@@ -495,7 +495,7 @@ def _post(base, path, body):
 
 def test_control_api_round_trip():
     fleet = Fleet.from_dict({"gateways": [
-        {"id": "site", "seed": 7, "tz_offset_hours": 0, "ac_type": 2}]})
+        {"id": "site", "seed": 7, "setup": "in-service", "tz_offset_hours": 0, "ac_type": 2}]})
     fleet.start(control_port=0)
     try:
         base = f"http://127.0.0.1:{fleet.control.port}"

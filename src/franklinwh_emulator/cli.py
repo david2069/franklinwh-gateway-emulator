@@ -59,7 +59,9 @@ async def _run(gateways: list[Gateway], control_port: int | None, ui: bool = Fal
     for gw in gateways:
         host, port = await gw.start_async()
         p = gw.profile
-        print(f"{gw.config.id}: Modbus TCP on {host}:{port}  serial={gw.serial}  "
+        modbus = (f"Modbus TCP on {host}:{port}" if gw.modbus_enabled else
+                  f"Modbus TCP off ({gw.config.setup}; enable with Direct Connect 1205 sunsMdEn)")
+        print(f"{gw.config.id}: {modbus}  serial={gw.serial}  "
               f"profile={p.name}  grid={gw.site.grid.name}  legs={','.join(gw.site.phases)}  "
               f"max_connections={p.max_connections}",
               flush=True)
@@ -398,7 +400,11 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=5020)
     s.add_argument("--dc-port", type=int,
-                   help="also serve Direct Connect (TCP/9000 protocol) on this port")
+                   help="Direct Connect (TCP/9000 protocol) port; aGate profiles always run one "
+                        "(default: a free port)")
+    s.add_argument("--setup", choices=("factory", "in-service"), default="factory",
+                   help="factory: Modbus TCP off until a Direct Connect 1205 write enables it "
+                        "(default); in-service: Modbus TCP on")
     s.add_argument("--id", default="agate")
     s.add_argument("--seed", type=int, default=0)
     s.add_argument("--serial")
@@ -487,7 +493,7 @@ def main(argv: list[str] | None = None) -> int:
         cfg = GatewayConfig(
             id=args.id, seed=args.seed, serial=args.serial, host=args.host, port=args.port,
             profile=args.profile, quirks=quirks,
-            time_scale=args.time_scale, dc_port=args.dc_port,
+            time_scale=args.time_scale, dc_port=args.dc_port, setup=args.setup,
             site=SiteConfig(seed=args.seed, apower_units=args.apower_units,
                             ac_type=args.ac_type, initial_soc=args.soc,
                             phases=args.phases.upper().split(",") if args.phases else None,

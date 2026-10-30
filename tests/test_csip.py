@@ -141,7 +141,7 @@ def test_sunsmden_toggles_modbus_listener():
     import socket
     import time as _time
     from franklinwh_emulator.gateway import Gateway, GatewayConfig
-    gw = Gateway(GatewayConfig(seed=7))
+    gw = Gateway(GatewayConfig(setup="in-service", seed=7))
     gw.modbus_apply_delay_s = 0.2
     host, port = gw.start()
     try:

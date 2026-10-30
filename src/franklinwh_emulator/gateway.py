@@ -63,6 +63,9 @@ def mock_serial(seed: int) -> str:
     return f"MOCK{seed % 10000:04d}" + "".join(rng.choice(_HEX) for _ in range(12))
 
 
+SETUPS = ("factory", "in-service")
+
+
 @dataclass
 class GatewayConfig:
     id: str = "agate"
@@ -73,8 +76,14 @@ class GatewayConfig:
     profile: str = DEFAULT_PROFILE
     quirks: dict[str, Any] = field(default_factory=dict)   # profile overrides
     time_scale: float = 1.0             # >1 fast-forwards the site clock
-    # Direct Connect (TCP/9000) frontend on the same site; None = off, 0 = ephemeral.
+    # Direct Connect (TCP/9000) frontend on the same site; 0 = ephemeral. Every aGate profile
+    # runs one (None → 0); the non-aGate ``spec`` profile only when a port is given.
     dc_port: int | None = None
+    # How the aGate starts. "factory": as an installer finds it, Modbus TCP off until a Direct
+    # Connect 1205 sunsMdEn write enables it (owner, 2026-10-30, #40). "in-service": already
+    # set up, Modbus TCP on. ``modbus_enabled`` overrides either.
+    setup: str = "factory"
+    modbus_enabled: bool | None = None
     site: SiteConfig = field(default_factory=SiteConfig)
 
     @classmethod
@@ -88,6 +97,8 @@ class GatewayConfig:
             dc = d.pop("directconnect") or {}
             d["dc_port"] = dc.get("port", 0)
         cfg = cls(**d)
+        if cfg.setup not in SETUPS:
+            raise ValueError(f"setup must be one of {list(SETUPS)}, not {cfg.setup!r}")
         cfg.site = SiteConfig(seed=cfg.seed, **site)
         return cfg
 
@@ -123,6 +134,9 @@ class Gateway:
         self.server = ModbusServer(self.device, cfg.host, cfg.port, self.faults)
         self.dc_faults = Faults()
         self.dc = None
+        is_agate = self.profile.name != "spec"          # every other profile is an aGate
+        if cfg.dc_port is None and is_agate:
+            cfg.dc_port = 0
         if cfg.dc_port is not None:
             from .directconnect import DirectConnectServer
             self.dc = DirectConnectServer(self, cfg.host, cfg.dc_port)
@@ -131,7 +145,10 @@ class Gateway:
         self._event_loop: asyncio.AbstractEventLoop | None = None
         # Direct Connect 1205 sunsMdEn. Writes are delayed-apply (~seconds, both
         # directions) on FW V12R02B30D06: the listener closes/reopens after a delay.
-        self.modbus_enabled = True
+        if cfg.modbus_enabled is not None:
+            self.modbus_enabled = bool(cfg.modbus_enabled)
+        else:
+            self.modbus_enabled = cfg.setup == "in-service" or not is_agate
         self.modbus_apply_delay_s = 3.0
         self.reboot_s = 20.0
         self.episode_phase: str | None = None   # "down" | "offgrid" during episode()
@@ -145,10 +162,11 @@ class Gateway:
         return None if self.dc is None else (self.dc.host, self.dc.port)
 
     async def _start_all(self) -> tuple[str, int]:
-        addr = await self.server.start()
+        if self.modbus_enabled:
+            await self.server.start()
         if self.dc is not None:
             await self.dc.start()
-        return addr
+        return self.address
 
     async def _stop_all(self) -> None:
         if self.dc is not None:

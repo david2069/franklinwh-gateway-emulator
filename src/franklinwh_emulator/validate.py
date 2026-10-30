@@ -33,7 +33,10 @@ DOCS: dict[str, str] = {
     "profile": "firmware profile (profiles.py), e.g. agate-v10r01b04d00",
     "quirks": "overrides of the profile's switches",
     "time_scale": "site clock speed; > 1 fast-forwards",
-    "dc_port": "Direct Connect port; null = off, 0 = ephemeral (see directconnect)",
+    "dc_port": "Direct Connect port; 0 = ephemeral. aGate profiles always run one (see directconnect)",
+    "setup": "factory (default: Modbus TCP off until a Direct Connect 1205 write) or in-service "
+             "(already set up: Modbus TCP on)",
+    "modbus_enabled": "start with the Modbus TCP Server on or off, whatever the setup",
     "apower_units": "number of aPowers",
     "ac_type": "0 single phase, 1 split phase, 2 three phase",
     "phases": "legs wired, e.g. [L1, L2]; default from ac_type",

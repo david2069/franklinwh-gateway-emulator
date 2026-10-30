@@ -71,7 +71,7 @@ def test_bad_function_code(client):
 
 def test_fleet_isolated_and_distinct():
     fleet = Fleet.from_dict({
-        "defaults": {"tz_offset_hours": 0},
+        "defaults": {"tz_offset_hours": 0, "setup": "in-service"},
         "gateways": [
             {"id": "site", "seed": 7, "apower_units": 2, "ac_type": 1},
             {"id": "shed", "seed": 42},
@@ -186,7 +186,7 @@ def test_range_fault_silent_short_and_expiry(gateway, client):
 def test_range_fault_over_control_api():
     import json as _j
     import urllib.request as _u
-    fleet = Fleet.from_dict({"gateways": [{"id": "a"}]})
+    fleet = Fleet.from_dict({"gateways": [{"id": "a", "setup": "in-service"}]})
     fleet.start(control_port=0)
     try:
         def post(body):
@@ -236,7 +236,7 @@ def test_slow_p_delays_only_a_fraction(gateway, client):
 def test_write_reject_over_control_api():
     import json as _j
     import urllib.request as _u
-    fleet = Fleet.from_dict({"gateways": [{"id": "a"}]})
+    fleet = Fleet.from_dict({"gateways": [{"id": "a", "setup": "in-service"}]})
     fleet.start(control_port=0)
     try:
         def post(body):

@@ -141,7 +141,7 @@ def test_direct_connect_circuits_and_meter():
     from franklinwh_local.client import LocalClient
     from franklinwh_emulator.gateway import Gateway, GatewayConfig
     clock = ManualClock(MIDNIGHT + 11 * 3600)
-    gw = Gateway(GatewayConfig(seed=7, dc_port=0, site=SiteConfig(
+    gw = Gateway(GatewayConfig(setup="in-service", seed=7, dc_port=0, site=SiteConfig(
         location=SYD, loads=[{"name": "hw", "type": "schedule", "w": 3600,
                               "on": ["10:00-14:00"], "circuit": 1}])), clock=clock)
     with gw:

@@ -31,7 +31,9 @@
           <span class="soc" x-text="pct(g.soc)" :aria-label="'state of charge ' + pct(g.soc)"></span>
         </div>
         <div class="addr">
-          <div x-text="'Modbus TCP ' + addr(g.address)"></div>
+          <div x-text="g.modbus_enabled ? 'Modbus TCP ' + addr(g.address) : 'Modbus TCP off'"
+               :class="{ off: !g.modbus_enabled }"
+               :title="g.modbus_enabled ? '' : 'Factory setup: enable with a Direct Connect 1205 sunsMdEn write'"></div>
           <div x-text="g.dc_address ? 'Direct Connect ' + addr(g.dc_address) : 'Direct Connect off'"
                :class="{ off: !g.dc_address }"
                :title="g.dc_address ? '' : 'No directconnect: entry for this gateway in the fleet file'"></div>

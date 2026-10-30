@@ -14,6 +14,7 @@ dependencies = [
     "pysunspec2>=1.1.0",
     "pyyaml>=6.0",
     "tzdata; platform_system == 'Windows'",   # IANA zones where the OS has none
+    "franklinwh-direct-connect-api>=0.3.0",   # every aGate runs a Direct Connect listener (#40)
 ]
 keywords = ["franklinwh", "agate", "modbus", "sunspec", "emulator", "simulator"]
 
