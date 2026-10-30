@@ -48,6 +48,19 @@ with Fleet.from_yaml("examples/fleet.yaml") as fleet:
 Inside an asyncio app, use `await gw.start_async()` / `await gw.stop_async()` to serve on
 your own loop.
 
+To check a fleet or scenario file without starting anything, `validate_fleet` and
+`validate_scenario` return every problem with its path (`[]` when clean):
+
+```python
+from franklinwh_emulator.gateway import load_yaml
+from franklinwh_emulator.validate import validate_fleet
+validate_fleet(load_yaml("my-fleet.yaml"))
+# [{'path': 'gateways[1].modbus', 'error': 'port 5020 already used by site (modbus)'}, ...]
+```
+
+Every gateway key, with its type, default and meaning, is in `validate.config_schema()` and in
+`GET /schema` under `gateway_config`.
+
 Runnable examples (tested in `tests/test_examples.py`, standard library plus the emulator):
 
 | File | Shows |

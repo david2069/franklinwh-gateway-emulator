@@ -258,5 +258,6 @@ def check_body(action: str, body: dict) -> str | None:
 
 
 def schema() -> dict:
-    """What ``GET /schema`` serves."""
-    return {"actions": ACTIONS}
+    """What ``GET /schema`` serves: the actions, and the keys a fleet's gateway may hold."""
+    from .validate import config_schema
+    return {"actions": ACTIONS, "gateway_config": config_schema()}
