@@ -210,6 +210,17 @@ function running() {
       if (f.range_fault) on.push('range ' + f.range_fault.start + '–' + f.range_fault.end);
       return on;
     },
+    // Colour classes: mode by native_mode (15507: 1 Backup, 2 Self, 3 TOU); battery by run status.
+    modeClass(g) { return ({ 1: 'mode-backup', 2: 'mode-self', 3: 'mode-tou' })[g.native_mode] || ''; },
+    statusClass(g) {
+      const n = (g.run_status_name || '').toLowerCase();
+      return n.includes('discharging') ? 'st-discharging' : n.includes('charging') ? 'st-charging'
+           : n.includes('standby') ? 'st-standby' : '';
+    },
+    reserveText(g) {
+      return g.grid_connected ? 'reserve ' + Math.round(g.active_reserve) + '%'
+                              : 'off-grid floor ' + Math.round(g.offgrid_floor_soc) + '%';
+    },
     // Values forced through pv / load / ambient (null = the model's own).
     overrideList(g) {
       const o = g.overrides || {};

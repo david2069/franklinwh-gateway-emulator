@@ -204,3 +204,19 @@ def test_appliance_errors_name_the_fix(ui):
         apply(fleet["site"], "appliance", {"name": "Water Heater", "on": True})
     apply(fleet["site"], "appliance", {"name": "hot_water", "on": True})
     assert gateway_state(fleet["site"])["appliances"]["hot_water"]["forced"] is True
+
+
+def test_state_has_firmware_and_active_reserve(ui):
+    from franklinwh_emulator.control import apply
+    fleet, _ = ui
+    gw = fleet["us-split"]
+    s = gateway_state(gw)
+    assert s["firmware"] == "V10R01B04D00" and s["offgrid_floor_soc"] == 5.0
+    apply(gw, "reserve", {"self": 25, "tou": 40})
+    for mode, reserve in ((2, 25), (3, 40), (1, 100)):           # Self, TOU, Emergency Backup
+        apply(gw, "mode", {"mode": mode})
+        assert gateway_state(gw)["active_reserve"] == reserve
+    v12 = Fleet.from_dict({"gateways": [{"id": "x", "profile": "agate-v12r02b60d00-candidate"},
+                                        {"id": "y", "profile": "spec"}]})
+    assert gateway_state(v12["x"])["firmware"] == "V12R02B60D00 (candidate)"
+    assert gateway_state(v12["y"])["firmware"] == "SunSpec DER (spec)"

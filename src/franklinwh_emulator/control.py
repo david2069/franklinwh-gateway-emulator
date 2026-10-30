@@ -80,6 +80,10 @@ def gateway_state(gw: "Gateway") -> dict:
         "address": list(gw.address),
         "dc_address": list(gw.dc_address) if gw.dc_address else None,
         "profile": gw.profile.name,
+        "firmware": gw.profile.firmware + (" (candidate)" if gw.profile.name.endswith("-candidate") else "")
+                    if gw.profile.name != "spec" else "SunSpec DER (spec)",
+        "active_reserve": site.active_reserve(),          # the reserve held now, by mode
+        "offgrid_floor_soc": site.config.offgrid_floor_soc,
         "native_mode_name": MODE_NAMES.get(snap.native_mode, str(snap.native_mode)),
         "run_status_name": RUN_NAMES.get(snap.run_status, str(snap.run_status)),
         "inverter_state_name": INV_NAMES.get(snap.inverter_state, str(snap.inverter_state)),
