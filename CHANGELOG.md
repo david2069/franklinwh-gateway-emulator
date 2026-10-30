@@ -5,6 +5,9 @@
 ### UI plan (2026-10-30)
 - `docs/UI_PLAN.md`: a plan, not yet built, for a local page to configure fleets, run scenarios
   and steer and watch emulated gateways. YAML stays the file format and JSON the wire format.
+- `docs/UI_PLAN.md`: the owner's answers (any user; the bridge's look with a live energy
+  diagram, location and weather; first release here with no JavaScript build), the diagram's
+  settings against what the emulator models, and what it doesn't model yet.
 
 ### Profiles checked against firmware_quirks.json (2026-10-30)
 - `tests/test_quirks_drift.py`: an `agate-*` profile may assert only what franklinwh-modbus

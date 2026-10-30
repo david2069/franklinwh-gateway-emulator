@@ -30,8 +30,11 @@ the aGate exclusive-access rule.
   version pinning between repos.
 - The emulator stays headless for its main users: the bridges' test suites install it and never
   load the UI.
-- **When to split it out:** if the front end needs a JavaScript build (Node, npm, a bundler), it
-  moves to its own repo that pins an emulator version. The design below avoids that.
+- **When to split it out:** if the front end needs a JavaScript build (Node, npm, a bundler), or
+  becomes a product of its own. It then moves to a new repo: a front end only, talking to the
+  emulator over the UI server's documented HTTP routes. **Never a fork**: a fork copies the
+  emulator and the copies drift.
+- The first release ships from here (owner, 2026-10-30).
 
 ## Config format: YAML for files, JSON on the wire
 
@@ -64,11 +67,17 @@ browser  ──HTTP/JSON──>  ui server (one local process)
 - **One process.** The UI server runs fleets in-process with the existing `Fleet` and
   `run_scenario`, as the tests and examples already do. No subprocess supervisor, no Docker.
 - **Standard library on the server**, like `control.py`: asyncio HTTP, JSON. No web framework.
-- **Front end without a build step:** plain HTML, CSS and JavaScript files shipped as package data.
-  A chart library, if needed, is vendored as one file. No Node.
+- **Front end without a build step, on the Modbus bridge's stack:** Alpine.js and Chart.js,
+  vendored as single pinned files, plus plain JavaScript files shipped as package data. The
+  bridge's web UI shows this carries an advanced UI with no JavaScript build (its only build step
+  compiles one CSS file, committed). No Node for users.
 - **Live updates by polling** `GET` state about once a second. It's local, few gateways, and
   needs no WebSocket code. Revisit only if it proves too slow.
 - **Loopback only, no authentication**, as with the control API: it binds to `127.0.0.1`.
+- **For any user.** The repo is to become public: the UI ships as an optional install extra, its
+  HTTP routes are documented for others to script against, and the docs say it has no login.
+- **Offline by default.** Fonts are vendored or the system's; nothing loads from the internet
+  unless a feature says so (the map, below).
 
 ### Workspace
 
@@ -131,11 +140,54 @@ Each is its own PR with tests. They're useful without the UI too.
 Each phase ships with tests: the server's routes through its HTTP interface, and the schema
 check above. The browser pages get a smoke test that loads each screen against a test fleet.
 
-## Open questions for the owner
+## Energy diagram
 
-1. **Who uses it?** Only you, or also the bridge sessions to set up their test fleets? If the
-   latter, the server's HTTP routes are the interface they would script against, and should be
-   documented as such.
-2. **Look and feel:** should it follow the bridges' UI patterns (layout, dialogs, terms), or is a
-   plain page enough?
-3. **No JavaScript build:** agreed? It is what keeps the UI in this repo.
+The Running screen's centrepiece is a live energy diagram in the Modbus bridge's look, from a
+design the owner has (a canvas of four presets, kept outside the repo). Grid → service meter →
+aGate in the middle; the main panel and home loads above; PV top right; aPowers right; generator,
+smart circuits and V2L below; an optional secondary panel on the aGate's non-backup port. Dashed
+lines animate in the direction power flows.
+
+Its four presets are one diagram with these settings:
+
+| Design setting | Values | From the emulator |
+|---|---|---|
+| PV topology | AC ports on the aGate · remote PV via aPbox · aPower S DC | `pv_inputs` (`proximal` = 15503 on the aGate; `remote1`/`remote2` = 15504/15505 via aPbox). aPower S DC: not modelled |
+| aPowers | 1–3 | `apower_units` |
+| Phases, service rating | 1–3 phases; amps | `ac_type`, `phases`. Rating: not modelled |
+| Grid, battery, home, solar flows | direction and kW | the gateway's state (`grid_w`, `battery_w`, `load_w`, `solar_w`) |
+| Smart circuits | SW1–3 on/off, kW | `circuits` |
+| Generator | status | `generator` |
+| EV, hot water | kW | appliances (`ev`, a scheduled `hot_water`) |
+| Header | location, timezone | `location`; weather from the gateway's `weather` |
+
+**Map (optional).** A map of the fleet's gateway locations needs map tiles from the internet
+(OpenStreetMap or similar), fetched by the viewer's browser. It is off unless switched on; the
+location and weather panel needs no network.
+
+**Not modelled; the diagram shows these as "not modelled", never invented values:**
+
+- per-aPower SoC and power (one combined battery; only single-aPower scans exist);
+- two PV inputs on the aGate itself (the emulator has one, 15503);
+- aPower S DC-coupled hybrid with MPPT inputs, and its ratings;
+- V2L;
+- non-backup loads on a secondary panel via the aGate's non-backup port;
+- the service meter's rating;
+- the EV's battery SoC and the hot water tank temperature;
+- tariff prices ($/MWh, c/kWh), which belong to the bridge's tariff logic.
+
+Each becomes its own backlog item with a documented or measured source before the emulator
+models it. Ratings shown on the cards (13.6 kWh, 5 kW per aPower) come from the emulator's
+constants; the aPower S figures in the design need a FranklinWH source.
+
+The design is a static mock-up: its numbers are fixed text and its flows don't balance. The UI
+rebuilds it in plain SVG driven by the state above. Its header held a street address; the UI shows
+only what the fleet config holds, and examples use city-level locations.
+
+## Owner's answers (2026-10-30)
+
+1. **Who uses it:** any user. The repo will become public.
+2. **Look and feel:** the bridge's UI, with the energy diagram above, including location and
+   weather.
+3. **JavaScript:** an advanced UI is expected. The first release is built here without a
+   JavaScript build; a new repo (not a fork) follows only if one becomes necessary.
