@@ -197,3 +197,57 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
 .diagram text.c-discharging { fill: var(--c-green); } .diagram text.c-standby { fill: var(--c-orange); }
 .card .fw { font: 12px var(--mono); color: var(--muted); }
 .card .soc small { display: block; font: 12px var(--sans); color: var(--muted); text-align: right; }
+
+/* TOU schedule (#58): dispatch and tariff timelines, the block table and its editor. */
+:root { --d1: #60a5fa; --d2: #fb923c; --d3: #facc15; --d6: #4ade80; --d7: #c084fc; --d8: #f87171;
+        --w0: #4ade80; --w1: #facc15; --w2: #f87171; --w4: #22d3ee; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) { --d1: #1d4ed8; --d2: #c2410c; --d3: #a16207; --d6: #15803d; --d7: #7e22ce; --d8: #b91c1c;
+                                   --w0: #15803d; --w1: #a16207; --w2: #b91c1c; --w4: #0e7490; }
+}
+.tou { margin-top: 16px; }
+.tou-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; }
+.tou-head h3 { margin: 0; }
+.tou-note { color: var(--text-2); font-size: 13px; flex: 1 1 200px; }
+.tou button, .tou-edit button { font: 600 13px var(--sans); border-radius: 8px; padding: 0 12px; min-height: 36px; cursor: pointer;
+  color: var(--bg); background: var(--ok); border: 0; }
+.tou button.secondary { color: var(--text-2); background: var(--panel-2); border: 1px solid var(--line); }
+.tou button:disabled { opacity: .6; cursor: progress; }
+.tou button:focus-visible, .tou input:focus-visible, .tou select:focus-visible { outline: 2px solid var(--ok); outline-offset: 1px; }
+.timeline { margin: 4px 0 14px; }
+.tl-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.tl-label { width: 64px; flex: none; font-size: 12px; color: var(--muted); }
+.tl-bar { position: relative; flex: 1; height: 30px; background: var(--panel-2); border-radius: 6px; overflow: hidden; }
+.tl-bar.thin { height: 20px; }
+.tl-seg { position: absolute; top: 0; bottom: 0; border-right: 2px solid var(--panel); display: flex; align-items: center;
+          justify-content: center; overflow: hidden; font: 600 11px var(--mono); color: #0b1220; }
+.tl-seg span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 3px; }
+.tl-seg.d1 { background: var(--d1); } .tl-seg.d2 { background: var(--d2); } .tl-seg.d3 { background: var(--d3); }
+.tl-seg.d6 { background: var(--d6); } .tl-seg.d7 { background: var(--d7); } .tl-seg.d8 { background: var(--d8); }
+.tl-seg.w0 { background: var(--w0); } .tl-seg.w1 { background: var(--w1); } .tl-seg.w2 { background: var(--w2); }
+.tl-seg.w4 { background: var(--w4); }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .tl-seg { color: #fff; } }
+.tl-now { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--text); }
+.tl-hours { position: relative; height: 16px; margin-left: 72px; font: 11px var(--mono); color: var(--muted); }
+.tl-hours span { position: absolute; transform: translateX(-50%); }
+.tl-hours span:first-child { transform: none; } .tl-hours span:last-child { transform: translateX(-100%); }
+.tou table tr.th td { color: var(--muted); font-family: var(--sans); }
+.detail .tou td { text-align: left; font-family: var(--mono); padding-right: 8px; }
+.tou tr.now td { color: var(--ok); font-weight: 600; }
+.tou-rows { display: grid; gap: 6px; margin-bottom: 8px; }
+.tou-row { display: grid; gap: 6px; align-items: center;
+           grid-template-columns: 70px 70px minmax(80px, 1fr) minmax(130px, 1.2fr) minmax(110px, 1fr) 40px; }
+.tou-row.th span { font-size: 12px; color: var(--muted); }
+.tou-row .limits { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+.tou input, .tou select { font: 13px var(--mono); color: var(--text); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 6px; padding: 6px; min-height: 36px; width: 100%; min-width: 0; }
+.tou .hint { color: var(--muted); font-size: 12px; margin: 8px 0; }
+.tou h4 { margin: 12px 0 6px; font-size: 13px; color: var(--text-2); }
+.tou-rates { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); }
+.tou-rate { display: grid; grid-template-columns: 110px 1fr 1fr; gap: 6px; align-items: center; font-size: 13px; }
+.tou-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.tou .result { margin-top: 8px; }
+@media (max-width: 640px) {
+  .tou-row { grid-template-columns: 1fr 1fr; }   /* start|end, name|dispatch, tariff|remove */
+  .tou-row.th { display: none; }
+}

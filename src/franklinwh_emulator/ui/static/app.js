@@ -25,6 +25,7 @@ function running() {
     layout: 'right',  // where the actions go: 'right' (beside, on wide screens) or 'below'
     forms: {},        // action -> {field: raw string}
     results: {},      // "<gateway>/<action>" -> {ok, text}
+    touDrafts: {},    // gateway -> the TOU editor's draft (tou.js), while it is open
     busy: '',
     _timer: null,
 
@@ -120,6 +121,54 @@ function running() {
       } finally {
         this.busy = '';
       }
+    },
+
+    // -- TOU schedule (tou.js) ---------------------------------------------------------------
+    touEditing() { return !!this.touDrafts[this.active]; },
+    touDraftNow() { return this.touDrafts[this.active]; },
+    touEdit() {
+      const d = touDraft(this.current.tou);
+      for (const w of Object.keys(this.schema.tou.waves)) d.rates[w] = d.rates[w] || { buy: '', sell: '' };
+      this.touDrafts[this.active] = d;
+    },
+    touCancel() { delete this.touDrafts[this.active]; },
+    touRate(w) { return this.touDraftNow().rates[w]; },
+    async touSend(reset) {
+      const gw = this.active;
+      const key = gw + '/tou-editor';
+      let body;
+      try {
+        body = reset ? { reset: true } : touBody(this.touDrafts[gw]);
+      } catch (e) {
+        this.results[key] = { ok: false, text: e.message };
+        return;
+      }
+      this.busy = 'tou';
+      try {
+        const data = await this._post('/gateways/' + encodeURIComponent(gw) + '/tou', body);
+        const i = this.gateways.findIndex(g => g.id === gw);
+        if (i >= 0) this.gateways[i] = data;
+        delete this.touDrafts[gw];
+        this.results[key] = { ok: true, text: (reset ? 'Default schedule restored on ' : 'Schedule applied to ') + gw +
+                                               ' at ' + new Date().toLocaleTimeString() };
+      } catch (e) {
+        this.results[key] = { ok: false, text: e.message };
+      } finally {
+        this.busy = '';
+      }
+    },
+    touNote(g) {
+      const a = g.tou.active;
+      if (g.native_mode !== 3) return 'Applies in TOU mode; this gateway is in ' + g.native_mode_name + '.';
+      return 'Now: ' + a.name + ' · ' + a.dispatch + ' · ' + a.wave + ' · ' + Math.round(a.remaining_min) + ' min left';
+    },
+    touAria(g) {
+      return 'TOU schedule: ' + g.tou.schedule.map(b => b.startHourTime + ' to ' + b.endHourTime + ' ' + b.dispatch + ' ' + b.wave).join('; ');
+    },
+    touPrice(g, wave) {
+      const r = g.tou.rates[String(wave)];
+      if (!r) return '—';
+      return (r.buy == null ? '—' : r.buy) + ' / ' + (r.sell == null ? '—' : r.sell);
     },
 
     // -- sessions: save what was done, restore it after a restart --------------------------
