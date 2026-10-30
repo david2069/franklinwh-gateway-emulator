@@ -123,6 +123,31 @@ function running() {
       }
     },
 
+    // -- Modbus TCP on/off through the gateway's own Direct Connect listener (1205 sunsMdEn) ---
+    modbusText(g) {
+      if (g.modbus_enabled && g.modbus_listening) return 'Modbus TCP Server on · ' + this.addr(g.address);
+      if (g.modbus_enabled) return 'Modbus TCP Server opening…';
+      if (g.modbus_listening) return 'Modbus TCP Server closing…';
+      return 'Modbus TCP Server off';
+    },
+    async dcModbus(on) {
+      const gw = this.active;
+      const key = gw + '/dc-modbus';
+      this.busy = 'dc-modbus';
+      try {
+        const data = await this._post('/gateways/' + encodeURIComponent(gw) + '/dc-modbus', { on });
+        const i = this.gateways.findIndex(g => g.id === gw);
+        if (i >= 0) this.gateways[i] = data;
+        this.results[key] = { ok: true, text: 'Direct Connect 1205 sunsMdEn=' + (on ? 1 : 0) + ' sent to ' +
+          this.addr(data.dc_address) + ' at ' + new Date().toLocaleTimeString() + '; the aGate ' +
+          (on ? 'opens' : 'closes') + ' Modbus TCP in about 3 s.' };
+      } catch (e) {
+        this.results[key] = { ok: false, text: e.message };
+      } finally {
+        this.busy = '';
+      }
+    },
+
     // -- TOU schedule (tou.js) ---------------------------------------------------------------
     touEditing() { return !!this.touDrafts[this.active]; },
     touDraftNow() { return this.touDrafts[this.active]; },

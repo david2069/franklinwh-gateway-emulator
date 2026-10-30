@@ -85,7 +85,7 @@ async def _run(gateways: list[Gateway], control_port: int | None, ui: bool = Fal
         if restore:
             from .control import ApiError
             try:
-                r = api.restore_session(restore)
+                r = await asyncio.to_thread(api.restore_session, restore)   # may send DC frames
                 print(f"restored session {restore}: {r['applied']} actions applied, "
                       f"{r['failed']} failed", flush=True)
                 for x in r["results"]:
