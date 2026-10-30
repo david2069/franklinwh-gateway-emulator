@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Every on/off field says what it does (2026-10-30, #30)
+- `offgrid.on`: true = island now; false = end the request and reconnect when the grid code
+  allows. The other true/false fields (restore, enforced, flicker, circuit on, installed,
+  modbus, csip, enable, server_up, clear) say what each value does too; the UI shows it.
+
 ### Mode numbers say which numbering they use (2026-10-30, #28)
 - The `mode` action and `native_mode` use the Modbus 15507 numbering (1 Emergency Backup,
   2 Self-Consumption, 3 TOU). Direct Connect and the cloud number modes differently (1 TOU,
