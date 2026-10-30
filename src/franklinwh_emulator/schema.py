@@ -239,6 +239,15 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "fields": {"sky": _f("string", enum=sorted(SKIES)), "flicker": _f("boolean", "open-meteo: add sub-15-minute cloud edges")},
         "examples": [{"sky": "storm"}],
     },
+    "apower": {
+        "doc": "Switch an aPower off or on at its physical switch. Off: it adds no charge or discharge "
+               "power (the combined SoC is kept). Not a Direct Connect command: the DC lead, 1823, "
+               "is unconfirmed (#71). Device lists over Direct Connect don't change (not measured).",
+        "fields": {"n": _f("integer", "aPower number, 1 to apower_units"),
+                   "on": _f("boolean", "false = switched off; true = on")},
+        "required": ["n", "on"],
+        "examples": [{"n": 1, "on": False}, {"n": 1, "on": True}],
+    },
     "circuit": {
         "doc": "Switch a smart circuit.",
         "fields": {"n": _f("integer", enum=[1, 2, 3]),
@@ -319,7 +328,7 @@ ACTIONS: dict[str, dict[str, Any]] = {
 GROUPS: dict[str, list[str]] = {
     "Grid and phases": ["grid", "offgrid"],
     "Inputs": ["pv", "load", "ambient", "weather"],
-    "Battery and modes": ["vpp", "release", "mode", "tou", "reserve", "soc"],
+    "Battery and modes": ["vpp", "release", "mode", "tou", "reserve", "soc", "apower"],
     "Loads": ["circuit", "appliance"],
     "Generator": ["generator"],
     "CSIP and comms": ["csip", "der-comms", "dc-modbus", "dc-reboot", "export"],

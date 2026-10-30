@@ -359,6 +359,9 @@ class Site:
         self.gen_wh = 0.0
         self._islanded_since: float | None = None
         self.rate_w = W_PER_APOWER * max(1, cfg.apower_units)
+        # aPowers switched off at their physical switch (set_apower). They add no power; the
+        # one combined SoC and capacity stay as they were (per-aPower SoC isn't modelled).
+        self.apower_off: set[int] = set()
 
         if cfg.ac_type not in AC_LAYOUTS:
             raise ValueError(f"ac_type must be 0, 1 or 2, not {cfg.ac_type!r}")
@@ -852,7 +855,7 @@ class Site:
         return min(r["gen_fw"], r["gen_vw"], self._es_ramp(self._t if ts is None else ts))
 
     def s_rated_va(self) -> float:
-        return VA_PER_APOWER * max(1, self.config.apower_units)
+        return VA_PER_APOWER * self.apower_units_on()
 
     def _reactive_var(self) -> float:
         """Volt-var: reactive power (+ supplying) from the mean connected-leg voltage, lagged."""
@@ -906,7 +909,7 @@ class Site:
             return min(0.0, net)                       # soak surplus, never discharge
         if mode == MODE_TOU:                           # the schedule's block decides (tou.py)
             block = tou.block_at(self.tou_schedule, hour * 60.0)
-            return tou.target_w(block["dispatchId"], net, W_PER_APOWER * max(1, self.config.apower_units))
+            return tou.target_w(block["dispatchId"], net, self.rate_w)
         return net                                     # self-consumption
 
     def _limits(self, floor: float, dt: float) -> tuple[float, float]:
@@ -1219,7 +1222,7 @@ class Site:
         # Overhead (inverter, BMS) drawn from the cells while discharging. Charging or idle,
         # PV or grid covers it: the reference aGate holds 100 % for hours with DCW 0. It
         # never takes SoC below the active floor.
-        drain = bm["standby_w"] * max(1, self.config.apower_units) * hours / self.capacity_wh * 100
+        drain = bm["standby_w"] * self.apower_units_on() * hours / self.capacity_wh * 100
         if drain and snap.battery_w > 0:
             floor = self.config.offgrid_floor_soc if not snap.grid_connected else self.active_reserve()
             self.soc = max(min(self.soc, floor), self.soc - drain)
@@ -1437,6 +1440,21 @@ class Site:
             self.csip.events.clear()
 
     # -- loads & smart circuits --------------------------------------------------------
+    def apower_units_on(self) -> int:
+        return max(1, self.config.apower_units) - len(self.apower_off)
+
+    def set_apower(self, n: int, on: bool) -> None:
+        """Switch aPower ``n`` on or off as its physical switch does (System User Manual: one per
+        unit). Off: it adds no charge or discharge power. What Direct Connect or Modbus report
+        for an off unit isn't measured, so their device lists don't change."""
+        units = max(1, self.config.apower_units)
+        if not 1 <= n <= units:
+            raise ValueError(f"aPower {n}: this site has aPower 1–{units}")
+        with self.lock:
+            self.step()
+            (self.apower_off.discard if on else self.apower_off.add)(n)
+            self.rate_w = W_PER_APOWER * self.apower_units_on()
+
     def set_circuit(self, n: int, on: bool) -> None:
         with self.lock:
             self.step()
