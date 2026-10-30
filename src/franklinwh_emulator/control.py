@@ -277,7 +277,9 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
                 gen.refuel(None if body["refuel"] is None else float(body["refuel"]))
         elif action == "weather":
             if site.weather is None:
-                raise ApiError(400, "weather: site uses the bell curve (set weather.model)")
+                raise ApiError(400, "weather: this gateway has no weather model (it uses the bell "
+                                    "curve): add `weather: {model: synthetic}` to its fleet entry "
+                                    "and restart")
             for key in ("sky", "flicker"):
                 if key in body:
                     setattr(site.weather.cfg, key, body[key])
