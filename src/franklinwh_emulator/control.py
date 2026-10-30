@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 
 from .schema import ACTIONS, check_body, schema
 from .server import Faults
-from .site import ALARMS, MODE_NAMES, W_PER_APOWER
+from .site import ALARMS, MODE_NAMES, W_PER_APOWER, WH_PER_APOWER
 from .weather import SKIES
 
 if TYPE_CHECKING:
@@ -63,6 +63,9 @@ def gateway_state(gw: "Gateway") -> dict:
         "ac_type": site.config.ac_type,
         "legs": list(site.phases),
         "pv_relays": dict(site.pv_relays),
+        "pv_inputs": dict(site.config.pv_inputs),
+        "apower_units": site.config.apower_units,
+        "apower_rating": {"wh": WH_PER_APOWER, "w": W_PER_APOWER},   # per aPower, emulator constants
         "forced_alarms": dict(site.forced_alarms),
         "remote_control": asdict(site.remote),
         "self_reserve": site.self_reserve,

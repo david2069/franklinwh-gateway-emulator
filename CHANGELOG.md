@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Web UI: energy diagram (2026-10-30, #22)
+- The selected gateway's live energy diagram, after the owner's design: grid, meter, aGate,
+  main panel and home, PV per input (aPbox for remote inputs), battery (one combined unit),
+  generator and smart circuits with their appliances. Animated lines follow the power's
+  direction; still with reduced motion. Unmodelled elements are listed, not drawn.
+- Control state gains `pv_inputs`, `apower_units` and `apower_rating` (per aPower, the
+  emulator's constants).
+
 ### Web UI: gateway cards (2026-10-30, #22)
 - `franklinwh-emulator ui FLEET.yaml`: validates the fleet, starts it, and serves a read-only
   page with live gateway cards and a detail panel for the selected (active) gateway, plus the

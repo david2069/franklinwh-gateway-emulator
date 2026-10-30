@@ -281,8 +281,11 @@ franklinwh-emulator ui examples/fleet.yaml        # then open http://127.0.0.1:8
 Checks the fleet file first (every problem is printed, and it exits 2), starts the fleet, and
 serves a page with one card per gateway, refreshed every second: the Modbus TCP Server and
 Direct Connect addresses to point a bridge at, SoC, solar, home, battery and grid power, grid
-state, mode, VPP, alarms and injected faults. Selecting a card shows its legs, smart circuits,
-appliances and generator. The page is read-only for now; the control API below runs on the
+state, mode, VPP, alarms and injected faults. Selecting a card shows its live energy diagram
+(grid, meter, aGate, home, PV per input with the aPbox for remote inputs, the battery, generator
+and smart circuits, with lines moving in the direction power flows), then its legs, circuits,
+appliances and generator. What the emulator doesn't model (per-aPower values, V2L, a non-backup
+panel, tariffs and more) is listed under the diagram rather than drawn. The page is read-only for now; the control API below runs on the
 same port, so `ctl` works unchanged. Loopback only, no login, no internet. Plan:
 [docs/UI_PLAN.md](docs/UI_PLAN.md).
 

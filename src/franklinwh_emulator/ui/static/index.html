@@ -6,6 +6,7 @@
 <title>FranklinWH Emulator</title>
 <link rel="stylesheet" href="/static/style.css">
 <script src="/static/app.js"></script>
+<script src="/static/diagram.js"></script>
 <script defer src="/static/alpinejs-3.14.1.min.js"></script>
 </head>
 <body x-data="running()" x-init="start()">
@@ -50,6 +51,7 @@
       <div>
         <h2 x-text="current.id"></h2>
         <div class="sub" x-text="detailLine(current)"></div>
+        <div x-html="renderDiagram(current)"></div>
         <div class="grid2">
           <div>
             <h3>Grid</h3>

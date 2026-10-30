@@ -41,7 +41,7 @@ def test_page_and_its_files(ui):
     assert status == 200 and ctype.startswith("text/html")
     page = body.decode()
     refs = re.findall(r'(?:src|href)="/static/([^"]+)"', page)
-    assert set(refs) == {"style.css", "app.js", "alpinejs-3.14.1.min.js"}
+    assert set(refs) == {"style.css", "app.js", "diagram.js", "alpinejs-3.14.1.min.js"}
     for name in refs:
         status, ctype, _ = get(f"{base}/static/{name}")
         assert status == 200
@@ -77,7 +77,7 @@ def test_page_reads_only_fields_the_state_has(ui):
     """Every g.<field> / current.<field> the page uses exists in the control API's state."""
     fleet, _ = ui
     state = gateway_state(fleet["site"])
-    text = (STATIC / "index.html").read_text() + (STATIC / "app.js").read_text()
+    text = "".join((STATIC / n).read_text() for n in ("index.html", "app.js", "diagram.js"))
     used = set(re.findall(r"\b(?:g|current)\.([a-z_]+)", text))
     assert used and used <= set(state), sorted(used - set(state))
     leg_fields = set(re.findall(r"\bleg\.([a-z_]+)", text))
@@ -92,3 +92,12 @@ def test_ui_command_refuses_a_bad_fleet(tmp_path, capsys):
     assert main(["ui", str(bad)]) == 2
     err = capsys.readouterr().err
     assert "gateways[0].colour: unknown key" in err and "gateways[1].id: duplicate" in err
+
+
+def test_state_carries_what_the_diagram_draws(ui):
+    fleet, _ = ui
+    state = gateway_state(fleet["site"])
+    assert state["pv_inputs"] == {"proximal": 1.0}
+    assert state["apower_units"] == 1
+    assert state["apower_rating"] == {"wh": 13600, "w": 5000}    # emulator constants
+    assert set(state["pv_by_input"]) >= set(state["pv_inputs"])

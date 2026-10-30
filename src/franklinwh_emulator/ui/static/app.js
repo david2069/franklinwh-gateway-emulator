@@ -47,7 +47,7 @@ function running() {
       try { localStorage.setItem('emulator.active', id); } catch (e) { /* private mode */ }
     },
 
-    kw(w) { return (w / 1000).toFixed(2) + ' kW'; },
+    kw(w) { const v = w / 1000; return (Math.abs(v) < 0.005 ? 0 : v).toFixed(2) + ' kW'; },
     pct(v) { return Math.round(v) + '%'; },
     addr(a) { return a ? a[0] + ':' + a[1] : ''; },
 
