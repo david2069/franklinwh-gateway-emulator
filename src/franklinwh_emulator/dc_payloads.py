@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from franklinwh_local.synthetic import MODE_IDS, SyntheticSite
 
+from .profiles import DC_FIRMWARE
 from .site import MODE_BACKUP, MODE_SELF, MODE_TOU
 
 if TYPE_CHECKING:
@@ -127,13 +128,32 @@ class DcPayloads:
         return v if isinstance(v, int) and v >= 1 else None
 
     # -- login / identity ----------------------------------------------------------
+    def dc_firmware(self) -> tuple[str, dict]:
+        ibg = self.gw.profile.dc_firmware
+        try:
+            return ibg, DC_FIRMWARE[ibg]
+        except KeyError:
+            raise ValueError(f"no Direct Connect versions for aGate firmware {ibg!r}; "
+                             f"known {sorted(DC_FIRMWARE)}") from None
+
     def login(self, req: dict) -> dict:
-        return _ok(SyHdVersion=102, IBG_SN=self.gw.serial, FHP_NUM=self.units,
-                   FHP_SN=[self.fhp_sn(i + 1) for i in range(self.units)],
-                   protocolVer="V1.11.03", IBG_VER="V12R02B30D06_260304",
-                   APP_VER="V2.0.0", AWS_VER="V1.0.0", SL_VER="V1.0.0",
-                   BMS_VER="V11R50B03D00", INV_VER="V3.1.0", DCDC_VER="V1.0.5",
-                   METER_VER="V1.0.0")
+        """1102, in the key order the reference aGate sends (V12R02B60D00_260924)."""
+        ibg, fw = self.dc_firmware()
+        n, pa, extra = self.units, fw["per_apower"], fw["extra"]
+        sns = [self.fhp_sn(i + 1) for i in range(n)]
+        hw = {k: v * n for k, v in extra.items() if isinstance(v, list)}     # one per aPower
+        return _ok(IBG_SN=self.gw.serial,
+                   **({"deviceType": extra["deviceType"]} if "deviceType" in extra else {}),
+                   protocolVer=fw["protocolVer"], IBG_VER=ibg, AWS_VER=fw["AWS_VER"],
+                   APP_VER=fw["APP_VER"], SL_VER=fw["SL_VER"], FHP_NUM=n, FHP_SN=sns,
+                   PE_SN=[sn + "P1" for sn in sns],
+                   FPGA_VER=[pa["FPGA_VER"]] * n, DCDC_VER=[pa["DCDC_VER"]] * n,
+                   INV_VER=[pa["INV_VER"]] * n, BMS_SN=[sn + "B1" for sn in sns],
+                   BMS_VER=[pa["BMS_VER"]] * n, BL_VER=[pa["BL_VER"]] * n, TH_VER=[pa["TH_VER"]] * n,
+                   SyHdVersion=fw["SyHdVersion"], METER_VER=fw["METER_VER"],
+                   **({"threePhasePvPower": extra["threePhasePvPower"]}
+                      if "threePhasePvPower" in extra else {}),
+                   **hw)
 
     def device_check(self, req: dict) -> dict:
         return {**_ok(), "devNum": self.units, "isOver": 1,
@@ -151,10 +171,11 @@ class DcPayloads:
         if dev is None or dev > self.units:
             return _refused(-1, **{k: "" for k in keys})
         sn = self.fhp_sn(dev)
+        ibg, fw = self.dc_firmware()
         return _ok(id=dev, fhp_sn=sn, ibg_sn=self.gw.serial,
-                   ibg_ver="V12R02B30D06_260304", ibg_iot="V12R00B06D04_260304",
-                   ibg_local="V12R00B07D04_260205", pe_sn=sn + "P1", pe_ver="",
-                   bms_sn=sn + "B1", bms_ver="V11R50B03D00")
+                   ibg_ver=ibg, ibg_iot=fw["AWS_VER"],
+                   ibg_local=fw["APP_VER"], pe_sn=sn + "P1", pe_ver="",
+                   bms_sn=sn + "B1", bms_ver=fw["per_apower"]["BMS_VER"])
 
     # -- live power ----------------------------------------------------------------
     def power_flow(self, req: dict) -> dict:
