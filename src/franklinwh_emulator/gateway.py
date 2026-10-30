@@ -181,6 +181,7 @@ class Gateway:
         self.reboot_s = 20.0
         self.rebooting = False                   # True while reboot() has the listeners down
         self.episode_phase: str | None = None   # "down" | "offgrid" during episode()
+        self.debug_mode = False                  # injected: DC 1301 run_status 8 (Debug Mode)
 
     @property
     def address(self) -> tuple[str, int]:

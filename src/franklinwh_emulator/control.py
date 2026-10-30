@@ -118,6 +118,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "modbus_listening": gw.server._server is not None,   # :502 open now (lags a 1205 write ~3 s)
         "rebooting": gw.rebooting,                          # both listeners down for a 1721 reboot
         "episode_phase": gw.episode_phase,
+        "debug_mode": gw.debug_mode,              # injected: DC 1301 run_status reads 8
         "export_limit_enforced": site.export_limit_enforced,
         "export_breach_s": site.export_breach_s,
         "export_breach_wh": site.export_breach_wh,
@@ -192,6 +193,8 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
             gw.set_addressing(**body)
         elif action == "episode":
             gw.episode(float(body["down_s"]), float(body["offgrid_s"]))
+        elif action == "debug-mode":
+            gw.debug_mode = bool(body["on"])
         elif action == "pv":
             if "input" in body:
                 site.set_pv_relay(body["input"], bool(body.get("relay", True)))
