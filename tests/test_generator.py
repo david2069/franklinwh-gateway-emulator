@@ -175,3 +175,27 @@ def test_reference_1902_key_set():
     out = DcPayloads(gw).handlers[1901]({"opt": 0})
     assert set(out) == real
     assert (out["genEn"], out["genStartElec"], out["genCloseElec"], out["startDelTime"]) == (0, 20, 80, 1800)
+
+
+def test_installed_from_the_control_api_fits_a_working_generator():
+    """As `generator: {installed: true}` in a fleet file (#51): from the control API too."""
+    from franklinwh_emulator.control import apply
+    clock = ManualClock(NIGHT)
+    gw = Gateway(GatewayConfig(seed=7, site=SiteConfig(seed=7, tz_offset_hours=10, initial_soc=30)),
+                 clock=clock)
+    gen = gw.site.generator
+    assert not gen.hw.installed and gen.block["genEn"] == BLOCK_DEFAULTS["genEn"]
+    apply(gw, "generator", {"installed": True})
+    assert gen.block["genEn"] == 1 and gen.block["genRatedPower"] == 7000
+    apply(gw, "grid", {"available": False})               # islanded: the generator is needed
+    apply(gw, "generator", {"start": True})
+    s = after(gw.site, clock, gen.hw.crank_s + gen.hw.warmup_s + 30)
+    assert s.generator_w > 0
+
+
+def test_rated_w_and_explicit_settings_win_over_the_fitted_defaults():
+    from franklinwh_emulator.control import apply
+    gw = Gateway(GatewayConfig(seed=7), clock=ManualClock(NIGHT))
+    apply(gw, "generator", {"rated_w": 5000, "set": {"manuSw": 2}, "installed": True})
+    b = gw.site.generator.block
+    assert b["genRatedPower"] == 5000 and b["manuSw"] == 2 and b["genEn"] == 1

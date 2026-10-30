@@ -255,8 +255,13 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
                     if k not in gen.block:
                         raise ApiError(400, f"generator: unknown 1901 field {k!r}")
                     gen.block[k] = v
+            if "rated_w" in body:
+                gen.block["genRatedPower"] = int(body["rated_w"])
             if "installed" in body:
-                gen.hw.installed = bool(body["installed"])
+                if body["installed"]:
+                    gen.fit()                     # as installed: true in a fleet file
+                else:
+                    gen.hw.installed = False
             if body.get("start"):
                 gen.start_manual()
             if body.get("stop"):
