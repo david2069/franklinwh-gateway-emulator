@@ -288,14 +288,19 @@ class Fleet:
     def __getitem__(self, gw_id: str) -> Gateway:
         return self.gateways[gw_id]
 
-    def start(self, control_port: int | None = None,
-              control_host: str = "127.0.0.1") -> dict[str, tuple[str, int]]:
+    def start(self, control_port: int | None = None, control_host: str = "127.0.0.1",
+              *, ui: bool = False) -> dict[str, tuple[str, int]]:
         """Start every gateway; with ``control_port`` (0 = ephemeral) also the HTTP
-        control API, reachable afterwards as ``fleet.control.port``."""
+        control API, reachable afterwards as ``fleet.control.port``. ``ui``: serve the web UI
+        on that port too."""
         self._loop = self._loop or _LoopThread("franklinwh-emulator-fleet")
         addresses = {gid: gw.start(self._loop) for gid, gw in self.gateways.items()}
         if control_port is not None and self.control is None:
-            self.control = ControlApi(self.gateways, control_host, control_port)
+            if ui:
+                from .ui.server import UiServer
+                self.control = UiServer(self.gateways, control_host, control_port)
+            else:
+                self.control = ControlApi(self.gateways, control_host, control_port)
             self._loop.run(self.control.start())
         return addresses
 

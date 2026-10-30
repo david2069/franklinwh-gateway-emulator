@@ -272,6 +272,20 @@ can be set per leg, which is how phase loss and single-leg sags work.
 > islanded and multi-phase pictures follow SunSpec semantics. Treat them as "what a correct
 > DER would show" until real captures exist.
 
+### Web UI
+
+```bash
+franklinwh-emulator ui examples/fleet.yaml        # then open http://127.0.0.1:8502/
+```
+
+Checks the fleet file first (every problem is printed, and it exits 2), starts the fleet, and
+serves a page with one card per gateway, refreshed every second: the Modbus TCP Server and
+Direct Connect addresses to point a bridge at, SoC, solar, home, battery and grid power, grid
+state, mode, VPP, alarms and injected faults. Selecting a card shows its legs, smart circuits,
+appliances and generator. The page is read-only for now; the control API below runs on the
+same port, so `ctl` works unchanged. Loopback only, no login, no internet. Plan:
+[docs/UI_PLAN.md](docs/UI_PLAN.md).
+
 ### Control API and `ctl`
 
 `serve` and `fleet` start an HTTP control API on `127.0.0.1:8502` (`--control-port`,

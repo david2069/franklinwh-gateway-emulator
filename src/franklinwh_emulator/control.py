@@ -16,18 +16,25 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from dataclasses import asdict, fields
+from dataclasses import asdict, dataclass, fields
 from typing import TYPE_CHECKING
 
 from .schema import ACTIONS, check_body, schema
 from .server import Faults
-from .site import ALARMS, W_PER_APOWER
+from .site import ALARMS, MODE_NAMES, W_PER_APOWER
 from .weather import SKIES
 
 if TYPE_CHECKING:
     from .gateway import Gateway
 
 log = logging.getLogger(__name__)
+
+
+@dataclass
+class Raw:
+    """A non-JSON response (a page or a static file)."""
+    content_type: str
+    body: bytes
 
 
 class ApiError(Exception):
@@ -47,6 +54,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "address": list(gw.address),
         "dc_address": list(gw.dc_address) if gw.dc_address else None,
         "profile": gw.profile.name,
+        "native_mode_name": MODE_NAMES.get(snap.native_mode, str(snap.native_mode)),
         "base_aliases": list(gw.profile.base_aliases),
         "write_rejects": list(gw.device.write_rejects),
         "write_bases": None if gw.profile.write_bases is None else list(gw.profile.write_bases),
@@ -299,9 +307,13 @@ class ControlApi:
                 status, payload = e.status, {"error": str(e)}
             except json.JSONDecodeError as e:
                 status, payload = 400, {"error": f"bad JSON: {e}"}
-            data = json.dumps(payload, indent=1).encode()
+            if isinstance(payload, Raw):
+                data, ctype = payload.body, payload.content_type
+            else:
+                data, ctype = json.dumps(payload, indent=1).encode(), "application/json"
             reason = {200: "OK", 400: "Bad Request", 404: "Not Found"}.get(status, "Error")
-            writer.write(f"HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\n"
+            writer.write(f"HTTP/1.1 {status} {reason}\r\nContent-Type: {ctype}\r\n"
+                         "Cache-Control: no-store\r\n"
                          f"Content-Length: {len(data)}\r\nConnection: close\r\n\r\n".encode() + data)
             await writer.drain()
         except (ValueError, asyncio.IncompleteReadError, ConnectionError) as e:

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FranklinWH Emulator</title>
+<link rel="stylesheet" href="/static/style.css">
+<script src="/static/app.js"></script>
+<script defer src="/static/alpinejs-3.14.1.min.js"></script>
+</head>
+<body x-data="running()" x-init="start()">
+<header>
+  <h1>FranklinWH Emulator</h1>
+  <span class="meta" x-text="gateways.length + (gateways.length === 1 ? ' gateway' : ' gateways') + ' · emulated, not real devices'"></span>
+</header>
+<main>
+  <p class="status" :class="{ bad: error }" x-show="error || !loaded" x-text="error || 'Loading…'" role="status"></p>
+
+  <section class="cards" aria-label="Gateways">
+    <template x-for="g in gateways" :key="g.id">
+      <button type="button" class="card" :aria-pressed="(g.id === active).toString()" @click="select(g.id)">
+        <div class="top">
+          <span class="id" x-text="g.id"></span>
+          <span class="soc" x-text="pct(g.soc)" :aria-label="'state of charge ' + pct(g.soc)"></span>
+        </div>
+        <div class="addr">
+          <div x-text="'Modbus TCP ' + addr(g.address)"></div>
+          <div x-show="g.dc_address" x-text="'Direct Connect ' + addr(g.dc_address)"></div>
+        </div>
+        <dl class="flows">
+          <div><dt>Solar</dt><dd x-text="kw(g.solar_w)"></dd></div>
+          <div><dt>Home</dt><dd x-text="kw(g.load_w)"></dd></div>
+          <div><dt>Battery</dt><dd x-text="kw(Math.abs(g.battery_w)) + batteryDir(g)"></dd></div>
+          <div><dt>Grid</dt><dd x-text="kw(Math.abs(g.grid_w)) + gridDir(g)"></dd></div>
+        </dl>
+        <div class="tags">
+          <span class="tag" :class="g.grid_connected ? 'ok' : 'bad'" x-text="gridState(g)"></span>
+          <span class="tag" x-text="g.native_mode_name"></span>
+          <span class="tag warn" x-show="g.remote_control && g.remote_control.enabled">VPP</span>
+          <template x-for="a in g.alarm_names" :key="a"><span class="tag bad" x-text="a"></span></template>
+          <template x-for="f in faultList(g)" :key="f"><span class="tag warn" x-text="'fault: ' + f"></span></template>
+          <span class="tag" x-show="g.episode_phase" x-text="'episode: ' + g.episode_phase"></span>
+        </div>
+      </button>
+    </template>
+  </section>
+
+  <section class="detail" x-show="current" aria-live="polite">
+    <template x-if="current">
+      <div>
+        <h2 x-text="current.id"></h2>
+        <div class="sub" x-text="detailLine(current)"></div>
+        <div class="grid2">
+          <div>
+            <h3>Grid</h3>
+            <table>
+              <tr><td>Voltage (mean L-N)</td><td x-text="current.v_ln.toFixed(1) + ' V'"></td></tr>
+              <tr><td>Frequency</td><td x-text="current.hz.toFixed(2) + ' Hz'"></td></tr>
+              <template x-for="(leg, name) in current.phases" :key="name">
+                <tr><td x-text="name"></td><td x-text="leg.v_ln.toFixed(1) + ' V · ' + kw(leg.grid_w)"></td></tr>
+              </template>
+              <tr x-show="current.trip_reason"><td>Trip</td><td x-text="current.trip_reason + (current.trip_stage ? ' · ' + current.trip_stage : '')"></td></tr>
+            </table>
+          </div>
+          <div>
+            <h3>Smart circuits</h3>
+            <table>
+              <template x-for="(c, n) in current.circuits" :key="n">
+                <tr><td x-text="n + ' · ' + c.name"></td><td x-text="(c.on ? 'on' : 'off') + ' · ' + kw(c.power_w)"></td></tr>
+              </template>
+            </table>
+          </div>
+          <div>
+            <h3>Appliances</h3>
+            <p class="empty" x-show="!Object.keys(current.appliances).length">None configured (built-in load curve).</p>
+            <table x-show="Object.keys(current.appliances).length">
+              <template x-for="(a, name) in current.appliances" :key="name">
+                <tr><td x-text="name"></td><td x-text="kw(current.loads[name] || 0)"></td></tr>
+              </template>
+            </table>
+          </div>
+          <div>
+            <h3>Generator</h3>
+            <table>
+              <tr><td>Fitted</td><td x-text="current.generator.installed ? 'yes' : 'no'"></td></tr>
+              <tr x-show="current.generator.installed"><td>Output</td><td x-text="kw(current.generator_w)"></td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </template>
+  </section>
+</main>
+</body>
+</html>
