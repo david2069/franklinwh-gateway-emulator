@@ -132,7 +132,8 @@ def test_der_comms_sunsmden_closes_modbus(dc, gw):
 
 def test_solar_pv_and_export_limit(clock):
     g = make_gateway(clock, seed=7, dc_port=0,
-                     site={"grid_code": "ausgrid", "pv_inputs": {"proximal": 1.0}})
+                     site={"grid_code": "ausgrid", "pv_inputs": {"proximal": 1.0},
+                           "cap_forced_solar": False})
     with g:
         c = LocalClient(*g.dc_address, timeout=2, retries=0)
         c.transport.connect()

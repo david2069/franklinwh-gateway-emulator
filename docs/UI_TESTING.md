@@ -46,7 +46,7 @@ its result stays in the form until that form is used again.
 
 | Group → form | Enter | Send, then expect |
 |---|---|---|
-| Inputs → **pv** | solar_w `6000` | Green "Applied …"; solar lines move; the battery charges or the grid exports |
+| Inputs → **pv** | solar_w `6000` | Green "Applied …". In daylight at the gateway, solar rises to at most what the sun gives then; at night it stays 0 and the tag says "capped … by the sun" |
 | Inputs → **load** | w `4500` | The card's Home shows 4.50 kW |
 | Loads → **circuit** | n `2`, on `false` | The SW2 box greys out |
 | Grid and phases → **grid** | available `false` | The card shows "islanded"; the Grid box turns red; no grid flow |

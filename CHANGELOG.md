@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Forced solar can't exceed the sun (2026-10-31, #56)
+- `pv solar_w` is now a ceiling: solar = min(forced, what the gateway's solar model gives at its
+  local time: open-meteo's value, the synthetic sky or the bell curve), so 0 at night (owner:
+  "no sunshine - no solar"). `Site.solar_model_w()` is the model's value.
+- `cap_forced_solar: false` (per gateway) uses the forced value as given, for lab tests where PV
+  is an input; the grid-code, CSIP and export-limit tests and the `au-response-timing`,
+  `csip-comms-loss`, `csip-zero-export` and `latent-export-breach` scenarios set it.
+- The page shows both: "solar forced 16.00 kW, capped at 0.00 kW by the sun".
+
 ### Weather error says how to add a weather model (2026-10-31)
 - The weather action on a gateway without a weather model said "site uses the bell curve";
   it now says to add `weather: {model: synthetic}` to the gateway's fleet entry.

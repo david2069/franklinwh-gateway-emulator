@@ -10,7 +10,7 @@ from franklinwh_emulator.scenario import (INVARIANTS, Runner, Scenario, builtin_
 
 BASIC = {
     "name": "basic", "start": "2026-01-15T12:00:00", "duration": "10m", "record_every": "30s",
-    "fleet": {"gateways": [{"id": "site", "seed": 7, "grid_code": "ausgrid", "setup": "in-service",
+    "fleet": {"gateways": [{"id": "site", "seed": 7, "grid_code": "ausgrid", "setup": "in-service", "cap_forced_solar": False,
                             "tz_offset_hours": 10, "initial_soc": 60}]},
     "steps": [
         {"at": 0, "do": "pv", "with": {"solar_w": 0}},

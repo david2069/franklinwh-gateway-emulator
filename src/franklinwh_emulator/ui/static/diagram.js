@@ -149,7 +149,9 @@ function renderDiagram(g) {
     w ? skyLabel(w.sky || w.model) : 'bell curve (no weather model)',
     w && w.poa_w_m2 != null ? w.poa_w_m2 + ' W/m² on the array' : null,
     'ambient ' + g.ambient_c.toFixed(1) + ' °C' + (forced('ambient_c') ? ' (forced)' : ''),
-    forced('solar_w') ? 'solar forced to ' + kwText(ov.solar_w) + ', not the sun' : null,
+    forced('solar_w') ? (g.cap_forced_solar
+      ? 'solar forced to ' + kwText(ov.solar_w) + (g.solar_w < ov.solar_w - 1 ? ', capped at ' + kwText(g.solar_w) + ' by the sun' : '')
+      : 'solar forced to ' + kwText(ov.solar_w) + ', not capped by the sun') : null,
     'cabinet ' + g.cabinet_c.toFixed(1) + ' °C (modelled)'].filter(Boolean).join(' · ');
   const label = `Energy flow for ${g.id}: grid ${kwText(g.grid_w)}, home ${kwText(g.load_w)}, ` +
     `solar ${kwText(g.solar_w)}, battery ${Math.round(g.soc)}% ${kwText(g.battery_w)}`;

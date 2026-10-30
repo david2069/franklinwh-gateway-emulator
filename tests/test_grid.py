@@ -25,6 +25,7 @@ def site(**kw):
     clock = ManualClock(NOON)
     kw.setdefault("tz_offset_hours", 0)
     kw.setdefault("initial_soc", 60)
+    kw.setdefault("cap_forced_solar", False)     # PV is a test input here (#56)
     s = Site(SiteConfig(seed=7, **kw), clock)
     s.solar_override_w, s.load_override_w = 0, 2000
     return s, clock

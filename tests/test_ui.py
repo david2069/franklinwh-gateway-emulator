@@ -190,7 +190,7 @@ def test_overrides_are_in_the_state(ui):
     assert gateway_state(gw)["overrides"] == {"solar_w": None, "load_w": None, "ambient_c": None}
     apply(gw, "pv", {"solar_w": 6000})
     s = gateway_state(gw)
-    assert s["overrides"]["solar_w"] == 6000 and s["solar_w"] == pytest.approx(6000, abs=1)
+    assert s["overrides"]["solar_w"] == 6000 and s["solar_w"] <= 6000 + 1    # capped by the sun (#56)
     apply(gw, "pv", {"solar_w": None})
     assert gateway_state(gw)["overrides"]["solar_w"] is None
 

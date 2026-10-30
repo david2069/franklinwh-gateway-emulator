@@ -121,3 +121,26 @@ def test_weather_action_without_a_model_says_how_to_add_one():
     gw = Gateway(GatewayConfig(setup="in-service", seed=7))
     with pytest.raises(ApiError, match=r"this gateway has no weather model.*weather: \{model: synthetic\}"):
         apply(gw, "weather", {"sky": "storm"})
+
+
+def test_forced_solar_is_capped_by_the_sun():
+    """#56: no sunshine, no solar; forced solar never exceeds the model's value."""
+    syd = {"latitude": -33.87, "longitude": 151.21, "timezone": "Australia/Sydney"}
+    noon, night = 1768446000.0, 1768474800.0           # 2026-01-15 14:00 and 22:00 Sydney
+    for cap in (True, False):
+        for ts in (noon, night):
+            s = Site(SiteConfig(seed=7, location=syd, weather={"model": "synthetic", "kwp": 6.6},
+                                cap_forced_solar=cap), ManualClock(ts))
+            model = s.solar_model_w(ts)
+            s.solar_override_w = 16000
+            got = s.solar_w(ts)
+            if cap:
+                assert got == pytest.approx(model) and got < 16000
+            else:
+                assert got == 16000
+    s = Site(SiteConfig(seed=7, location=syd, weather={"model": "synthetic", "kwp": 6.6}), ManualClock(night))
+    s.solar_override_w = 16000
+    assert s.solar_w(night) == 0                       # night is enforced
+    s = Site(SiteConfig(seed=7, location=syd, weather={"model": "synthetic", "kwp": 6.6}), ManualClock(noon))
+    s.solar_override_w = 1000
+    assert s.solar_w(noon) == 1000                     # below the sun: as forced
