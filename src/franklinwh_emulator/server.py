@@ -179,14 +179,18 @@ class ModbusServer:
             if fc == 6:
                 address, value = struct.unpack(">HH", pdu[1:5])
                 exc = self.device.write(address, [value])
-                return bytes([fc | 0x80, exc]) if exc else pdu[:5]
+                if exc:
+                    return bytes([fc | 0x80, exc])
+                return bytes([fc]) + struct.pack(">H", self.device.echo_address(address, 1)) + pdu[3:5]
             if fc == 16:
                 address, count, nbytes = struct.unpack(">HHB", pdu[1:6])
                 if not 1 <= count <= 123 or nbytes != count * 2 or len(pdu) < 6 + nbytes:
                     return bytes([fc | 0x80, ILLEGAL_VALUE])
                 values = list(struct.unpack(">%dH" % count, pdu[6:6 + nbytes]))
                 exc = self.device.write(address, values)
-                return bytes([fc | 0x80, exc]) if exc else pdu[:5]
+                if exc:
+                    return bytes([fc | 0x80, exc])
+                return bytes([fc]) + struct.pack(">H", self.device.echo_address(address, count)) + pdu[3:5]
         except struct.error:
             return bytes([fc | 0x80, ILLEGAL_VALUE])
         return bytes([fc | 0x80, ILLEGAL_FUNCTION])

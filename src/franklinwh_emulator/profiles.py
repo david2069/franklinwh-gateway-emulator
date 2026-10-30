@@ -25,6 +25,8 @@ class Profile:
     base_aliases: tuple[int, ...] = ()
     # Bases that accept SunSpec writes (None = every served base). Elsewhere: exception 2.
     write_bases: tuple[int, ...] | None = None
+    # A write to an alias base is answered with the base-0 address (FC06/FC16 echo).
+    write_echo_base0: bool = False
 
     # -- M704 sign conventions -------------------------------------------------
     wsetpct_positive_discharge: bool = True  # hardware: +WSetPct = discharge
@@ -72,6 +74,7 @@ PROFILES: dict[str, Profile] = {
         name="agate-v12r02b60d00-candidate",
         firmware="V12R02B60D00",
         base_aliases=(40000,),           # sunspec_map_at_pdu_40000; both bases accept writes
+        write_echo_base0=True,           # pdu_40000_write_response_address: 40319 -> 319
         tou_reserve_mirrors_self=False,  # ext_15509_tou_reserve: 15509 holds the TOU reserve
         # ext_16001_reserve: the active mode's reserve, 100 in Emergency Backup
         # (franklinwh-modbus#63; EB read in franklinwh-modbus-async#16 G2).
@@ -109,6 +112,7 @@ DEFAULT_PROFILE = "agate-v10r01b04d00"
 ALWAYS = object()
 QUIRK_BASIS: dict[str, tuple[object, tuple[str, ...]]] = {
     "base_aliases": ((), ("sunspec_map_at_pdu_40000",)),
+    "write_echo_base0": (False, ("pdu_40000_write_response_address",)),
     "wsetpct_positive_discharge": (ALWAYS, ("m704_wsetpct_sign",)),
     "wset_positive_charge": (ALWAYS, ("m704_wset_sign",)),
     "tou_reserve_mirrors_self": (ALWAYS, ("ext_15509_tou_reserve",)),
