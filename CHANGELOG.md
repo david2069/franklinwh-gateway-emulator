@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Web UI: gateway cards (2026-10-30, #22)
+- `franklinwh-emulator ui FLEET.yaml`: validates the fleet, starts it, and serves a read-only
+  page with live gateway cards and a detail panel for the selected (active) gateway, plus the
+  control API, on one loopback port (default 8502). `Fleet.start(..., ui=True)` does the same
+  in-process.
+- Alpine.js 3.14.1 vendored (identical to upstream and to the Modbus bridge's copy); system
+  fonts; no network.
+- Control state gains `native_mode_name`; the control server can return pages and files.
+
 ### Check fleet and scenario files without running them (2026-10-30, #18)
 - `validate.py`: `validate_fleet` and `validate_scenario` build everything a run would build
   except the servers, and return every problem as `{path, error}`: unknown keys, bad values,

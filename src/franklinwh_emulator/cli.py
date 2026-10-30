@@ -3,6 +3,7 @@
     franklinwh-emulator serve --port 5020 --seed 7
     franklinwh-emulator serve --profile spec --time-scale 60
     franklinwh-emulator fleet fleet.yaml
+    franklinwh-emulator ui fleet.yaml                 # the fleet + web UI on http://127.0.0.1:8502/
     franklinwh-emulator scenario list
     franklinwh-emulator scenario run outage-during-vpp --out results/
     franklinwh-emulator scenario run my.yaml --live --time-scale 60   # a bridge can connect
@@ -54,7 +55,7 @@ from .site import ALARMS, SiteConfig
 DEFAULT_API = "http://127.0.0.1:8502"
 
 
-async def _run(gateways: list[Gateway], control_port: int | None) -> None:
+async def _run(gateways: list[Gateway], control_port: int | None, ui: bool = False) -> None:
     for gw in gateways:
         host, port = await gw.start_async()
         p = gw.profile
@@ -67,9 +68,15 @@ async def _run(gateways: list[Gateway], control_port: int | None) -> None:
             print(f"{gw.config.id}: Direct Connect on {dh}:{dp}", flush=True)
     api = None
     if control_port is not None:
-        api = ControlApi({gw.config.id: gw for gw in gateways}, port=control_port)
+        if ui:
+            from .ui.server import UiServer
+            api = UiServer({gw.config.id: gw for gw in gateways}, port=control_port)
+        else:
+            api = ControlApi({gw.config.id: gw for gw in gateways}, port=control_port)
         host, port = await api.start()
         print(f"control API on http://{host}:{port}/gateways", flush=True)
+        if ui:
+            print(f"UI on http://{host}:{port}/", flush=True)
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -416,6 +423,11 @@ def main(argv: list[str] | None = None) -> int:
     f = sub.add_parser("fleet", help="run several gateways from a YAML file")
     f.add_argument("config")
 
+    u = sub.add_parser("ui", help="run a fleet from a YAML file with the web UI")
+    u.add_argument("config")
+    u.add_argument("--port", type=int, default=8502,
+                   help="UI and control API port on 127.0.0.1 (default 8502)")
+
     for p in (s, f):
         p.add_argument("--control-port", type=int, default=8502,
                        help="HTTP control API port on 127.0.0.1 (default 8502)")
@@ -484,6 +496,21 @@ def main(argv: list[str] | None = None) -> int:
                             grid_code=args.grid_code),
         )
         gateways = [Gateway(cfg)]
+    elif args.cmd == "ui":
+        from .gateway import load_yaml
+        from .validate import validate_fleet
+        d = load_yaml(args.config)
+        problems = validate_fleet(d)
+        if problems:
+            for p in problems:
+                print(f"{args.config}: {p['path']}: {p['error']}", file=sys.stderr)
+            return 2
+        gateways = list(Fleet.from_dict(d).gateways.values())
+        try:
+            asyncio.run(_run(gateways, args.port, ui=True))
+        except KeyboardInterrupt:
+            pass
+        return 0
     else:
         gateways = list(Fleet.from_yaml(args.config).gateways.values())
 
