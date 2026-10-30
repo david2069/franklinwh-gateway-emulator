@@ -55,7 +55,9 @@ its result stays in the form until that form is used again.
 ## 5. With a bridge (optional)
 
 Point the Modbus bridge at a card's Modbus TCP address (for `site`, `127.0.0.1:5020`), or the
-Direct Connect bridge at its Direct Connect address. Fire actions here and watch the bridge
+Direct Connect bridge at its Direct Connect address. In `examples/fleet.yaml` only `site` (9020)
+and `us-split` (9021) have one; the others show "Direct Connect off". Add
+`directconnect: {port: <port>}` to a gateway's entry to give it a listener. Fire actions here and watch the bridge
 react. The `ctl` command works against the same port (`franklinwh-emulator ctl site status`).
 
 ## 6. Undo

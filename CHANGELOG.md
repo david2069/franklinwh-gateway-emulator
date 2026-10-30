@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Web UI: "Direct Connect off" (2026-10-30, #36)
+- A card says "Direct Connect off" when its gateway has no `directconnect:` entry, rather than
+  showing nothing. In the example fleet only `site` and `us-split` have a listener
+  (docs/UI_TESTING.md says so).
+
 ### Web UI: version, actions on the right, active gateway pinned (2026-10-30, #34)
 - The header shows the emulator's version and, from a git checkout, the short commit
   (`GET /version`, new).
