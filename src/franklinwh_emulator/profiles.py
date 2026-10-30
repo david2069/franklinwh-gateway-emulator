@@ -17,6 +17,8 @@ class Profile:
     baseline: str = "agate_v10r01b04d00"
     firmware: str = "V10R01B04D00"
     model_name: str = "aGate X"
+    # The aGate (IBG) firmware Direct Connect reports: picks the 1102/1834 versions (DC_FIRMWARE).
+    dc_firmware: str = "V12R02B30D06_260304"
 
     # -- session -------------------------------------------------------------
     max_connections: int | None = 1          # the aGate serves one client at a time
@@ -73,6 +75,7 @@ PROFILES: dict[str, Profile] = {
     "agate-v12r02b60d00-candidate": Profile(
         name="agate-v12r02b60d00-candidate",
         firmware="V12R02B60D00",
+        dc_firmware="V12R02B60D00_260924",
         base_aliases=(40000,),           # sunspec_map_at_pdu_40000; both bases accept writes
         write_echo_base0=True,           # pdu_40000_write_response_address: 40319 -> 319
         tou_reserve_mirrors_self=False,  # ext_15509_tou_reserve: 15509 holds the TOU reserve
@@ -105,6 +108,33 @@ PROFILES: dict[str, Profile] = {
     ),
 }
 DEFAULT_PROFILE = "agate-v10r01b04d00"
+
+# Direct Connect 1102 login fields per aGate (IBG) firmware, as measured on the reference
+# aGate (one site, one aPower). ``per_apower`` keys are lists with one entry per aPower:
+# the list shape is measured, one entry per unit is inferred (no multi-aPower reply seen).
+# ``extra`` holds keys recorded only on that firmware. 1834 uses ibg_iot = AWS_VER and
+# ibg_local = APP_VER, as in the 2026-10-07 capture.
+DC_FIRMWARE: dict[str, dict] = {
+    # Reference capture 2026-10-07 (docs/CALIBRATION.md firmware table): values only; the
+    # list shape is assumed from V12R02B60D00.
+    "V12R02B30D06_260304": {
+        "protocolVer": "V1.11.03", "AWS_VER": "V12R00B06D04_260304", "APP_VER": "V12R00B07D04_260205",
+        "SL_VER": "V12R02B07D81", "METER_VER": "V12R00B11D00", "SyHdVersion": 102,
+        "per_apower": {"FPGA_VER": "V12R01B00D00", "DCDC_VER": "V12R02B07D01", "INV_VER": "V12R02B09D03",
+                       "BMS_VER": "V11R50B03D00", "BL_VER": "V11R06B00D00", "TH_VER": "V11R02B01D00"},
+        "extra": {},
+    },
+    # The full 1102 payload in fwh-direct-connect-bridge's firmware sweep (read
+    # ~2026-10-20T20:1xZ, after the update), relayed 2026-10-31 (#78).
+    "V12R02B60D00_260924": {
+        "protocolVer": "V1.12.02", "AWS_VER": "V12R00B15D00_260918", "APP_VER": "V12R00B16D00_260825",
+        "SL_VER": "V12R02B12D00", "METER_VER": "V12R00B11D00", "SyHdVersion": 102,
+        "per_apower": {"FPGA_VER": "V12R01B00D00", "DCDC_VER": "V12R02B10D00", "INV_VER": "V12R02B15D00",
+                       "BMS_VER": "V11R50B07D00", "BL_VER": "V11R06B00D00", "TH_VER": "V11R02B01D00"},
+        "extra": {"deviceType": 0, "threePhasePvPower": 0, "PE_HW_VER": [2], "BMS_MAIN_HW_VER": [0],
+                  "BMS_BL_HW_VER": [0], "BMS_TH_HW_VER": [0]},
+    },
+}
 
 # Profile fields that assert firmware behaviour: the value at which a field asserts nothing
 # (ALWAYS = every value asserts something) and the franklinwh-modbus firmware_quirks.json
@@ -144,4 +174,8 @@ def get_profile(name: str = DEFAULT_PROFILE, **overrides) -> Profile:
         overrides["base_aliases"] = tuple(overrides["base_aliases"])
     if overrides.get("write_bases") is not None:
         overrides["write_bases"] = tuple(overrides["write_bases"])
-    return replace(base, **overrides)
+    profile = replace(base, **overrides)
+    if profile.dc_firmware not in DC_FIRMWARE:
+        raise ValueError(f"dc_firmware {profile.dc_firmware!r}: no Direct Connect versions for it; "
+                         f"known {sorted(DC_FIRMWARE)}")
+    return profile
