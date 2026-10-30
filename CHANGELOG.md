@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Web UI: active reserve, coloured mode and battery status, firmware (2026-10-30, #49)
+- Cards show the active reserve under the SoC (the mode's reserve; 100% in Emergency Backup;
+  the off-grid floor while islanded), the firmware, and the battery status as a tag.
+- Colours (light and dark shades): Self-Consumption green, TOU cyan, Emergency Backup red;
+  Charging red, Discharging green, Standby orange (off-grid versions too). The diagram's aGate
+  box uses them and shows the reserve.
+- State gains `firmware`, `active_reserve`, `offgrid_floor_soc`.
+
 ### Action log, Save and Restore (2026-10-30, #47)
 - The control API logs every action it applies (page, `ctl`, API, restore), with wall time,
   the gateway's local time, the body and the result: `GET /log`, and the page's Activity panel.

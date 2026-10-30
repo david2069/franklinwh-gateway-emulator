@@ -51,8 +51,10 @@
       <button type="button" class="card" :aria-pressed="(g.id === active).toString()" @click="select(g.id)">
         <div class="top">
           <span class="id" x-text="g.id"></span>
-          <span class="soc" x-text="pct(g.soc)" :aria-label="'state of charge ' + pct(g.soc)"></span>
+          <span class="soc"><span x-text="pct(g.soc)" :aria-label="'state of charge ' + pct(g.soc)"></span>
+            <small x-text="reserveText(g)"></small></span>
         </div>
+        <div class="fw" x-text="'Firmware ' + g.firmware"></div>
         <div class="addr">
           <div x-text="g.modbus_enabled ? 'Modbus TCP ' + addr(g.address) : 'Modbus TCP off'"
                :class="{ off: !g.modbus_enabled }"
@@ -69,7 +71,8 @@
         </dl>
         <div class="tags">
           <span class="tag" :class="g.grid_connected ? 'ok' : 'bad'" x-text="gridState(g)"></span>
-          <span class="tag" x-text="g.native_mode_name"></span>
+          <span class="tag" :class="modeClass(g)" x-text="g.native_mode_name"></span>
+          <span class="tag" :class="statusClass(g)" x-text="g.run_status_name"></span>
           <span class="tag warn" x-show="g.remote_control && g.remote_control.enabled">VPP</span>
           <template x-for="a in g.alarm_names" :key="a"><span class="tag bad" x-text="a"></span></template>
           <template x-for="f in faultList(g)" :key="f"><span class="tag warn" x-text="'fault: ' + f"></span></template>

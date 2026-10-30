@@ -35,17 +35,28 @@ function link(points, w, dir) {
   return `<path class="flow ${cls}" d="${d}" style="animation-delay:${delay}s"></path>`;
 }
 
-function node(x, y, w, h, title, value, sub, cls, lines) {
-  // ``lines``: extra small lines under the value (the aGate's status).
-  const extra = (lines || []).map((l, i) => `<text class="s" x="${w / 2}" y="${74 + i * 18}">${esc(l)}</text>`).join('');
+function node(x, y, w, h, title, value, sub, cls, lines, valueCls) {
+  // ``lines``: extra small lines under the value (the aGate's status); each a string or
+  // [text, class]. ``valueCls``: a colour class for the value.
+  const extra = (lines || []).map((l, i) => {
+    const [t, c] = Array.isArray(l) ? l : [l, ''];
+    return `<text class="s ${c}" x="${w / 2}" y="${74 + i * 18}">${esc(t)}</text>`;
+  }).join('');
   const vy = lines && lines.length ? 48 : h / 2 + 10;
   return `<g class="node ${cls || ''}" transform="translate(${x - w / 2} ${y - h / 2})">
     <rect width="${w}" height="${h}" rx="12"></rect>
     <text class="t" x="${w / 2}" y="22">${esc(title)}</text>
-    ${value ? `<text class="v" x="${w / 2}" y="${vy}">${esc(value)}</text>` : ''}
+    ${value ? `<text class="v ${valueCls || ''}" x="${w / 2}" y="${vy}">${esc(value)}</text>` : ''}
     ${extra}
     ${sub ? `<text class="s" x="${w / 2}" y="${h - 12}">${esc(sub)}</text>` : ''}
   </g>`;
+}
+
+// 'charging' | 'discharging' | 'standby' (off-grid versions included), for the colour classes.
+function statusKey(g) {
+  const n = (g.run_status_name || '').toLowerCase();
+  return n.includes('discharging') ? 'discharging' : n.includes('charging') ? 'charging'
+       : n.includes('standby') ? 'standby' : '';
 }
 
 function renderDiagram(g) {
@@ -109,10 +120,11 @@ function renderDiagram(g) {
   const vpp = g.remote_control && g.remote_control.enabled;
   out.push(node(agate[0], agate[1], 180, 156, 'aGate', g.native_mode_name,
     vpp ? 'Modbus VPP' : '', vpp ? 'agate vpp' : 'agate', [
-      g.run_status_name + ' · ' + kwText(g.battery_w),
-      'SoC ' + Math.round(g.soc) + '% · inverter ' + g.inverter_state_name.toLowerCase(),
-      'cabinet ' + g.cabinet_c.toFixed(1) + ' °C',
-    ]));
+      [g.run_status_name + ' · ' + kwText(g.battery_w), 'c-' + statusKey(g)],
+      'SoC ' + Math.round(g.soc) + '% · ' + (g.grid_connected ? 'reserve ' + Math.round(g.active_reserve)
+                                                             : 'off-grid floor ' + Math.round(g.offgrid_floor_soc)) + '%',
+      'inverter ' + g.inverter_state_name.toLowerCase() + ' · cabinet ' + g.cabinet_c.toFixed(1) + ' °C',
+    ], 'c-' + ({ 1: 'backup', 2: 'self', 3: 'tou' })[g.native_mode]));
 
   // Bottom row: generator and smart circuits.
   const gen = g.generator || {};

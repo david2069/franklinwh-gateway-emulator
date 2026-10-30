@@ -11,6 +11,8 @@
   --ok-bg: #13281d;
   --warn: #f5a524;
   --bad: #f87171;
+  /* Mode and battery-status colours (owner, #49) */
+  --c-green: #4ade80; --c-cyan: #22d3ee; --c-red: #f87171; --c-orange: #fb923c;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   color-scheme: dark;
@@ -20,6 +22,7 @@
     --bg: #f4f6f9; --panel: #ffffff; --panel-2: #eef1f5; --line: #d5dbe4;
     --text: #172235; --text-2: #2c3a52; --muted: #56627a;
     --ok: #15803d; --ok-bg: #dcfce7; --warn: #b45309; --bad: #b91c1c;
+    --c-green: #15803d; --c-cyan: #0e7490; --c-red: #b91c1c; --c-orange: #c2410c;
     color-scheme: light;
   }
 }
@@ -180,3 +183,17 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
 .activity .log li { padding: 2px 0; word-break: break-word; }
 .activity .log li.bad { color: var(--bad); }
 .activity .empty { padding: 0 16px 12px; margin: 0; }
+
+/* Mode: Self-Consumption green, TOU cyan, Emergency Backup red. Battery: charging red,
+   discharging green, standby orange. */
+.tag.mode-self, .c-self { color: var(--c-green); border-color: var(--c-green); }
+.tag.mode-tou, .c-tou { color: var(--c-cyan); border-color: var(--c-cyan); }
+.tag.mode-backup, .c-backup { color: var(--c-red); border-color: var(--c-red); }
+.tag.st-charging, .c-charging { color: var(--c-red); border-color: var(--c-red); }
+.tag.st-discharging, .c-discharging { color: var(--c-green); border-color: var(--c-green); }
+.tag.st-standby, .c-standby { color: var(--c-orange); border-color: var(--c-orange); }
+.diagram text.c-self { fill: var(--c-green); } .diagram text.c-tou { fill: var(--c-cyan); }
+.diagram text.c-backup { fill: var(--c-red); } .diagram text.c-charging { fill: var(--c-red); }
+.diagram text.c-discharging { fill: var(--c-green); } .diagram text.c-standby { fill: var(--c-orange); }
+.card .fw { font: 12px var(--mono); color: var(--muted); }
+.card .soc small { display: block; font: 12px var(--sans); color: var(--muted); text-align: right; }
