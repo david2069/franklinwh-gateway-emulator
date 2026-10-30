@@ -42,7 +42,8 @@ def test_page_and_its_files(ui):
     assert status == 200 and ctype.startswith("text/html")
     page = body.decode()
     refs = re.findall(r'(?:src|href)="/static/([^"]+)"', page)
-    assert set(refs) == {"style.css", "app.js", "diagram.js", "actions.js", "alpinejs-3.14.1.min.js"}
+    assert set(refs) == {"style.css", "app.js", "diagram.js", "actions.js", "tou.js",
+                         "alpinejs-3.14.1.min.js"}
     for name in refs:
         status, ctype, _ = get(f"{base}/static/{name}")
         assert status == 200
@@ -78,7 +79,7 @@ def test_page_reads_only_fields_the_state_has(ui):
     """Every g.<field> / current.<field> the page uses exists in the control API's state."""
     fleet, _ = ui
     state = gateway_state(fleet["site"])
-    text = "".join((STATIC / n).read_text() for n in ("index.html", "app.js", "diagram.js", "actions.js"))
+    text = "".join((STATIC / n).read_text() for n in ("index.html", "app.js", "diagram.js", "actions.js", "tou.js"))
     used = set(re.findall(r"\b(?:g|current)\.([a-z_]+)", text))
     assert used and used <= set(state), sorted(used - set(state))
     leg_fields = set(re.findall(r"\bleg\.([a-z_]+)", text))
@@ -220,3 +221,78 @@ def test_state_has_firmware_and_active_reserve(ui):
                                         {"id": "y", "profile": "spec"}]})
     assert gateway_state(v12["x"])["firmware"] == "V12R02B60D00 (candidate)"
     assert gateway_state(v12["y"])["firmware"] == "SunSpec DER (spec)"
+
+
+# -- TOU schedule editor (#58) -----------------------------------------------------------------
+def test_schema_lists_the_tou_choices(ui):
+    _, base = ui
+    t = json.loads(get(base + "/schema")[2])["tou"]
+    assert t["dispatch"]["7"]["code"] == "GRID_EXPORT" and set(t["dispatch"]) == {"1", "2", "3", "6", "7", "8"}
+    assert t["waves"] == {"0": "Off-Peak", "1": "Mid-Peak", "2": "On-Peak", "4": "Super Off-Peak"}
+    assert "maxChargeSoc" in t["limit_fields"]
+
+
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_tou_editor_round_trips_the_schedule(ui, tmp_path):
+    """The state's schedule, opened in the editor and sent unchanged, is accepted and gives the
+    same schedule; edits, the timeline and a bad price convert as they should."""
+    import subprocess
+    fleet, base = ui
+    gw = fleet["us-split"]
+    from franklinwh_emulator.control import apply
+    apply(gw, "tou", {"schedule": [
+        {"name": "Peak", "startHourTime": "17:00", "endHourTime": "21:00", "waveType": 2, "dispatchId": 7,
+         "maxChargeSoc": 90}], "rates": {"2": {"buy": 0.54}}})
+    tou = gateway_state(gw)["tou"]
+    harness = tmp_path / "tou.js"
+    harness.write_text((STATIC / "tou.js").read_text() + f"""
+const T = {json.dumps(tou)};
+const d = touDraft(T);
+d.rates['0'] = {{buy: '', sell: ''}};
+const same = touBody(d);
+const edited = touDraft(T);
+touAddRow(edited);
+edited.rows[0].dispatchId = '8';
+const full = touDraft({{schedule: [{{name: 'a', startHourTime: '00:00', endHourTime: '17:00'}},
+                                   {{name: 'b', startHourTime: '17:00', endHourTime: '24:00'}}]}});
+touAddRow(full);
+const empty = touAddRow({{rows: [], rates: {{}}}});
+let bad;
+try {{ const b = touDraft(T); b.rates['2'].sell = 'x'; touBody(b); bad = 'accepted'; }} catch (e) {{ bad = e.message; }}
+print(JSON.stringify({{same, edited: touBody(edited), segs: touSegments(T.schedule),
+                      now: touNowPct({{endHourTime: '17:00', remaining_min: 60}}), limits: touLimits(d.rows[0].extra), bad,
+                      full: full.rows.map(r => r.start + '-' + r.end), empty: empty.rows.map(r => r.start + '-' + r.end)}}));
+""")
+    res = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
+    assert res["same"]["rates"] == {"2": {"buy": 0.54}}
+    assert len(res["same"]["schedule"]) == 1                  # the gaps stay gaps
+    assert res["same"]["schedule"][0] == {"maxChargeSoc": 90, "name": "Peak", "startHourTime": "17:00",
+                                          "endHourTime": "21:00", "dispatchId": 7, "waveType": 2}
+    assert [(s["left"], s["width"], s["dispatch"]) for s in res["segs"]] == [
+        (0, 17 / 24 * 100, "SELF"), (17 / 24 * 100, 4 / 24 * 100, "GRID_EXPORT"), (21 / 24 * 100, 3 / 24 * 100, "SELF")]
+    assert res["now"] == pytest.approx(16 / 24 * 100)
+    assert res["limits"] == "maxChargeSoc 90"
+    assert res["bad"] == "rates 2 sell: not a number"
+    assert res["full"] == ["00:00-17:00", "17:00-20:30", "20:30-24:00"]   # the day was full: split the last
+    assert res["empty"] == ["00:00-24:00"]
+    assert res["edited"]["schedule"][0]["dispatchId"] == 8
+    assert res["edited"]["schedule"][1] == {"name": "New", "startHourTime": "21:00", "endHourTime": "24:00",
+                                            "dispatchId": 6, "waveType": 0}
+
+    def post(body):
+        req = urllib.request.Request(base + "/gateways/us-split/tou", method="POST", data=json.dumps(body).encode())
+        try:
+            with urllib.request.urlopen(req, timeout=3) as r:
+                return r.status, json.load(r)
+        except urllib.error.HTTPError as e:
+            return e.code, json.load(e)
+    status, state = post(res["same"])
+    assert status == 200 and state["tou"]["schedule"] == tou["schedule"] and state["tou"]["rates"] == tou["rates"]
+    status, state = post(res["edited"])
+    assert status == 200 and [(b["startHourTime"], b["dispatch"]) for b in state["tou"]["schedule"]] == [
+        ("00:00", "SELF"), ("17:00", "GRID_CHARGE"), ("21:00", "SELF")]
+    assert not state["tou"]["schedule"][2].get("filled")      # the added row, not a gap
+    edited = res["edited"]
+    edited["schedule"][1]["startHourTime"] = "20:00"          # overlaps: the server's answer
+    status, err = post(edited)
+    assert status == 400 and err["error"].startswith("tou: 'Peak' (17:00-21:00) overlaps")   # one prefix

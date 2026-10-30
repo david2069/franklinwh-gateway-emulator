@@ -312,7 +312,8 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
         else:
             raise ApiError(404, f"unknown action {action!r}")
     except (KeyError, TypeError, ValueError) as e:
-        raise ApiError(400, f"{action}: {e}") from None
+        msg = str(e)                       # already names the action ("tou block 2: …"): as is
+        raise ApiError(400, msg if msg.startswith((f"{action}:", f"{action} ")) else f"{action}: {msg}") from None
 
 
 # Actions not replayed by a restore: they are events, not settings.

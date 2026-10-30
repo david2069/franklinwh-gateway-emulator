@@ -322,4 +322,12 @@ def check_body(action: str, body: dict) -> str | None:
 def schema() -> dict:
     """What ``GET /schema`` serves: the actions, and the keys a fleet's gateway may hold."""
     from .validate import config_schema
-    return {"actions": ACTIONS, "groups": GROUPS, "gateway_config": config_schema()}
+    return {"actions": ACTIONS, "groups": GROUPS, "gateway_config": config_schema(), "tou": tou_codes()}
+
+
+def tou_codes() -> dict:
+    """The TOU editor's choices: dispatch codes, tariff periods (wave types) and limit fields."""
+    from . import tou
+    return {"dispatch": {str(k): {"code": c, "doc": d} for k, (c, d) in tou.DISPATCH.items()},
+            "waves": {str(k): v for k, v in tou.WAVES.items()},
+            "limit_fields": list(tou.LIMIT_FIELDS)}

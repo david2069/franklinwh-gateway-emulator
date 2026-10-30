@@ -8,6 +8,7 @@
 <script src="/static/app.js"></script>
 <script src="/static/diagram.js"></script>
 <script src="/static/actions.js"></script>
+<script src="/static/tou.js"></script>
 <script defer src="/static/alpinejs-3.14.1.min.js"></script>
 </head>
 <body x-data="running()" x-init="start()">
@@ -125,6 +126,102 @@
               <tr x-show="current.generator.installed"><td>Output</td><td x-text="kw(current.generator_w)"></td></tr>
             </table>
           </div>
+        </div>
+        <div class="tou" x-show="schema">
+          <div class="tou-head">
+            <h3>TOU schedule</h3>
+            <span class="tou-note" x-text="touNote(current)"></span>
+            <button type="button" class="secondary" x-show="!touEditing()" @click="touEdit()">Edit</button>
+          </div>
+          <div class="timeline" role="img" :aria-label="touAria(current)">
+            <div class="tl-row">
+              <span class="tl-label">Dispatch</span>
+              <div class="tl-bar">
+                <template x-for="(s, i) in touSegments(current.tou.schedule)" :key="i">
+                  <div class="tl-seg" :class="'d' + s.dispatchId" :style="'left:' + s.left + '%;width:' + s.width + '%'"
+                       :title="s.from + '–' + s.to + ' · ' + s.name + ' · ' + s.dispatch + ' · ' + s.wave">
+                    <span x-text="s.dispatch"></span></div>
+                </template>
+                <div class="tl-now" x-show="touNowPct(current.tou.active) !== null" :style="'left:' + touNowPct(current.tou.active) + '%'"></div>
+              </div>
+            </div>
+            <div class="tl-row">
+              <span class="tl-label">Tariff</span>
+              <div class="tl-bar thin">
+                <template x-for="(s, i) in touSegments(current.tou.schedule)" :key="i">
+                  <div class="tl-seg" :class="'w' + s.waveType" :style="'left:' + s.left + '%;width:' + s.width + '%'"
+                       :title="s.from + '–' + s.to + ' · ' + s.wave"><span x-text="s.wave"></span></div>
+                </template>
+              </div>
+            </div>
+            <div class="tl-hours" aria-hidden="true">
+              <template x-for="h in [0, 3, 6, 9, 12, 15, 18, 21, 24]" :key="h">
+                <span :style="'left:' + (h / 24 * 100) + '%'" x-text="String(h).padStart(2, '0')"></span>
+              </template>
+            </div>
+          </div>
+          <table x-show="!touEditing()">
+            <tr class="th"><td>Time</td><td>Name</td><td>Dispatch</td><td>Tariff</td><td>Buy / sell</td></tr>
+            <template x-for="(b, i) in current.tou.schedule" :key="i">
+              <tr :class="{ now: b.startHourTime === current.tou.active.startHourTime }">
+                <td x-text="b.startHourTime + '–' + b.endHourTime"></td>
+                <td x-text="b.name + (b.filled ? ' (gap)' : '')"></td>
+                <td x-text="b.dispatchId + ' ' + b.dispatch"></td>
+                <td x-text="b.wave"></td>
+                <td x-text="touPrice(current, b.waveType)"></td>
+              </tr>
+            </template>
+          </table>
+          <form class="tou-edit" x-show="touEditing()" @submit.prevent="touSend()" aria-label="Edit the TOU schedule">
+            <template x-if="touEditing()">
+              <div>
+                <div class="tou-rows">
+                  <div class="tou-row th" aria-hidden="true"><span>Start</span><span>End</span><span>Name</span><span>Dispatch</span><span>Tariff</span><span></span></div>
+                  <template x-for="(r, i) in touDraftNow().rows" :key="i">
+                    <div class="tou-row">
+                      <input type="text" x-model="r.start" :aria-label="'Block ' + (i + 1) + ' start (HH:MM)'" inputmode="numeric" autocomplete="off">
+                      <input type="text" x-model="r.end" :aria-label="'Block ' + (i + 1) + ' end (HH:MM)'" inputmode="numeric" autocomplete="off">
+                      <input type="text" x-model="r.name" :aria-label="'Block ' + (i + 1) + ' name'" autocomplete="off">
+                      <select x-model="r.dispatchId" :aria-label="'Block ' + (i + 1) + ' dispatch'">
+                        <template x-for="[v, d] in Object.entries(schema.tou.dispatch)" :key="v">
+                          <option :value="v" x-text="v + ' ' + d.code" :title="d.doc" :selected="v === r.dispatchId"></option>
+                        </template>
+                      </select>
+                      <select x-model="r.waveType" :aria-label="'Block ' + (i + 1) + ' tariff'">
+                        <template x-for="[v, n] in Object.entries(schema.tou.waves)" :key="v">
+                          <option :value="v" x-text="n" :selected="v === r.waveType"></option>
+                        </template>
+                      </select>
+                      <button type="button" class="secondary" @click="touDraftNow().rows.splice(i, 1)" :aria-label="'Remove block ' + (i + 1)">✕</button>
+                      <small class="limits" x-show="touLimits(r.extra)" x-text="'kept, not applied: ' + touLimits(r.extra)"></small>
+                    </div>
+                  </template>
+                </div>
+                <button type="button" class="secondary" @click="touAddRow(touDraftNow())">Add block</button>
+                <p class="hint">HH:MM, 00:00–24:00, no overlaps. Gaps run SELF, off-peak. Dispatch:
+                  <template x-for="[v, d] in Object.entries(schema.tou.dispatch)" :key="v"><span x-text="d.code + ' = ' + d.doc + '. '"></span></template></p>
+                <h4>Prices per tariff ($/kWh, shown only)</h4>
+                <div class="tou-rates">
+                  <template x-for="[w, n] in Object.entries(schema.tou.waves)" :key="w">
+                    <div class="tou-rate">
+                      <span x-text="n"></span>
+                      <input type="text" inputmode="decimal" placeholder="buy" autocomplete="off" :aria-label="n + ' buy price'"
+                             :value="touRate(w).buy" @input="touRate(w).buy = $event.target.value">
+                      <input type="text" inputmode="decimal" placeholder="sell" autocomplete="off" :aria-label="n + ' sell price'"
+                             :value="touRate(w).sell" @input="touRate(w).sell = $event.target.value">
+                    </div>
+                  </template>
+                </div>
+                <div class="tou-buttons">
+                  <button type="button" class="secondary" @click="touCancel()">Cancel</button>
+                  <button type="button" class="secondary" @click="touSend(true)">Reset to default</button>
+                  <button type="submit" :disabled="busy === 'tou'" x-text="busy === 'tou' ? 'Sending…' : 'Send'"></button>
+                </div>
+              </div>
+            </template>
+          </form>
+          <p class="result" x-show="result('tou-editor')" :class="result('tou-editor') && (result('tou-editor').ok ? 'ok' : 'bad')"
+             x-text="result('tou-editor') && result('tou-editor').text" role="status"></p>
         </div>
       </div>
     </template>
