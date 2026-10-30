@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Check fleet and scenario files without running them (2026-10-30, #18)
+- `validate.py`: `validate_fleet` and `validate_scenario` build everything a run would build
+  except the servers, and return every problem as `{path, error}`: unknown keys, bad values,
+  duplicate gateway ids, port clashes, unknown step actions and body keys, steps aimed at a
+  missing gateway.
+- `config_schema()` describes every gateway key (type and default from `GatewayConfig` and
+  `SiteConfig`, plus a one-line meaning). `GET /schema` serves it as `gateway_config`.
+
 ### One schema for the control actions (2026-10-30, #18)
 - `schema.py` describes every control action: fields, types, units, allowed values, signs,
   required fields and examples. `GET /schema` serves it.
