@@ -47,6 +47,7 @@ def test_every_handler_is_in_the_schema():
     handled = set(re.findall(r'action == "([a-z-]+)"', body))
     for group in re.findall(r"action in \(([^)]*)\)", body):
         handled |= set(re.findall(r'"([a-z-]+)"', group))
+    handled |= control.DC_ACTIONS                 # sent over Direct Connect by ControlApi.dc_write
     assert handled == set(ACTIONS)
 
 

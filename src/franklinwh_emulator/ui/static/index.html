@@ -90,13 +90,18 @@
         <h2 x-text="current.id"></h2>
         <div class="sub" x-text="detailLine(current)"></div>
         <div class="comms" x-show="current.profile !== 'spec'">
-          <span class="comms-state" :class="{ off: !current.modbus_listening }" x-text="modbusText(current)"></span>
-          <button type="button" x-show="current.dc_address" :disabled="busy === 'dc-modbus'" @click="dcModbus(!current.modbus_enabled)"
+          <span class="comms-state" :class="{ off: !current.modbus_listening, warn: current.rebooting }" x-text="modbusText(current)"></span>
+          <button type="button" x-show="current.dc_address" :disabled="busy === 'dc-modbus' || current.rebooting" @click="dcModbus(!current.modbus_enabled)"
                   :title="'Sends a Direct Connect 1205 sunsMdEn write to ' + addr(current.dc_address)"
                   x-text="busy === 'dc-modbus' ? 'Sending…' : (current.modbus_enabled ? 'Disable' : 'Enable') + ' Modbus TCP via Direct Connect'"></button>
-          <span class="empty" x-show="!current.dc_address">No Direct Connect listener, so no 1205 write.</span>
-          <p class="result" x-show="result('dc-modbus')" :class="result('dc-modbus') && (result('dc-modbus').ok ? 'ok' : 'bad')"
-             x-text="result('dc-modbus') && result('dc-modbus').text" role="status"></p>
+          <button type="button" x-show="current.dc_address" :disabled="busy === 'dc-reboot' || current.rebooting" @click="dcReboot()"
+                  :title="'Sends a Direct Connect 1721 reboot to ' + addr(current.dc_address)"
+                  x-text="busy === 'dc-reboot' ? 'Sending…' : 'Reboot via Direct Connect'"></button>
+          <span class="empty" x-show="!current.dc_address">No Direct Connect listener, so no 1205 write or 1721 reboot.</span>
+          <template x-for="a in ['dc-modbus', 'dc-reboot']" :key="a">
+            <p class="result" x-show="result(a)" :class="result(a) && (result(a).ok ? 'ok' : 'bad')"
+               x-text="result(a) && result(a).text" role="status"></p>
+          </template>
         </div>
         <div x-html="renderDiagram(current)"></div>
         <div class="grid2">

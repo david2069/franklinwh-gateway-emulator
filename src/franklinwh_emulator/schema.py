@@ -280,6 +280,14 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "required": ["on"],
         "examples": [{"on": True}, {"on": False}],
     },
+    "dc-reboot": {
+        "doc": "Reboot the gateway as an installer's tool does: a Direct Connect 1721 reboot sent over "
+               "its own Direct Connect port (franklinwh-direct-connect-api reboot). Both listeners drop "
+               "for 20 s and come back on the same ports; the site's state is kept. Not saved in "
+               "sessions.",
+        "fields": {},
+        "examples": [{}],
+    },
     "csip": {
         "doc": "The CSIP-AUS utility server: registration, availability, events, default.",
         "fields": {
@@ -306,7 +314,7 @@ GROUPS: dict[str, list[str]] = {
     "Battery and modes": ["vpp", "release", "mode", "tou", "reserve", "soc"],
     "Loads": ["circuit", "appliance"],
     "Generator": ["generator"],
-    "CSIP and comms": ["csip", "der-comms", "dc-modbus", "export"],
+    "CSIP and comms": ["csip", "der-comms", "dc-modbus", "dc-reboot", "export"],
     "Alarms and faults": ["alarms", "faults", "dc-faults", "range-fault", "write-reject",
                           "addressing", "episode"],
 }

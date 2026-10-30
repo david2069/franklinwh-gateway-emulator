@@ -125,6 +125,7 @@ function running() {
 
     // -- Modbus TCP on/off through the gateway's own Direct Connect listener (1205 sunsMdEn) ---
     modbusText(g) {
+      if (g.rebooting) return 'Rebooting… Modbus TCP and Direct Connect are down';
       if (g.modbus_enabled && g.modbus_listening) return 'Modbus TCP Server on · ' + this.addr(g.address);
       if (g.modbus_enabled) return 'Modbus TCP Server opening…';
       if (g.modbus_listening) return 'Modbus TCP Server closing…';
@@ -141,6 +142,23 @@ function running() {
         this.results[key] = { ok: true, text: 'Direct Connect 1205 sunsMdEn=' + (on ? 1 : 0) + ' sent to ' +
           this.addr(data.dc_address) + ' at ' + new Date().toLocaleTimeString() + '; the aGate ' +
           (on ? 'opens' : 'closes') + ' Modbus TCP in about 3 s.' };
+      } catch (e) {
+        this.results[key] = { ok: false, text: e.message };
+      } finally {
+        this.busy = '';
+      }
+    },
+
+    async dcReboot() {
+      const gw = this.active;
+      const key = gw + '/dc-reboot';
+      this.busy = 'dc-reboot';
+      try {
+        const data = await this._post('/gateways/' + encodeURIComponent(gw) + '/dc-reboot', {});
+        const i = this.gateways.findIndex(g => g.id === gw);
+        if (i >= 0) this.gateways[i] = data;
+        this.results[key] = { ok: true, text: 'Direct Connect 1721 reboot sent to ' + this.addr(data.dc_address) +
+          ' at ' + new Date().toLocaleTimeString() + '; both listeners come back in about 20 s, on the same ports.' };
       } catch (e) {
         this.results[key] = { ok: false, text: e.message };
       } finally {

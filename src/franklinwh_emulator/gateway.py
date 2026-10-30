@@ -179,6 +179,7 @@ class Gateway:
             self.modbus_enabled = cfg.setup == "in-service" or not is_agate
         self.modbus_apply_delay_s = 3.0
         self.reboot_s = 20.0
+        self.rebooting = False                   # True while reboot() has the listeners down
         self.episode_phase: str | None = None   # "down" | "offgrid" during episode()
 
     @property
@@ -225,15 +226,19 @@ class Gateway:
         if loop is None:
             return
         delay = self.reboot_s if down_s is None else down_s
+        self.rebooting = True
 
         async def cycle():
-            await asyncio.sleep(0.05)                   # let the reply path unwind
-            await self._stop_all()
-            await asyncio.sleep(delay)
-            if self.modbus_enabled:
-                await self.server.start()
-            if self.dc is not None:
-                await self.dc.start()
+            try:
+                await asyncio.sleep(0.05)               # let the reply path unwind
+                await self._stop_all()
+                await asyncio.sleep(delay)
+                if self.modbus_enabled:
+                    await self.server.start()
+                if self.dc is not None:
+                    await self.dc.start()
+            finally:
+                self.rebooting = False
         loop.call_soon_threadsafe(lambda: asyncio.ensure_future(cycle()))
 
     def episode(self, down_s: float, offgrid_s: float) -> None:
