@@ -437,7 +437,8 @@ class ControlApi:
         path = self._sessions_dir() / f"{self._check_name(name)}.yaml"
         if not path.is_file():
             raise ApiError(404, f"no session {name!r}")
-        doc = yaml.safe_load(path.read_text()) or {}
+        from .gateway import fix_bool_keys            # a hand-written bare on:/off: key, as fleet files
+        doc = fix_bool_keys(yaml.safe_load(path.read_text())) or {}
         results = []
         for a in doc.get("actions", []):
             gw = self.gateways.get(a.get("gateway"))

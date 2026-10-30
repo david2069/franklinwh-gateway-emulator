@@ -109,3 +109,17 @@ def test_restore_unknown_session_is_404(tmp_path):
     with pytest.raises(ApiError) as e:
         api.restore_session("nope")
     assert e.value.status == 404
+
+
+def test_restore_reads_a_bare_on_key(tmp_path):
+    """A hand-written session with an unquoted on: key restores as fleet files do (#66)."""
+    f = start(tmp_path)
+    try:
+        d = tmp_path / "sessions"
+        d.mkdir(exist_ok=True)
+        (d / "hand.yaml").write_text("actions:\n  - {gateway: site, do: circuit, with: {n: 2, on: false}}\n")
+        r = post(f, "/session/restore", {"name": "hand"})
+        assert (r["applied"], r["failed"]) == (1, 0), r["results"]
+        assert gateway_state(f["site"])["circuits"]["2"]["on"] is False
+    finally:
+        f.stop()
