@@ -171,3 +171,11 @@ def test_state_has_agate_status_sun_and_temperatures(ui):
     night_sun = gateway_state(night["site"])["sun"]
     assert day_sun["up"] and day_sun["elevation_deg"] > 60
     assert not night_sun["up"] and night_sun["elevation_deg"] < 0
+
+
+def test_version_endpoint(ui):
+    from franklinwh_emulator import __version__
+    _, base = ui
+    v = json.loads(get(base + "/version")[2])
+    assert v["version"] == __version__
+    assert v["commit"] is None or re.fullmatch(r"[0-9a-f]{7,12}", v["commit"])

@@ -13,6 +13,8 @@ function running() {
     loaded: false,
     error: '',
     schema: null,
+    version: null,
+    layout: 'right',  // where the actions go: 'right' (beside, on wide screens) or 'below'
     forms: {},        // action -> {field: raw string}
     results: {},      // "<gateway>/<action>" -> {ok, text}
     busy: '',
@@ -23,7 +25,11 @@ function running() {
     },
 
     async start() {
-      try { this.active = localStorage.getItem('emulator.active'); } catch (e) { /* private mode */ }
+      try {
+        this.active = localStorage.getItem('emulator.active');
+        this.layout = localStorage.getItem('emulator.layout') || 'right';
+      } catch (e) { /* private mode */ }
+      this._get('/version').then(v => { this.version = v; }).catch(() => {});
       await this.poll();
       this._timer = setInterval(() => this.poll(), POLL_MS);
       try {
@@ -103,6 +109,15 @@ function running() {
       } finally {
         this.busy = '';
       }
+    },
+
+    versionText() {
+      if (!this.version) return '';
+      return 'v' + this.version.version + (this.version.commit ? ' · ' + this.version.commit : '');
+    },
+    toggleLayout() {
+      this.layout = this.layout === 'right' ? 'below' : 'right';
+      try { localStorage.setItem('emulator.layout', this.layout); } catch (e) { /* private mode */ }
     },
 
     select(id) {

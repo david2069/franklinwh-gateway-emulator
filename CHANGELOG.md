@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Web UI: version, actions on the right, active gateway pinned (2026-10-30, #34)
+- The header shows the emulator's version and, from a git checkout, the short commit
+  (`GET /version`, new).
+- On wide screens the actions sit in their own scrolling column on the right; a header switch
+  puts them back below (remembered in the browser). Narrow screens stack.
+- The actions column pins "Actions on [gateway]" at its top, with a picker to change the active
+  gateway.
+- `vpp.watts` says it is used when `pct_hw` is also sent.
+
 ### Web UI: aGate status, day or night, temperatures (2026-10-30, #32)
 - The aGate box shows the mode, run status with battery kW (Charging, Discharging, Standby and
   the off-grid versions), SoC, inverter state, cabinet temperature, and "Modbus VPP" (amber)

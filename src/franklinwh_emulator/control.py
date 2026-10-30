@@ -1,5 +1,6 @@
 """HTTP control API for steering running gateways (stdlib only, JSON in/out).
 
+    GET  /version                       the emulator's version (and commit, from a git checkout)
     GET  /schema                        every action, its fields and examples (schema.py)
     GET  /gateways                      list gateways
     GET  /gateways/<id>                 live state
@@ -35,6 +36,22 @@ class Raw:
     """A non-JSON response (a page or a static file)."""
     content_type: str
     body: bytes
+
+
+def version_info() -> dict:
+    """Package version, plus the short commit when running from a git checkout."""
+    import subprocess
+    from pathlib import Path
+    from . import __version__
+    commit = None
+    root = Path(__file__).resolve().parents[2]
+    if (root / ".git").exists():
+        try:
+            commit = subprocess.run(["git", "-C", str(root), "rev-parse", "--short", "HEAD"],
+                                    capture_output=True, text=True, timeout=2).stdout.strip() or None
+        except (OSError, subprocess.SubprocessError):
+            commit = None
+    return {"version": __version__, "commit": commit}
 
 
 class ApiError(Exception):
@@ -273,6 +290,7 @@ class ControlApi:
         self.host = host
         self.port = port
         self._server: asyncio.base_events.Server | None = None
+        self._version: dict | None = None
 
     async def start(self) -> tuple[str, int]:
         self._server = await asyncio.start_server(self._client, self.host, self.port)
@@ -287,6 +305,10 @@ class ControlApi:
 
     def _route(self, method: str, path: str, body: dict):
         parts = [p for p in path.split("?")[0].split("/") if p]
+        if parts == ["version"] and method == "GET":
+            if self._version is None:
+                self._version = version_info()
+            return self._version
         if parts == ["schema"] and method == "GET":
             return schema()
         if parts == ["gateways"] and method == "GET":
