@@ -91,6 +91,7 @@ def gateway_state(gw: "Gateway") -> dict:
         # Values forced through the pv / load / ambient actions; null = the model's own.
         "overrides": {"solar_w": site.solar_override_w, "load_w": site.load_override_w,
                       "ambient_c": site.ambient_override_c},
+        "cap_forced_solar": site.config.cap_forced_solar,
         "base_aliases": list(gw.profile.base_aliases),
         "write_rejects": list(gw.device.write_rejects),
         "write_bases": None if gw.profile.write_bases is None else list(gw.profile.write_bases),

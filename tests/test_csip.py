@@ -13,6 +13,7 @@ def site(**kw):
     clock = ManualClock(NOON)
     kw.setdefault("tz_offset_hours", 0)
     kw.setdefault("initial_soc", 60)
+    kw.setdefault("cap_forced_solar", False)     # PV is a test input here (#56)
     s = Site(SiteConfig(seed=7, grid_code="ausgrid", **kw), clock)
     s.serial = "MOCK00073B1612DD272D"
     s.solar_override_w, s.load_override_w = 6000, 500

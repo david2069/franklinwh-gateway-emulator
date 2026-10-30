@@ -194,6 +194,9 @@ class SiteConfig:
     # Share of the solar curve on each PV input (aGate built-in vs aPbox remote).
     pv_inputs: dict[str, float] = field(default_factory=lambda: {"proximal": 1.0})
     offgrid_floor_soc: float = 5.0         # islanded discharge floor (1723 offgridSoc)
+    # Forced solar (pv solar_w) can't exceed what the solar model gives now (0 at night, #56).
+    # False: the forced value is used as given; for lab tests where PV is an input.
+    cap_forced_solar: bool = True
     # The grid code's export limit is the connection-agreement limit. Whether the aGate
     # itself enforces it is a separate question: on the reference Ausgrid site it does
     # not (local 1903 grid_feed_max = -1, cloud notControlExportSolar = true), so the
@@ -573,8 +576,16 @@ class Site:
 
     # -- environment curves (ported from SyntheticSite) -------------------------
     def solar_w(self, ts: float) -> float:
+        """PV output: the solar model's, or a forced value capped at it, since forced solar
+        cannot exceed what the sun gives at this place and time (0 at night; #56)."""
+        model = self.solar_model_w(ts)
         if self.solar_override_w is not None:
-            return max(0.0, self.solar_override_w)
+            forced = max(0.0, self.solar_override_w)
+            return min(forced, model) if self.config.cap_forced_solar else forced
+        return model
+
+    def solar_model_w(self, ts: float) -> float:
+        """What the solar model gives now: replayed data, the weather model, or the bell curve."""
         if self.replay is not None:
             v = self.replay.solar_w(ts)
             if v is not None:

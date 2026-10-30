@@ -117,7 +117,9 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "fields": {
             "input": _f("string", enum=list(PV_INPUTS)),
             "relay": _f("boolean", "false = open (input drops to 0 W)"),
-            "solar_w": _f("number", "null = back to the solar model", unit="W", nullable=True),
+            "solar_w": _f("number", "forced solar, capped at what the solar model gives now (0 at "
+                                    "night) unless cap_forced_solar is false; null = back to the "
+                                    "solar model", unit="W", nullable=True),
         },
         "examples": [{"input": "proximal", "relay": False}, {"solar_w": 3000},
                      {"solar_w": None}],

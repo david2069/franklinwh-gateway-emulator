@@ -7,6 +7,8 @@ start: "2026-01-15T11:00:00"
 duration: 30m
 record_every: 10s
 fleet:
+  defaults:
+    cap_forced_solar: false   # PV is a test input here, set exactly (#56)
   gateways:
     - {id: home, seed: 7, grid_code: ausgrid, location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}, initial_soc: 100}
 steps:
