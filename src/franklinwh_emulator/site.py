@@ -1377,11 +1377,12 @@ class Site:
     def force_appliance(self, name: str, state: bool | None) -> None:
         """True = run now, False = off, None = back to its own schedule."""
         if self.loads is None:
-            raise ValueError("site has no load components (set `loads`)")
+            raise ValueError("this gateway has no appliances: add `loads:` to its fleet entry "
+                             "(e.g. `loads: sydney-family`) and restart")
         with self.lock:
             self.step()
             try:
                 self.loads.by_name(name).forced = state
             except KeyError:
-                raise ValueError(f"no load component {name!r}; have "
+                raise ValueError(f"no appliance {name!r}; this gateway has "
                                  f"{[c.name for c in self.loads.components]}") from None

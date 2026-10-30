@@ -143,7 +143,7 @@ const bad = [];
 for (const [n, f] of [['load', {{w: 'abc'}}], ['csip', {{control: '[1]'}}], ['csip', {{control: '{{'}}]]) {{
   try {{ buildBody(S[n], f); bad.push('accepted'); }} catch (e) {{ bad.push(e.message); }}
 }}
-print(JSON.stringify({{out, bad, blank: buildBody(S.grid, formFromBody(S.grid, {{}})), modeOpts: choiceOptions(S.mode.fields.mode)}}));
+print(JSON.stringify({{out, bad, blank: buildBody(S.grid, formFromBody(S.grid, {{}})), modeOpts: choiceOptions(S.mode.fields.mode), appOpts: choiceOptions(S.appliance.fields.name, {{appliances: {{ev: {{circuit: 2}}, base: {{circuit: null}}}}}}), noApps: choiceOptions(S.appliance.fields.name, {{appliances: {{}}}})}}));
 """)
     import subprocess
     res = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True,
@@ -153,6 +153,8 @@ print(JSON.stringify({{out, bad, blank: buildBody(S.grid, formFromBody(S.grid, {
     assert len(res["out"]) == sum(len(a["examples"]) for a in schema()["actions"].values())
     assert res["bad"] == ["w: not a number", "control: needs a JSON object", "control: not valid JSON"]
     assert res["blank"] == {}
+    assert res["appOpts"] == [["", "— not set —"], ["ev", "ev · SW2"], ["base", "base"]]
+    assert res["noApps"] == [["", "— this gateway has no appliances —"]]
     assert res["modeOpts"] == [["", "— not set —"], ["1", "1 · Emergency Backup"],
                                ["2", "2 · Self-Consumption"], ["3", "3 · TOU"]]
 
@@ -191,3 +193,14 @@ def test_overrides_are_in_the_state(ui):
     assert s["overrides"]["solar_w"] == 6000 and s["solar_w"] == pytest.approx(6000, abs=1)
     apply(gw, "pv", {"solar_w": None})
     assert gateway_state(gw)["overrides"]["solar_w"] is None
+
+
+def test_appliance_errors_name_the_fix(ui):
+    from franklinwh_emulator.control import ApiError, apply
+    fleet, _ = ui
+    with pytest.raises(ApiError, match="this gateway has no appliances: add `loads:`"):
+        apply(fleet["us-split"], "appliance", {"name": "Water Heater", "on": True})
+    with pytest.raises(ApiError, match=r"no appliance 'Water Heater'; this gateway has \[.*'hot_water'"):
+        apply(fleet["site"], "appliance", {"name": "Water Heater", "on": True})
+    apply(fleet["site"], "appliance", {"name": "hot_water", "on": True})
+    assert gateway_state(fleet["site"])["appliances"]["hot_water"]["forced"] is True

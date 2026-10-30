@@ -211,7 +211,8 @@ ACTIONS: dict[str, dict[str, Any]] = {
     },
     "appliance": {
         "doc": "Force an appliance on or off, or hand it back to its schedule.",
-        "fields": {"name": _f("string"),
+        "fields": {"name": dict(_f("string", "one of this gateway's appliances (its fleet "
+                                             "entry's loads:)"), options_from="appliances"),
                    "on": _f(["boolean", "string"], 'null or "auto" = its own schedule',
                             nullable=True)},
         "required": ["name"],
