@@ -222,7 +222,9 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "doc": "The generator: 1901 settings, hardware, manual start/stop, faults, fuel.",
         "fields": {
             "set": _f("object", "1901 fields to change"),
-            "installed": _f("boolean", "true = a generator is fitted"),
+            "installed": _f("boolean", "true = fit a generator (feature on, 7 kW, auto start, unless "
+                                       "set otherwise); false = none fitted"),
+            "rated_w": _f("number", "the generator's rated power (1901 genRatedPower)", unit="W"),
             "start": _f("boolean", "manual start"),
             "stop": _f("boolean", "manual stop"),
             "fault": _f("string", "null clears the forced fault", enum=["fail-start", "trip"],
@@ -230,7 +232,8 @@ ACTIONS: dict[str, dict[str, Any]] = {
             "clear": _f("boolean", "clear a latched fault"),
             "refuel": _f("number", "null = full", unit="L", nullable=True),
         },
-        "examples": [{"installed": True}, {"start": True}, {"stop": True},
+        "examples": [{"installed": True}, {"installed": True, "rated_w": 5000}, {"start": True},
+                     {"stop": True},
                      {"fault": "trip"}, {"refuel": None}],
     },
     "der-comms": {

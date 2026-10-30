@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Generator: fit a working one from the page (2026-10-31, #51)
+- The generator action's `installed: true` now fits a working generator, as the fleet file's
+  `generator: {installed: true}` does (feature on, 7 kW, auto start), for settings still at
+  their factory value. New field `rated_w` (W, 1901 `genRatedPower`) sets its size.
+
 ### Web UI: active reserve, coloured mode and battery status, firmware (2026-10-30, #49)
 - Cards show the active reserve under the SoC (the mode's reserve; 100% in Emergency Backup;
   the off-grid floor while islanded), the firmware, and the battery status as a tag.

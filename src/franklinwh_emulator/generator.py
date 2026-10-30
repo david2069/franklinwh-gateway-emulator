@@ -53,6 +53,10 @@ BLOCK_DEFAULTS: dict = {
 }
 
 
+# What ``installed: true`` sets up: the feature on, a 7 kW unit, auto start.
+FITTED_DEFAULTS = {"genEn": 1, "genRatedPower": 7000, "genModel": "emulated", "manuSw": AUTO}
+
+
 @dataclass
 class GeneratorHardware:
     installed: bool = False
@@ -76,7 +80,7 @@ class Generator:
                    "mode": "manuSw"}
         block = dict(BLOCK_DEFAULTS)
         if self.hw.installed:                    # sensible defaults for a fitted unit
-            block.update({"genEn": 1, "genRatedPower": 7000, "genModel": "emulated", "manuSw": AUTO})
+            block.update(FITTED_DEFAULTS)
         for k, v in cfg.items():
             key = aliases.get(k, k)
             if key == "manuSw" and isinstance(v, str):
@@ -275,6 +279,14 @@ class Generator:
                                                   * gen_w / 1000.0) * hours)
             if self.fuel_l <= 0:
                 self._set_fault("out-of-fuel")
+
+    def fit(self) -> None:
+        """Fit a generator at run time: as ``installed: true`` in a fleet file, the fitted-unit
+        defaults fill every setting still at its factory value."""
+        self.hw.installed = True
+        for k, v in FITTED_DEFAULTS.items():
+            if self.block.get(k) == BLOCK_DEFAULTS.get(k):
+                self.block[k] = v
 
     def status(self) -> dict:
         return {"installed": self.hw.installed, "enabled": self.enabled,
