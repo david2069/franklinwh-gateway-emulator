@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### TOU schedule with dispatch codes and tariff periods (2026-10-31, #58)
+- In TOU mode the battery follows a schedule of blocks in the FranklinWH cloud format
+  (franklinwh-cloud TOU guide): `startHourTime`/`endHourTime`, `waveType` (0, 1, 2, 4),
+  `dispatchId` (1 HOME, 2 STANDBY, 3 SOLAR, 6 SELF, 7 GRID_EXPORT, 8 GRID_CHARGE). Gaps are SELF,
+  off-peak. `tou_schedule` / `tou_rates` in the fleet file; the `tou` action at run time (doesn't
+  change the mode); state `tou` (schedule, rates, active block, minutes left).
+- The default schedule is the previous fixed behaviour (solar-charge off-peak, self-consumption
+  17:00–21:00), so existing scenarios are unchanged.
+- The guide's limit fields are kept and shown, not applied (the guide: `minDischargeSoc` is
+  ignored by the aGate; the others aren't verified in all firmware).
+- Page: lists of objects (the schedule) are edited as JSON until the schedule editor lands.
+
 ### Forced solar can't exceed the sun (2026-10-31, #56)
 - `pv solar_w` is now a ceiling: solar = min(forced, what the gateway's solar model gives at its
   local time: open-meteo's value, the synthetic sky or the bell curve), so 0 at night (owner:

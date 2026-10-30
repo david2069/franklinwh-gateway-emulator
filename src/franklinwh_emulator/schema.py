@@ -187,6 +187,33 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "required": ["mode"],
         "examples": [{"mode": 3}],
     },
+    "tou": {
+        "doc": "The TOU schedule (franklinwh-cloud block format) and prices. Applies in TOU mode; "
+               "doesn't change the mode.",
+        "fields": {
+            "schedule": dict(_f("array", "blocks: {name, startHourTime, endHourTime, waveType (0 off-peak, "
+                                    "1 mid-peak, 2 on-peak, 4 super off-peak), dispatchId (1 HOME, "
+                                    "2 STANDBY, 3 SOLAR, 6 SELF, 7 GRID_EXPORT, 8 GRID_CHARGE)}; gaps "
+                                    "are SELF off-peak"), items="object"),
+            "rates": _f("object", "{waveType: {buy, sell}} $/kWh, display only"),
+            "reset": _f("boolean", "true = back to the default schedule"),
+        },
+        "examples": [
+            {"schedule": [
+                {"name": "Super Off-Peak", "startHourTime": "00:00", "endHourTime": "10:00",
+                 "waveType": 4, "dispatchId": 1},
+                {"name": "Solar", "startHourTime": "10:00", "endHourTime": "12:00", "waveType": 4,
+                 "dispatchId": 3},
+                {"name": "On-Peak", "startHourTime": "12:00", "endHourTime": "19:00", "waveType": 2,
+                 "dispatchId": 6},
+                {"name": "Export", "startHourTime": "19:00", "endHourTime": "20:00", "waveType": 0,
+                 "dispatchId": 7},
+                {"name": "On-Peak", "startHourTime": "20:00", "endHourTime": "24:00", "waveType": 2,
+                 "dispatchId": 1}],
+             "rates": {"2": {"buy": 0.54, "sell": 0.03}, "0": {"buy": 0.0, "sell": 0.0}}},
+            {"reset": True},
+        ],
+    },
     "reserve": {
         "doc": "Backup reserves.",
         "fields": {"self": _f("integer", "Self-Consumption reserve", unit="%"),
@@ -268,7 +295,7 @@ ACTIONS: dict[str, dict[str, Any]] = {
 GROUPS: dict[str, list[str]] = {
     "Grid and phases": ["grid", "offgrid"],
     "Inputs": ["pv", "load", "ambient", "weather"],
-    "Battery and modes": ["vpp", "release", "mode", "reserve", "soc"],
+    "Battery and modes": ["vpp", "release", "mode", "tou", "reserve", "soc"],
     "Loads": ["circuit", "appliance"],
     "Generator": ["generator"],
     "CSIP and comms": ["csip", "der-comms", "export"],

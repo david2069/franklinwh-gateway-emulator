@@ -53,6 +53,7 @@ from .generator import Generator
 from .replay import Replay, ReplayConfig
 from .loads import DEFAULT_CIRCUITS, Circuit, Component, Context, LoadModel
 from .weather import Weather, WeatherConfig
+from . import tou
 
 WH_PER_APOWER = 13_600          # 713.WHRtg on a single-aPower aGate
 W_PER_APOWER = 5_000            # continuous charge/discharge per aPower
@@ -84,7 +85,6 @@ RESP_STEP_S = 0.5               # ...and in half seconds while a grid response i
 # in that mode (2026-10-21, one site; franklinwh-modbus#75). No other value has been read.
 MODE_BACKUP, MODE_SELF, MODE_TOU = 1, 2, 3
 MODE_NAMES = {MODE_BACKUP: "Emergency Backup", MODE_SELF: "Self-Consumption", MODE_TOU: "TOU"}
-TOU_PEAK = (17.0, 21.0)         # local hours the TOU mode discharges in
 
 PHASES = ("L1", "L2", "L3")
 # Phase angles (degrees) and the legs each SunSpec ACType may use by default.
@@ -194,6 +194,10 @@ class SiteConfig:
     # Share of the solar curve on each PV input (aGate built-in vs aPbox remote).
     pv_inputs: dict[str, float] = field(default_factory=lambda: {"proximal": 1.0})
     offgrid_floor_soc: float = 5.0         # islanded discharge floor (1723 offgridSoc)
+    # TOU mode: the schedule (franklinwh-cloud block format, tou.py) and prices per tariff
+    # period ({waveType: {buy, sell}}, display only). None → tou.DEFAULT_SCHEDULE.
+    tou_schedule: list | None = None
+    tou_rates: dict | None = None
     # Forced solar (pv solar_w) can't exceed what the solar model gives now (0 at night, #56).
     # False: the forced value is used as given; for lab tests where PV is an input.
     cap_forced_solar: bool = True
@@ -447,6 +451,8 @@ class Site:
         # Export compliance and the CSIP-AUS client.
         self.serial = ""                   # set by the owning Gateway (for the LFDI)
         self.export_limit_enforced = cfg.export_limit_enforced
+        self.tou_schedule = tou.parse_schedule(cfg.tou_schedule or tou.DEFAULT_SCHEDULE)
+        self.tou_rates = tou.parse_rates(cfg.tou_rates)
         self.export_breach_s = 0.0
         self.export_breach_wh = 0.0
         self.csip = CsipClient()
@@ -855,6 +861,27 @@ class Site:
         return self._applied()["var"]
 
     # -- control ------------------------------------------------------------------
+    def set_tou_schedule(self, blocks: list | None = None, rates: dict | None = None) -> None:
+        """Replace the TOU schedule (None = the default) and/or the rates. Doesn't change the mode."""
+        schedule = tou.parse_schedule(blocks or tou.DEFAULT_SCHEDULE) if blocks is not False else None
+        parsed_rates = tou.parse_rates(rates) if rates is not None else None
+        with self.lock:
+            self.step()
+            if schedule is not None:
+                self.tou_schedule = schedule
+            if parsed_rates is not None:
+                self.tou_rates = parsed_rates
+
+    def tou_now(self, ts: float) -> dict:
+        """The schedule, the rates and the active block with its time left."""
+        lt = self.local_datetime(ts)
+        minute = lt.hour * 60 + lt.minute + lt.second / 60.0
+        b = tou.block_at(self.tou_schedule, minute)
+        active = {**tou.public(b), "remaining_min": round(b["_end"] - minute, 1),
+                  "rates": self.tou_rates.get(b["waveType"])}
+        return {"schedule": [tou.public(x) for x in self.tou_schedule],
+                "rates": {str(k): v for k, v in self.tou_rates.items()}, "active": active}
+
     def active_reserve(self) -> float:
         if self.native_mode == MODE_TOU:
             return float(self.tou_reserve)
@@ -877,9 +904,10 @@ class Site:
         mode = self.native_mode
         if mode == MODE_BACKUP:
             return min(0.0, net)                       # soak surplus, never discharge
-        if mode == MODE_TOU and not (TOU_PEAK[0] <= hour < TOU_PEAK[1]):
-            return min(0.0, net)                       # off-peak: charge from surplus only
-        return net                                     # self-consumption / TOU peak
+        if mode == MODE_TOU:                           # the schedule's block decides (tou.py)
+            block = tou.block_at(self.tou_schedule, hour * 60.0)
+            return tou.target_w(block["dispatchId"], net, W_PER_APOWER * max(1, self.config.apower_units))
+        return net                                     # self-consumption
 
     def _limits(self, floor: float, dt: float) -> tuple[float, float]:
         """(max discharge W, max charge W) given rate, SoC, floor and step length."""
