@@ -110,6 +110,15 @@ class AGateDevice:
                 return a
         return None
 
+    def echo_address(self, address: int, count: int) -> int:
+        """The address a successful write's reply carries: the request's, or base 0 when the
+        profile answers alias-base writes that way (``write_echo_base0``)."""
+        if self.profile.write_echo_base0:
+            a = self._sunspec_offset(address, count)
+            if a is not None:
+                return a
+        return address
+
     # -- reads ------------------------------------------------------------------
     def read(self, address: int, count: int) -> list[int] | int:
         with self.lock:

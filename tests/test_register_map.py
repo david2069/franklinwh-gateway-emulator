@@ -1,6 +1,8 @@
 import pytest
 """The register layout must match the real aGate scan (AGATE_FULL_SCAN_2026-05-14)."""
 
+import struct
+
 import pytest
 from conftest import RawClient, make_gateway
 from franklinwh_emulator.device import ILLEGAL_ADDRESS
@@ -201,3 +203,24 @@ def test_addressing_switch_and_write_bases(clock):
         c.close()
     with pytest.raises(ValueError):
         gw.set_addressing(bogus=True)
+
+
+@pytest.mark.parametrize("profile,echo_base0", [("agate-v12r02b60d00-candidate", True),
+                                                ("agate-v10r01b04d00", False)])
+def test_mirror_write_reply_address(clock, profile, echo_base0):
+    """#76: V12R02B60D00 answers a write to the 40000 mirror with the base-0 address
+    (firmware_quirks pdu_40000_write_response_address: 40319 -> 319). Base-0 writes, and
+    profiles without the quirk, echo the request."""
+    gw = make_gateway(clock, seed=1, profile=profile)
+    wsetena = gw.device.image.ref(704, "WSetEna").address
+    with gw:
+        gw.set_addressing(base_aliases=[40000])
+        c = RawClient(*gw.address)
+        fc6 = c._call(struct.pack(">BHH", 6, 40000 + wsetena, 1))
+        fc16 = c._call(struct.pack(">BHHBH", 16, 40000 + wsetena, 1, 2, 0))
+        base0 = c._call(struct.pack(">BHH", 6, wsetena, 1))
+        c.close()
+    want = wsetena if echo_base0 else 40000 + wsetena
+    assert fc6 == struct.pack(">BHH", 6, want, 1)
+    assert fc16 == struct.pack(">BHH", 16, want, 1)
+    assert base0 == struct.pack(">BHH", 6, wsetena, 1)
