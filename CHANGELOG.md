@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Web UI: aGate status, day or night, temperatures (2026-10-30, #32)
+- The aGate box shows the mode, run status with battery kW (Charging, Discharging, Standby and
+  the off-grid versions), SoC, inverter state, cabinet temperature, and "Modbus VPP" (amber)
+  while an M704 dispatch is active.
+- The diagram header has a sun or moon icon with the sun's elevation at the gateway's location,
+  the sky in words ("broken cloud", not "broken"), irradiance, and ambient and cabinet
+  temperatures (cabinet is the emulator's model, and says so).
+- Remote (cloud) VPP mode and the network connection type join the "not modelled" list.
+- Control state gains `run_status_name`, `inverter_state_name` and `sun`
+  (`elevation_deg`, `up`; null without a location).
+
 ### Every on/off field says what it does (2026-10-30, #30)
 - `offgrid.on`: true = island now; false = end the request and reconnect when the grid code
   allows. The other true/false fields (restore, enforced, flicker, circuit on, installed,

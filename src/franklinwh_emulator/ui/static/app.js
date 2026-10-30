@@ -130,7 +130,7 @@ function running() {
     detailLine(g) {
       const parts = [g.profile, g.grid_code, g.legs.join(' '), g.local_time];
       if (g.location && g.location.timezone) parts.push(g.location.timezone);
-      if (g.weather) parts.push(g.weather.model + (g.weather.sky ? ' · ' + g.weather.sky : ''));
+      if (g.weather) parts.push(g.weather.model + ' weather');
       return parts.filter(Boolean).join(' · ');
     },
   };

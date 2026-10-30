@@ -113,6 +113,11 @@ RUN_STANDBY, RUN_CHARGING, RUN_DISCHARGING = 0, 1, 2
 RUN_OFFGRID_STANDBY, RUN_OFFGRID_CHARGING, RUN_OFFGRID_DISCHARGING = 5, 6, 7
 # 8 = Debug Mode and 9 = VPP mode (franklinwh-cloud RUN_STATUS). Neither is emulated yet.
 RUN_DEBUG, RUN_VPP = 8, 9
+RUN_NAMES = {RUN_STANDBY: "Standby", RUN_CHARGING: "Charging", RUN_DISCHARGING: "Discharging",
+             RUN_OFFGRID_STANDBY: "Off-grid standby", RUN_OFFGRID_CHARGING: "Off-grid charging",
+             RUN_OFFGRID_DISCHARGING: "Off-grid discharging"}
+INV_NAMES = {INV_OFF: "Off", INV_RUNNING: "Running", INV_THROTTLED: "Throttled",
+             INV_FAULT: "Fault", INV_STANDBY: "Standby"}   # SunSpec 701.InvSt names
 
 PV_INPUTS = ("proximal", "remote1", "remote2")   # 15503, 15504, 15505
 _TRIP_REASON = {"v_lo": "under-voltage", "v_hi": "over-voltage",

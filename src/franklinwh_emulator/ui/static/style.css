@@ -69,11 +69,14 @@ main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 .empty { color: var(--muted); font-size: 13px; }
 
 /* Energy diagram */
-.diagram-head { margin: 0 0 6px; color: var(--muted); font-size: 13px; }
+.diagram-head { margin: 0 0 6px; color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.diagram-head .icon { width: 22px; height: 22px; flex: none; fill: none; stroke: var(--warn); stroke-width: 2; stroke-linecap: round; }
+.diagram-head .icon circle, .diagram-head .icon path { fill: var(--warn); }
 .diagram-wrap { overflow-x: auto; margin-bottom: 8px; }   /* narrow screens scroll, text stays legible */
 .diagram { display: block; width: 100%; min-width: 720px; height: auto; }
 .diagram .node rect { fill: var(--panel-2); stroke: var(--ok); stroke-width: 1.5; }
 .diagram .node.agate rect { fill: var(--ok-bg); stroke-width: 2.5; }
+.diagram .node.vpp rect { stroke: var(--warn); }
 .diagram .node.agate .v { font: 600 14px var(--sans); }
 .diagram .node.dim rect { stroke: var(--line); }
 .diagram .node.bad rect { stroke: var(--bad); }
