@@ -299,9 +299,30 @@ aPower S. Related: the Direct Connect API quirks file is keyed by aGate/aPower m
 
 ### DOCKER-IPS: one IP per gateway · `todo`
 **Why:** LAN discovery (the bridge's planned setup wizard, `franklinwh-local scan`) needs
-real addresses on :502/:9000, not port offsets.
+real addresses on :502/:9000, not port offsets. And when several emulated aGates share one
+address with shifted ports, a client that keys state on the address mixes them up: the Direct
+Connect bridge's force tracking does today (fwh-direct-connect-bridge, 2026-10-31).
+**Owner's direction (2026-10-31):** support any setup; Docker in any flavour is the easy common
+route. An HA add-on is a good option among them, not the only one.
 **Scope:** a Compose file with macvlan/ipvlan, one container per gateway, and an mDNS stub
 (`_ssh._tcp` with the NXP hostname, as the real device advertises).
+**Notes from the Direct Connect bridge session** (2026-10-31, at the owner's request):
+1. One container per aGate, each with its own IP on the standard ports (9000 Direct Connect, 502
+   Modbus TCP), makes every emulated aGate look like real hardware; no client needs port
+   settings.
+2. On Docker Desktop for macOS, container IPs live inside Docker's hidden Linux VM: unreachable
+   from the Mac, the LAN or the HAOS QEMU VM. Publishing ports puts every aGate back on one
+   address with shifted ports, and macvlan isn't supported there.
+3. Ways to get one IP per aGate:
+   - inside the HAOS VM (one or more add-ons), reachable from other add-ons on HA's internal
+     network at their own addresses on standard ports; fits the bridges' VM acceptance tests;
+   - IP aliases on the Mac (`ifconfig en0 alias …`), one address per aGate: no Docker, but needs
+     spare LAN addresses and admin rights (loopback aliases, `lo0`, serve same-machine clients);
+   - a Linux host (VM or Pi) with macvlan.
+4. In any topology each emulated aGate needs its own serial (both bridges lock a serial to one
+   gateway; `seed` already gives each its own). From an add-on, 127.0.0.1 is the add-on's own
+   container: a bridge add-on must use a reachable address, and the emulator must listen on all
+   interfaces (`host: 0.0.0.0`, then the control API's loopback-only rule needs revisiting).
 
 ---
 
