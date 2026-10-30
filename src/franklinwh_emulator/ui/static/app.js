@@ -1,4 +1,5 @@
-/* Running screen: one card per gateway, polled about once a second. Read-only.
+/* Running screen: one card per gateway, polled about once a second; the active gateway's
+ * diagram and its action forms (built from GET /schema, see actions.js).
  *
  * Sign conventions are the control API's: battery_w + = discharging, grid_w + = importing.
  * Results and errors show on the page; no toasts.
@@ -11,6 +12,10 @@ function running() {
     active: null,
     loaded: false,
     error: '',
+    schema: null,
+    forms: {},        // action -> {field: raw string}
+    results: {},      // "<gateway>/<action>" -> {ok, text}
+    busy: '',
     _timer: null,
 
     get current() {
@@ -21,6 +26,12 @@ function running() {
       try { this.active = localStorage.getItem('emulator.active'); } catch (e) { /* private mode */ }
       await this.poll();
       this._timer = setInterval(() => this.poll(), POLL_MS);
+      try {
+        this.schema = await this._get('/schema');
+        for (const [name, a] of Object.entries(this.schema.actions)) this.forms[name] = formFromBody(a, {});
+      } catch (e) {
+        this.error = 'Can\'t load the action list: ' + e.message;
+      }
     },
 
     async poll() {
@@ -40,6 +51,58 @@ function running() {
       const r = await fetch(path, { cache: 'no-store' });
       if (!r.ok) throw new Error(path + ' answered ' + r.status);
       return r.json();
+    },
+
+    // -- actions ---------------------------------------------------------------------------
+    groupNames() { return this.schema ? Object.keys(this.schema.groups) : []; },
+    actionsIn(group) { return this.schema.groups[group]; },
+    action(name) { return this.schema.actions[name]; },
+    fieldsOf(name) { return Object.entries(this.action(name).fields); },
+    kind(spec) { return fieldKind(spec); },
+    options(spec) { return choiceOptions(spec); },
+    fieldId(name, field) { return 'f-' + name + '-' + field; },
+    required(name, field) { return (this.action(name).required || []).includes(field); },
+    hint(spec) {
+      const t = [].concat(spec.type).join(' or ');
+      return [spec.unit, spec.doc, this.kind(spec) === 'list' ? 'comma separated' : '',
+              spec.nullable && this.kind(spec) !== 'choice' ? 'null allowed' : '', t]
+        .filter(Boolean).join(' · ');
+    },
+    result(name) { return this.results[this.active + '/' + name] || null; },
+    fillExample(name, i) {
+      if (i === '') return;
+      this.forms[name] = formFromBody(this.action(name), this.action(name).examples[Number(i)]);
+    },
+
+    async submit(name) {
+      const gw = this.active;
+      const key = gw + '/' + name;
+      let body;
+      try {
+        body = buildBody(this.action(name), this.forms[name]);
+      } catch (e) {
+        this.results[key] = { ok: false, text: e.message };
+        return;
+      }
+      this.busy = name;
+      try {
+        const r = await fetch('/gateways/' + encodeURIComponent(gw) + '/' + name, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          this.results[key] = { ok: false, text: data.error || ('answered ' + r.status) };
+          return;
+        }
+        const i = this.gateways.findIndex(g => g.id === gw);
+        if (i >= 0) this.gateways[i] = data;
+        this.results[key] = { ok: true, text: 'Applied to ' + gw + ' at ' + new Date().toLocaleTimeString() +
+                                               ': ' + JSON.stringify(body) };
+      } catch (e) {
+        this.results[key] = { ok: false, text: 'Not sent: ' + e.message };
+      } finally {
+        this.busy = '';
+      }
     },
 
     select(id) {

@@ -285,8 +285,10 @@ state, mode, VPP, alarms and injected faults. Selecting a card shows its live en
 (grid, meter, aGate, home, PV per input with the aPbox for remote inputs, the battery, generator
 and smart circuits, with lines moving in the direction power flows), then its legs, circuits,
 appliances and generator. What the emulator doesn't model (per-aPower values, V2L, a non-backup
-panel, tariffs and more) is listed under the diagram rather than drawn. The page is read-only for now; the control API below runs on the
-same port, so `ctl` works unchanged. Loopback only, no login, no internet. Plan:
+panel, tariffs and more) is listed under the diagram rather than drawn. Under it, every control action
+has a form (built from `GET /schema`, grouped as in SCENARIOS.md); only the fields you fill are
+sent, and the emulator's answer (applied, or its error) stays in the form. The control API below
+runs on the same port, so `ctl` works unchanged. Loopback only, no login, no internet. Plan:
 [docs/UI_PLAN.md](docs/UI_PLAN.md).
 
 ### Control API and `ctl`

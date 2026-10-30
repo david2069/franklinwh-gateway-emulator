@@ -98,5 +98,5 @@ def test_config_schema_covers_every_field_with_a_doc():
 
 def test_schema_includes_gateway_config_and_is_json():
     s = json.loads(json.dumps(schema()))
-    assert set(s) == {"actions", "gateway_config"}
+    assert set(s) == {"actions", "groups", "gateway_config"}
     assert "apower_units" in s["gateway_config"]

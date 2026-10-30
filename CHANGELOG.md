@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Web UI: actions panel (2026-10-30, #25)
+- Every control action as a form on the active gateway, built from `GET /schema`: fields by
+  type, required ones marked, units and docs shown, "fill from example". Only filled fields are
+  sent; the emulator's answer stays in the form (no toasts).
+- `schema.GROUPS`: each action's group, served by `GET /schema` (`groups`) and set on each
+  action (`group`).
+
 ### Web UI: energy diagram (2026-10-30, #22)
 - The selected gateway's live energy diagram, after the owner's design: grid, meter, aGate,
   main panel and home, PV per input (aPbox for remote inputs), battery (one combined unit),
