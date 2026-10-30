@@ -16,15 +16,21 @@ from .site import ALARMS, MODE_NAMES, PV_INPUTS
 from .weather import SKIES
 
 LEGS = ["L1", "L2", "L3"]
+# Direct Connect / cloud number the same modes differently (1726 scheduling_type, cloud
+# workMode; dc_payloads.PROGRAMMES): checked against PROGRAMMES in tests/test_schema.py.
+DC_MODE_NUMBERS = {"Time-of-Use": 1, "Self-Consumption": 2, "Emergency Backup": 3}
 
 
 def _f(type_: str | list[str], doc: str = "", *, unit: str | None = None,
-       enum: list | None = None, nullable: bool = False) -> dict[str, Any]:
+       enum: list | None = None, nullable: bool = False,
+       labels: dict | None = None) -> dict[str, Any]:
     d: dict[str, Any] = {"type": type_}
     if unit:
         d["unit"] = unit
     if enum is not None:
         d["enum"] = enum
+    if labels:
+        d["labels"] = {str(k): v for k, v in labels.items()}   # what each enum value means
     if nullable:
         d["nullable"] = True
     if doc:
@@ -169,9 +175,11 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "examples": [{}],
     },
     "mode": {
-        "doc": "Native operating mode.",
-        "fields": {"mode": _f("integer", ", ".join(f"{k} {v}" for k, v in MODE_NAMES.items()),
-                              enum=list(MODE_NAMES))},
+        "doc": "Native operating mode, in Modbus 15507 numbering. Direct Connect and the cloud "
+               "number modes differently: " +
+               ", ".join(f"{v} {k}" for k, v in DC_MODE_NUMBERS.items()) + ".",
+        "fields": {"mode": _f("integer", "Modbus 15507 numbering", enum=list(MODE_NAMES),
+                              labels=MODE_NAMES)},
         "required": ["mode"],
         "examples": [{"mode": 3}],
     },

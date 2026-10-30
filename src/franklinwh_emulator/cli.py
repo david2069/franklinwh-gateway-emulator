@@ -316,7 +316,7 @@ def _summary(state: dict) -> str:
         f"  modbus    {'on' if state['modbus_enabled'] else 'OFF (sunsMdEn=0)'}"
         + (f"   direct connect {state['dc_address'][0]}:{state['dc_address'][1]}"
            if state.get("dc_address") else "   direct connect off"),
-        f"  battery   SoC {state['soc']:.1f}%  mode {state['native_mode']}  "
+        f"  battery   SoC {state['soc']:.1f}%  mode {state['native_mode']} {state.get('native_mode_name', '')}  "
         f"VPP {'on' if state['remote'] else 'off'}",
         f"  pv relays {state['pv_relays']}",
         f"  circuits  " + "  ".join(f"{n}:{c['name']} {'on' if c['on'] else 'OFF'} {c['power_w']:.0f}W"
@@ -456,7 +456,7 @@ def main(argv: list[str] | None = None) -> int:
                                    " | solar <W|auto> | load <W|auto> | ambient <C|auto> | "
                                    "alarm <NAME...> [--persistent] | clear-alarm [NAME...] | "
                                    "reset-alarms | fault|dc-fault key=value... | vpp <W, +charge> | release | "
-                                   "mode <1-4> | soc <pct> | sky clear|broken|overcast|storm | "
+                                   "mode <1|2|3> (Modbus 15507: 1 Emergency Backup, 2 Self-Consumption, 3 TOU) | soc <pct> | sky clear|broken|overcast|storm | "
                                    "circuit <1-3> on|off | appliance <name> on|off|auto | modbus on|off | "
                                    "generator start|stop|clear|fault X|refuel L|set k=v... | "
                                    "export-limit enforce|track | csip on|off [uri] | "

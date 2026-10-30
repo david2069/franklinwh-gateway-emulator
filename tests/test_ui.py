@@ -143,7 +143,7 @@ const bad = [];
 for (const [n, f] of [['load', {{w: 'abc'}}], ['csip', {{control: '[1]'}}], ['csip', {{control: '{{'}}]]) {{
   try {{ buildBody(S[n], f); bad.push('accepted'); }} catch (e) {{ bad.push(e.message); }}
 }}
-print(JSON.stringify({{out, bad, blank: buildBody(S.grid, formFromBody(S.grid, {{}}))}}));
+print(JSON.stringify({{out, bad, blank: buildBody(S.grid, formFromBody(S.grid, {{}})), modeOpts: choiceOptions(S.mode.fields.mode)}}));
 """)
     import subprocess
     res = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True,
@@ -153,3 +153,5 @@ print(JSON.stringify({{out, bad, blank: buildBody(S.grid, formFromBody(S.grid, {
     assert len(res["out"]) == sum(len(a["examples"]) for a in schema()["actions"].values())
     assert res["bad"] == ["w: not a number", "control: needs a JSON object", "control: not valid JSON"]
     assert res["blank"] == {}
+    assert res["modeOpts"] == [["", "— not set —"], ["1", "1 · Emergency Backup"],
+                               ["2", "2 · Self-Consumption"], ["3", "3 · TOU"]]

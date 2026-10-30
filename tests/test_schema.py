@@ -103,3 +103,18 @@ def test_fault_fields_follow_the_dataclass():
 def test_mode_values_are_the_sites():
     from franklinwh_emulator.site import MODE_NAMES
     assert ACTIONS["mode"]["fields"]["mode"]["enum"] == list(MODE_NAMES)
+
+
+def test_mode_labels_and_the_other_numbering():
+    """15507 and Direct Connect / cloud number the modes differently; both are stated."""
+    from franklinwh_emulator.schema import DC_MODE_NUMBERS
+    from franklinwh_emulator.site import MODE_NAMES
+    field = ACTIONS["mode"]["fields"]["mode"]
+    assert field["labels"] == {str(k): v for k, v in MODE_NAMES.items()}
+    assert field["labels"]["1"] == "Emergency Backup"            # 15507 = 1
+    pytest.importorskip("franklinwh_local")
+    from franklinwh_emulator.dc_payloads import PROGRAMMES
+    assert DC_MODE_NUMBERS == {name: sched for _, (_, name, sched) in PROGRAMMES.items()}
+    assert DC_MODE_NUMBERS["Time-of-Use"] == 1                    # scheduling_type = 1
+    for name, n in DC_MODE_NUMBERS.items():
+        assert f"{n} {name}" in ACTIONS["mode"]["doc"]

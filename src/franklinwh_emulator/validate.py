@@ -43,7 +43,8 @@ DOCS: dict[str, str] = {
     "grid_overrides": "grid-code values to change, e.g. {es_delay_s: 5}",
     "location": "{latitude, longitude, timezone (IANA, DST-aware), postcode}",
     "tz_offset_hours": "fixed UTC offset, no DST; location.timezone wins",
-    "native_mode": "1 Emergency Backup, 2 Self-Consumption, 3 TOU",
+    "native_mode": "Modbus 15507 numbering: 1 Emergency Backup, 2 Self-Consumption, 3 TOU "
+                   "(Direct Connect and the cloud number them differently)",
     "self_reserve": "Self-Consumption reserve, %",
     "tou_reserve": "TOU reserve, %",
     "initial_soc": "starting state of charge, %; default derived from the seed",

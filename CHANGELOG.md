@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Mode numbers say which numbering they use (2026-10-30, #28)
+- The `mode` action and `native_mode` use the Modbus 15507 numbering (1 Emergency Backup,
+  2 Self-Consumption, 3 TOU). Direct Connect and the cloud number modes differently (1 TOU,
+  2 Self-Consumption, 3 Emergency Backup). The schema now labels each value and states both;
+  the UI shows "1 · Emergency Backup".
+- Fixed stale text: `ctl` help said `mode <1-4>` and the fleet example listed `4 manual`;
+  15507 = 4 was never read and isn't accepted. `ctl status` prints the mode's name.
+
 ### Web UI testing guide (2026-10-30)
 - `docs/UI_TESTING.md`: start the UI on the example fleet, then check the cards, the energy
   diagram and the actions step by step, with what each should show; with a bridge; undoing.

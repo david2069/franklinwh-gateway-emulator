@@ -22,7 +22,8 @@ function fieldKind(spec) {
 function choiceOptions(spec) {
   const opts = [['', '— not set —']];
   if (typesOf(spec).includes('boolean')) opts.push(['true', 'true'], ['false', 'false']);
-  for (const v of spec.enum || []) opts.push([String(v), String(v)]);
+  const labels = spec.labels || {};
+  for (const v of spec.enum || []) opts.push([String(v), labels[v] ? v + ' · ' + labels[v] : String(v)]);
   if (spec.nullable) opts.push(['null', 'null']);
   return opts;
 }
