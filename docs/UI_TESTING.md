@@ -23,8 +23,10 @@ package isn't installed in it: `pip install -e .` once).
 
 - There are 7 cards: `site`, `us-split`, `au-3phase`, `au-2phase`, `tou-reserve`, `fresh`, `spec`.
 - `fresh` is a factory aGate: its card says **Modbus TCP off**. Like a real one, it serves only
-  Direct Connect until a Direct Connect `1205` `sunsMdEn` write turns Modbus TCP on (the
-  **der-comms** form with modbus `true` does the same through the control API).
+  Direct Connect until a Direct Connect `1205` `sunsMdEn` write turns Modbus TCP on. Select it
+  and press **Enable Modbus TCP via Direct Connect** (under its name): the emulator sends that
+  write to `fresh`'s own Direct Connect port, the line reads "opening…", and about 3 s later
+  "Modbus TCP Server on" with the address (the card too). **Disable …** closes it again.
 - `site` has appliances (`loads: sydney-family`): hot water on SW1, EV on SW2, aircon on SW3.
 - Each shows SoC, solar, home, battery and grid power, changing every second, and the addresses
   to point a bridge at.
@@ -77,7 +79,7 @@ mode; the line beside the heading says which mode the gateway is in.
 
 Point the Modbus bridge at a card's Modbus TCP address (for `site`, `127.0.0.1:5020`), or the
 Direct Connect bridge at its Direct Connect address (every aGate has one: 9020–9026 in the
-example; `spec` is not an aGate). For `fresh`, enable Modbus TCP through Direct Connect first. Fire actions here and watch the bridge
+example; `spec` is not an aGate). For `fresh`, enable Modbus TCP first (step 2). Fire actions here and watch the bridge
 react. The `ctl` command works against the same port (`franklinwh-emulator ctl site status`).
 
 ## 7. Save and restore

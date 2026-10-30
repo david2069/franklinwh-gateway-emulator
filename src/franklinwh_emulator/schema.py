@@ -272,6 +272,14 @@ ACTIONS: dict[str, dict[str, Any]] = {
                    "csip": _f("boolean", "enable or disable the CSIP client")},
         "examples": [{"modbus": False}, {"modbus": True}, {"csip": True}],
     },
+    "dc-modbus": {
+        "doc": "Turn the Modbus TCP Server on or off as an installer's tool does: a Direct Connect 1205 "
+               "sunsMdEn write sent over this gateway's own Direct Connect port "
+               "(franklinwh-direct-connect-api set_der_comms). It opens or closes after ~3 s.",
+        "fields": {"on": _f("boolean", "true = enable Modbus TCP (sunsMdEn = 1); false = disable it")},
+        "required": ["on"],
+        "examples": [{"on": True}, {"on": False}],
+    },
     "csip": {
         "doc": "The CSIP-AUS utility server: registration, availability, events, default.",
         "fields": {
@@ -298,7 +306,7 @@ GROUPS: dict[str, list[str]] = {
     "Battery and modes": ["vpp", "release", "mode", "tou", "reserve", "soc"],
     "Loads": ["circuit", "appliance"],
     "Generator": ["generator"],
-    "CSIP and comms": ["csip", "der-comms", "export"],
+    "CSIP and comms": ["csip", "der-comms", "dc-modbus", "export"],
     "Alarms and faults": ["alarms", "faults", "dc-faults", "range-fault", "write-reject",
                           "addressing", "episode"],
 }

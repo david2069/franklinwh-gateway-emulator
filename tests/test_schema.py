@@ -35,7 +35,7 @@ def test_every_example_runs(fleet, action, body):
     body = dict(body)
     if action == "episode":       # same shape, short enough to finish before the fleet stops
         body = {k: 0.05 for k in body}
-    apply(fleet["site"], action, body)
+    fleet.control.apply_logged(fleet["site"], action, body)   # as the API does (dc-modbus too)
     if action == "episode":
         time.sleep(0.5)
 

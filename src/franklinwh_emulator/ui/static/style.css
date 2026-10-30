@@ -251,3 +251,13 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
   .tou-row { grid-template-columns: 1fr 1fr; }   /* start|end, name|dispatch, tariff|remove */
   .tou-row.th { display: none; }
 }
+
+/* Modbus TCP on/off via Direct Connect 1205 (#63) */
+.comms { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: -4px 0 12px; }
+.comms-state { font: 13px var(--mono); color: var(--ok); }
+.comms-state.off { color: var(--muted); }
+.comms button { font: 600 13px var(--sans); border-radius: 8px; padding: 0 12px; min-height: 36px; cursor: pointer;
+  color: var(--text-2); background: var(--panel-2); border: 1px solid var(--line); }
+.comms button:disabled { opacity: .6; cursor: progress; }
+.comms button:focus-visible { outline: 2px solid var(--ok); outline-offset: 1px; }
+.comms .result { flex-basis: 100%; }
