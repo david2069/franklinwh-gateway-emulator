@@ -2,6 +2,10 @@
 
     GET  /version                       the emulator's version (and commit, from a git checkout)
     GET  /schema                        every action, its fields and examples (schema.py)
+    GET  /log                           every action applied, oldest first (also failed ones)
+    GET  /sessions                      saved sessions in <workspace>/sessions
+    POST /session/save                  {"name": "evening-test"} (optional): write the session
+    POST /session/restore               {"name": "evening-test"}: replay its actions
     GET  /gateways                      list gateways
     GET  /gateways/<id>                 live state
     POST /gateways/<id>/<action>        an action from schema.ACTIONS; returns the new state
@@ -292,11 +296,21 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
         raise ApiError(400, f"{action}: {e}") from None
 
 
+# Actions not replayed by a restore: they are events, not settings.
+TRANSIENT = {"episode"}
+LOG_MAX = 10_000
+_NAME_OK = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
+
+
 class ControlApi:
-    def __init__(self, gateways: dict[str, "Gateway"], host: str = "127.0.0.1", port: int = 8502):
+    def __init__(self, gateways: dict[str, "Gateway"], host: str = "127.0.0.1", port: int = 8502,
+                 *, workspace: str = "emulator-workspace", fleet_file: str | None = None):
         self.gateways = gateways
         self.host = host
         self.port = port
+        self.workspace = workspace
+        self.fleet_file = fleet_file
+        self.log: list[dict] = []
         self._server: asyncio.base_events.Server | None = None
         self._version: dict | None = None
 
@@ -311,12 +325,98 @@ class ControlApi:
             await self._server.wait_closed()
             self._server = None
 
+    # -- action log, sessions ------------------------------------------------------------
+    def apply_logged(self, gw: "Gateway", action: str, body: dict, source: str = "api") -> None:
+        """``apply``, recording what was asked and what happened."""
+        import datetime as dt
+        entry = {"at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+                 "site_time": gw.site.local_datetime(gw.site.clock.now()).isoformat(timespec="seconds"),
+                 "gateway": gw.config.id, "action": action, "body": body, "source": source,
+                 "ok": True, "error": None}
+        try:
+            apply(gw, action, body)
+        except ApiError as e:
+            entry.update(ok=False, error=str(e))
+            raise
+        finally:
+            self.log.append(entry)
+            del self.log[:-LOG_MAX]
+
+    def _sessions_dir(self):
+        from pathlib import Path
+        return Path(self.workspace) / "sessions"
+
+    def sessions(self) -> list[dict]:
+        d = self._sessions_dir()
+        if not d.is_dir():
+            return []
+        return [{"name": p.stem, "saved": p.stat().st_mtime}
+                for p in sorted(d.glob("*.yaml"), key=lambda p: p.stat().st_mtime, reverse=True)]
+
+    @staticmethod
+    def _check_name(name: str) -> str:
+        if not name or len(name) > 64 or set(name) - _NAME_OK:
+            raise ApiError(400, "session name: letters, digits, - and _ only (max 64)")
+        return name
+
+    def save_session(self, name: str | None = None) -> dict:
+        """Write the successful, non-transient actions so far, then each gateway's SoC."""
+        import datetime as dt
+        import yaml
+        now = dt.datetime.now(dt.timezone.utc)
+        name = self._check_name(name or now.strftime("session-%Y%m%d-%H%M%S"))
+        actions = [{"gateway": e["gateway"], "do": e["action"], "with": e["body"]}
+                   for e in self.log if e["ok"] and e["action"] not in TRANSIENT]
+        for gid, gw in self.gateways.items():
+            actions.append({"gateway": gid, "do": "soc",
+                            "with": {"value": round(gateway_state(gw)["soc"], 1)}})
+        doc = {"saved": now.isoformat(timespec="seconds"), "emulator": version_info(),
+               "fleet": self.fleet_file, "gateways": sorted(self.gateways), "actions": actions}
+        d = self._sessions_dir()
+        d.mkdir(parents=True, exist_ok=True)
+        path = d / f"{name}.yaml"
+        path.write_text("# franklinwh-emulator session: the actions applied, in order, then each "
+                        "gateway's SoC.\n# Restore with the UI's Restore, POST /session/restore, or "
+                        "`ui FLEET --restore NAME`.\n" + yaml.safe_dump(doc, sort_keys=False))
+        return {"name": name, "path": str(path), "actions": len(actions)}
+
+    def restore_session(self, name: str) -> dict:
+        """Replay a saved session's actions in order; returns each one's result."""
+        import yaml
+        path = self._sessions_dir() / f"{self._check_name(name)}.yaml"
+        if not path.is_file():
+            raise ApiError(404, f"no session {name!r}")
+        doc = yaml.safe_load(path.read_text()) or {}
+        results = []
+        for a in doc.get("actions", []):
+            gw = self.gateways.get(a.get("gateway"))
+            if gw is None:
+                results.append({**a, "ok": False, "error": f"no gateway {a.get('gateway')!r} in this fleet"})
+                continue
+            try:
+                self.apply_logged(gw, a["do"], dict(a.get("with") or {}), source=f"restore:{name}")
+                results.append({**a, "ok": True, "error": None})
+            except ApiError as e:
+                results.append({**a, "ok": False, "error": str(e)})
+        return {"name": name, "applied": sum(r["ok"] for r in results),
+                "failed": sum(not r["ok"] for r in results), "results": results}
+
     def _route(self, method: str, path: str, body: dict):
         parts = [p for p in path.split("?")[0].split("/") if p]
         if parts == ["version"] and method == "GET":
             if self._version is None:
                 self._version = version_info()
             return self._version
+        if parts == ["log"] and method == "GET":
+            return self.log
+        if parts == ["sessions"] and method == "GET":
+            return self.sessions()
+        if parts == ["session", "save"] and method == "POST":
+            return self.save_session(body.get("name"))
+        if parts == ["session", "restore"] and method == "POST":
+            if "name" not in body:
+                raise ApiError(400, "restore: needs a session name")
+            return self.restore_session(body["name"])
         if parts == ["schema"] and method == "GET":
             return schema()
         if parts == ["gateways"] and method == "GET":
@@ -329,7 +429,7 @@ class ControlApi:
             if len(parts) == 2 and method == "GET":
                 return gateway_state(gw)
             if len(parts) == 3 and method == "POST":
-                apply(gw, parts[2], body)
+                self.apply_logged(gw, parts[2], body)
                 return gateway_state(gw)
         raise ApiError(404, f"{method} {path}: not found")
 

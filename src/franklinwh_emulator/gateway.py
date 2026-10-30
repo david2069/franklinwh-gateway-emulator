@@ -307,7 +307,7 @@ class Fleet:
         return self.gateways[gw_id]
 
     def start(self, control_port: int | None = None, control_host: str = "127.0.0.1",
-              *, ui: bool = False) -> dict[str, tuple[str, int]]:
+              *, ui: bool = False, workspace: str = "emulator-workspace") -> dict[str, tuple[str, int]]:
         """Start every gateway; with ``control_port`` (0 = ephemeral) also the HTTP
         control API, reachable afterwards as ``fleet.control.port``. ``ui``: serve the web UI
         on that port too."""
@@ -316,9 +316,9 @@ class Fleet:
         if control_port is not None and self.control is None:
             if ui:
                 from .ui.server import UiServer
-                self.control = UiServer(self.gateways, control_host, control_port)
+                self.control = UiServer(self.gateways, control_host, control_port, workspace=workspace)
             else:
-                self.control = ControlApi(self.gateways, control_host, control_port)
+                self.control = ControlApi(self.gateways, control_host, control_port, workspace=workspace)
             self._loop.run(self.control.start())
         return addresses
 

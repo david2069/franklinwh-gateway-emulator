@@ -15,12 +15,30 @@
   <h1>FranklinWH Emulator</h1>
   <span class="version" x-show="version" x-text="versionText()"></span>
   <span class="meta" x-text="gateways.length + (gateways.length === 1 ? ' gateway' : ' gateways') + ' · emulated, not real devices'"></span>
+  <form class="session" @submit.prevent="saveSession()" aria-label="Save or restore the setup">
+    <label class="vh" for="save-name">Session name</label>
+    <input id="save-name" type="text" x-model="saveName" placeholder="name (optional)" autocomplete="off">
+    <button type="submit">Save</button>
+    <label class="vh" for="restore-name">Saved session</label>
+    <select id="restore-name" x-model="restoreName" :disabled="!sessionsList.length">
+      <option value="" x-show="!sessionsList.length">no saved sessions</option>
+      <template x-for="s in sessionsList" :key="s.name"><option :value="s.name" x-text="s.name"></option></template>
+    </select>
+    <button type="button" class="secondary" @click="restoreSession()" :disabled="!restoreName">Restore</button>
+  </form>
   <button type="button" class="layout-toggle" @click="toggleLayout()" :aria-pressed="(layout === 'right').toString()"
           x-text="layout === 'right' ? 'Actions: right' : 'Actions: below'"
           title="Show the actions beside the gateways, or below them"></button>
 </header>
 <main :class="'layout-' + layout">
   <p class="status" :class="{ bad: error }" x-show="error || !loaded" x-text="error || 'Loading…'" role="status"></p>
+  <div class="session-msg" x-show="sessionMsg" :class="sessionMsg && (sessionMsg.ok ? 'ok' : 'bad')" role="status">
+    <span x-text="sessionMsg && sessionMsg.text"></span>
+    <ul x-show="sessionMsg && sessionMsg.details.length">
+      <template x-for="d in (sessionMsg ? sessionMsg.details : [])" :key="d"><li x-text="d"></li></template>
+    </ul>
+    <button type="button" class="secondary" @click="sessionMsg = null">Close</button>
+  </div>
   <div class="stale" x-show="stale" role="alert">
     <span x-text="stale"></span>
     <button type="button" @click="location.reload()" x-text="staleNewCode ? 'Reload' : 'Reload page'"></button>
@@ -118,6 +136,13 @@
       </select>
     </div>
     <p class="sub">Each form sends only the fields you fill. The emulator checks them; its answer stays in the form.</p>
+    <details class="group activity">
+      <summary x-text="'Activity (' + log.length + ' actions this run)'"></summary>
+      <p class="empty" x-show="!log.length">Nothing yet. Every action from this page, ctl, the API or a restore shows here.</p>
+      <ol class="log">
+        <template x-for="(e, i) in recentLog()" :key="i"><li :class="{ bad: !e.ok }" x-text="logLine(e)"></li></template>
+      </ol>
+    </details>
     <template x-for="group in groupNames()" :key="group">
       <details class="group">
         <summary x-text="group"></summary>

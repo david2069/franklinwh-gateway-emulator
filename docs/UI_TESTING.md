@@ -63,7 +63,17 @@ Direct Connect bridge at its Direct Connect address (every aGate has one: 9020â€
 example; `spec` is not an aGate). For `fresh`, enable Modbus TCP through Direct Connect first. Fire actions here and watch the bridge
 react. The `ctl` command works against the same port (`franklinwh-emulator ctl site status`).
 
-## 6. Undo
+## 6. Save and restore
+
+- Set something up (step 4), type a name in the header (or leave it blank) and press **Save**.
+  The line under the header says where it went (`emulator-workspace/sessions/<name>.yaml`).
+- Press Ctrl-C and start the UI again. The open page says the emulator restarted; reload it.
+- Pick the session in the header and press **Restore**: everything you set comes back, and the
+  line says how many actions applied (and which failed, if the fleet changed).
+- Or start with it: `franklinwh-emulator ui examples/fleet.yaml --restore <name>`.
+- **Activity** (top of the actions column) lists every action this run, from any source.
+
+## 7. Undo
 
 - pv solar_w `null` and load w `null` hand solar and load back to the model.
 - Alarms â†’ reset `true` clears latched alarms; clear `all` clears the rest.

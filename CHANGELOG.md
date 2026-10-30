@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Action log, Save and Restore (2026-10-30, #47)
+- The control API logs every action it applies (page, `ctl`, API, restore), with wall time,
+  the gateway's local time, the body and the result: `GET /log`, and the page's Activity panel.
+- **Save** (`POST /session/save`, the header's Save) writes the successful actions in order,
+  minus events (`episode`), plus each gateway's SoC, with the emulator version and fleet file,
+  to `<workspace>/sessions/<name>.yaml` (default `./emulator-workspace`, gitignored).
+- **Restore** (`POST /session/restore`, the header's Restore, or `ui FLEET --restore NAME`)
+  replays them and reports each one that fails. `GET /sessions` lists them; names only.
+
 ### Web UI: notices a restart or new version (2026-10-30, #45)
 - The page checks `GET /version` every 5 s. If the emulator restarted, it says the gateways
   started fresh (earlier actions not kept), with Reload and Dismiss; if it now runs a new

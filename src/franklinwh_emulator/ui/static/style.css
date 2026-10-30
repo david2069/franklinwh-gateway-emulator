@@ -156,3 +156,27 @@ main.layout-right > .stale { grid-column: 1 / -1; }
 .stale button { font: 600 14px var(--sans); border-radius: 8px; padding: 0 14px; min-height: 36px; cursor: pointer;
                 color: var(--bg); background: var(--warn); border: 0; }
 .stale button.secondary { color: var(--warn); background: transparent; border: 1px solid var(--warn); }
+
+/* Save / restore */
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.session { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
+.session + .layout-toggle { margin-left: 0; }
+.session input, .session select { font: 13px var(--mono); color: var(--text); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; min-height: 36px; max-width: 170px; }
+.session button { font: 600 13px var(--sans); border-radius: 8px; padding: 0 12px; min-height: 36px; cursor: pointer;
+  color: var(--bg); background: var(--ok); border: 0; }
+.session button.secondary, .session-msg button.secondary { color: var(--text-2); background: var(--panel); border: 1px solid var(--line); }
+.session button:disabled { opacity: .5; cursor: default; }
+.session-msg { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 16px; padding: 10px 12px;
+  border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); font-size: 14px; }
+main.layout-right > .session-msg { grid-column: 1 / -1; }
+.session-msg.ok { border-color: var(--ok); color: var(--ok); }
+.session-msg.bad { border-color: var(--bad); color: var(--bad); }
+.session-msg span { flex: 1 1 300px; }
+.session-msg ul { flex-basis: 100%; margin: 0; padding-left: 18px; font: 12px var(--mono); }
+.session-msg button { font: 13px var(--sans); border-radius: 8px; padding: 0 12px; min-height: 32px; cursor: pointer; }
+/* Activity */
+.activity .log { margin: 0; padding: 0 16px 14px 34px; font: 12px var(--mono); color: var(--text-2); max-height: 320px; overflow-y: auto; }
+.activity .log li { padding: 2px 0; word-break: break-word; }
+.activity .log li.bad { color: var(--bad); }
+.activity .empty { padding: 0 16px 12px; margin: 0; }
