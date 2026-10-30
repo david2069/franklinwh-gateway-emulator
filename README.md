@@ -293,7 +293,14 @@ appliances and generator. What the emulator doesn't model (per-aPower values, V2
 panel, tariffs and more) is listed under the diagram rather than drawn. Under it, every control action
 has a form (built from `GET /schema`, grouped as in SCENARIOS.md); only the fields you fill are
 sent, and the emulator's answer (applied, or its error) stays in the form. The control API below
-runs on the same port, so `ctl` works unchanged. Loopback only, no login, no internet. Plan:
+runs on the same port, so `ctl` works unchanged.
+
+**Save and Restore.** Every action applied (page, `ctl`, API or restore) is logged (`GET /log`,
+the page's Activity panel). **Save** writes the successful ones, in order, plus each gateway's
+SoC, to `emulator-workspace/sessions/<name>.yaml`; after a restart, **Restore** (or
+`franklinwh-emulator ui FLEET --restore NAME`) replays them, so the fleet is set up as before.
+The page notices a restart or a new version and offers to reload. Loopback only, no login, no
+internet. Plan:
 [docs/UI_PLAN.md](docs/UI_PLAN.md); a hands-on walk-through: [docs/UI_TESTING.md](docs/UI_TESTING.md).
 
 ### Control API and `ctl`

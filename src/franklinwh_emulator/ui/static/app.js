@@ -15,6 +15,11 @@ function running() {
     error: '',
     schema: null,
     version: null,
+    sessionsList: [],  // saved sessions, newest first
+    saveName: '',
+    restoreName: '',
+    sessionMsg: null,  // {ok, text, details}: the last save/restore, shown until the next
+    log: [],           // the emulator's action log (newest last)
     stale: '',          // why this page is out of date (the emulator restarted or changed)
     staleNewCode: false,
     layout: 'right',  // where the actions go: 'right' (beside, on wide screens) or 'below'
@@ -36,6 +41,7 @@ function running() {
       this._versionTimer = setInterval(() => this.checkVersion(), VERSION_CHECK_MS);
       await this.poll();
       this._timer = setInterval(() => this.poll(), POLL_MS);
+      this.loadSessions();
       try {
         this.schema = await this._get('/schema');
         for (const [name, a] of Object.entries(this.schema.actions)) this.forms[name] = formFromBody(a, {});
@@ -52,6 +58,7 @@ function running() {
         if (!states.some(g => g.id === this.active)) this.active = states.length ? states[0].id : null;
         this.error = '';
         this.loaded = true;
+        this._get('/log').then(l => { this.log = l; }).catch(() => {});
       } catch (e) {
         this.error = 'Can\'t reach the emulator: ' + e.message + '. Retrying every second.';
       }
@@ -113,6 +120,48 @@ function running() {
       } finally {
         this.busy = '';
       }
+    },
+
+    // -- sessions: save what was done, restore it after a restart --------------------------
+    async loadSessions() {
+      try { this.sessionsList = await this._get('/sessions'); } catch (e) { this.sessionsList = []; }
+      if (!this.sessionsList.some(s => s.name === this.restoreName))
+        this.restoreName = this.sessionsList.length ? this.sessionsList[0].name : '';
+    },
+    async _post(path, body) {
+      const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(body) });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || ('answered ' + r.status));
+      return data;
+    },
+    async saveSession() {
+      try {
+        const r = await this._post('/session/save', this.saveName.trim() ? { name: this.saveName.trim() } : {});
+        this.sessionMsg = { ok: true, text: 'Saved "' + r.name + '": ' + r.actions + ' actions (incl. each gateway\'s SoC) to ' + r.path, details: [] };
+        this.saveName = '';
+        await this.loadSessions();
+        this.restoreName = r.name;
+      } catch (e) {
+        this.sessionMsg = { ok: false, text: 'Not saved: ' + e.message, details: [] };
+      }
+    },
+    async restoreSession() {
+      if (!this.restoreName) return;
+      try {
+        const r = await this._post('/session/restore', { name: this.restoreName });
+        this.sessionMsg = { ok: r.failed === 0,
+          text: 'Restored "' + r.name + '": ' + r.applied + ' applied, ' + r.failed + ' failed',
+          details: r.results.filter(x => !x.ok).map(x => x.gateway + ' ' + x.do + ' ' + JSON.stringify(x.with) + ': ' + x.error) };
+        await this.poll();
+      } catch (e) {
+        this.sessionMsg = { ok: false, text: 'Not restored: ' + e.message, details: [] };
+      }
+    },
+    recentLog() { return this.log.slice(-40).reverse(); },
+    logLine(e) {
+      return e.at.slice(11, 19) + ' · ' + e.gateway + ' · ' + e.action + ' ' + JSON.stringify(e.body) +
+             (e.source !== 'api' ? ' · ' + e.source : '') + (e.ok ? '' : ' · ' + e.error);
     },
 
     // The emulator restarted, or now runs other code: this page (and its state) is out of date.

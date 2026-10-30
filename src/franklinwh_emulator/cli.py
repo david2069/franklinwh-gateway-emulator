@@ -55,7 +55,9 @@ from .site import ALARMS, SiteConfig
 DEFAULT_API = "http://127.0.0.1:8502"
 
 
-async def _run(gateways: list[Gateway], control_port: int | None, ui: bool = False) -> None:
+async def _run(gateways: list[Gateway], control_port: int | None, ui: bool = False,
+               workspace: str = "emulator-workspace", fleet_file: str | None = None,
+               restore: str | None = None) -> None:
     for gw in gateways:
         host, port = await gw.start_async()
         p = gw.profile
@@ -70,15 +72,27 @@ async def _run(gateways: list[Gateway], control_port: int | None, ui: bool = Fal
             print(f"{gw.config.id}: Direct Connect on {dh}:{dp}", flush=True)
     api = None
     if control_port is not None:
+        cls = ControlApi
         if ui:
             from .ui.server import UiServer
-            api = UiServer({gw.config.id: gw for gw in gateways}, port=control_port)
-        else:
-            api = ControlApi({gw.config.id: gw for gw in gateways}, port=control_port)
+            cls = UiServer
+        api = cls({gw.config.id: gw for gw in gateways}, port=control_port,
+                  workspace=workspace, fleet_file=fleet_file)
         host, port = await api.start()
         print(f"control API on http://{host}:{port}/gateways", flush=True)
         if ui:
             print(f"UI on http://{host}:{port}/", flush=True)
+        if restore:
+            from .control import ApiError
+            try:
+                r = api.restore_session(restore)
+                print(f"restored session {restore}: {r['applied']} actions applied, "
+                      f"{r['failed']} failed", flush=True)
+                for x in r["results"]:
+                    if not x["ok"]:
+                        print(f"  {x['gateway']} {x['do']} {x.get('with')}: {x['error']}", flush=True)
+            except ApiError as e:
+                print(f"restore {restore}: {e}", flush=True)
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -433,6 +447,10 @@ def main(argv: list[str] | None = None) -> int:
     u.add_argument("config")
     u.add_argument("--port", type=int, default=8502,
                    help="UI and control API port on 127.0.0.1 (default 8502)")
+    u.add_argument("--workspace", default="emulator-workspace",
+                   help="where saved sessions go (<workspace>/sessions; default ./emulator-workspace)")
+    u.add_argument("--restore", metavar="NAME",
+                   help="replay a saved session's actions once the fleet is up")
 
     for p in (s, f):
         p.add_argument("--control-port", type=int, default=8502,
@@ -513,7 +531,8 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         gateways = list(Fleet.from_dict(d).gateways.values())
         try:
-            asyncio.run(_run(gateways, args.port, ui=True))
+            asyncio.run(_run(gateways, args.port, ui=True, workspace=args.workspace,
+                             fleet_file=args.config, restore=args.restore))
         except KeyboardInterrupt:
             pass
         return 0
