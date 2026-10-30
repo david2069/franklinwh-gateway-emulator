@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### One schema for the control actions (2026-10-30, #18)
+- `schema.py` describes every control action: fields, types, units, allowed values, signs,
+  required fields and examples. `GET /schema` serves it.
+- **Changed:** the control API (and scenario steps) now refuse unknown body keys and missing
+  required ones with 400. They used to be ignored, so `{"hz": 51, "phse": "L2"}` changed every
+  leg.
+- The `control.py` docstring no longer lists the actions; it had drifted (`generator` and
+  `dc-faults` missing, `mode` 4 listed but not accepted). README and SCENARIOS.md point to the
+  schema.
+
 ### UI plan (2026-10-30)
 - `docs/UI_PLAN.md`: a plan, not yet built, for a local page to configure fleets, run scenarios
   and steer and watch emulated gateways. YAML stays the file format and JSON the wire format.
