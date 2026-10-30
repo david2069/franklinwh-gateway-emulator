@@ -10,7 +10,8 @@
 #     location ({latitude, longitude, timezone: <IANA, DST-aware>, postcode}), weather
 #     ({model: bell|synthetic|open-meteo, kwp, tilt, azimuth, sky} — inherits lat/lon),
 #     tz_offset_hours (fixed offset, no DST; location.timezone wins),
-#     native_mode (1 backup, 2 self, 3 TOU, 4 manual), self_reserve, tou_reserve,
+#     native_mode (Modbus 15507 numbering: 1 Emergency Backup, 2 Self-Consumption, 3 TOU;
+#     Direct Connect and the cloud number them differently), self_reserve, tou_reserve,
 #     initial_soc, solar_peak_w, home_base_w, pv_inputs ({proximal: 0.6, remote1: 0.4}),
 #     offgrid_floor_soc.
 defaults:
