@@ -166,7 +166,8 @@ class DcPayloads:
         flat = [round(kwh[c], 2) for c in ENERGY_CHANNELS]
         zeros = [0] * len(ENERGY_CHANNELS)
         return _ok(
-            mode=pid, name=name, electricity_type=1, run_status=s.run_status,
+            # 8 = Debug Mode (cloud enum) only when injected (debug-mode action); not captured.
+            mode=pid, name=name, electricity_type=1, run_status=8 if self.gw.debug_mode else s.run_status,
             p_uti=round(s.grid_w, 1), p_sun=round(s.solar_w, 1), p_gen=round(s.generator_w, 1),
             p_fhp=round(s.battery_w, 1), p_load=round(s.load_w, 1),
             soc=round(s.soc, 1), t_amb=round(s.ambient_c, 1),

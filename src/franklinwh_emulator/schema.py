@@ -106,6 +106,14 @@ ACTIONS: dict[str, dict[str, Any]] = {
         },
         "examples": [{"base_aliases": [40000], "write_bases": [0]}],
     },
+    "debug-mode": {
+        "doc": "Make Direct Connect 1301 report run_status 8, Debug Mode (a FranklinWH remote-support "
+               "session), to test clients. 8 is in the cloud enum; no capture shows the local channel "
+               "sending it. Nothing else changes (Modbus, 1707, the battery).",
+        "fields": {"on": _f("boolean", "true = 1301 run_status reads 8; false = the model's own")},
+        "required": ["on"],
+        "examples": [{"on": True}, {"on": False}],
+    },
     "episode": {
         "doc": "Drop the Modbus server, then return islanded.",
         "fields": {"down_s": _f("number", unit="s"), "offgrid_s": _f("number", unit="s")},
@@ -316,7 +324,7 @@ GROUPS: dict[str, list[str]] = {
     "Generator": ["generator"],
     "CSIP and comms": ["csip", "der-comms", "dc-modbus", "dc-reboot", "export"],
     "Alarms and faults": ["alarms", "faults", "dc-faults", "range-fault", "write-reject",
-                          "addressing", "episode"],
+                          "addressing", "episode", "debug-mode"],
 }
 for _group, _names in GROUPS.items():
     for _name in _names:

@@ -315,3 +315,16 @@ def test_unknown_setup_is_refused():
     from franklinwh_emulator.gateway import GatewayConfig
     with pytest.raises(ValueError, match="setup must be one of"):
         GatewayConfig.from_dict({"id": "x", "setup": "commissioned"})
+
+
+def test_debug_mode_injection_changes_only_1301_run_status(gw, dc):
+    """#70: run_status 8 (Debug Mode, cloud enum) while injected; the rest is untouched."""
+    from franklinwh_emulator.control import apply, gateway_state
+    before = dc.power_flow()["run_status"]
+    assert before != 8
+    apply(gw, "debug-mode", {"on": True})
+    assert dc.power_flow()["run_status"] == 8
+    s = gateway_state(gw)
+    assert s["debug_mode"] is True and s["run_status"] != 8          # Modbus/model unchanged
+    apply(gw, "debug-mode", {"on": False})
+    assert dc.power_flow()["run_status"] != 8 and gateway_state(gw)["debug_mode"] is False
