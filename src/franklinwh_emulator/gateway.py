@@ -29,7 +29,7 @@ from .control import ControlApi
 from .device import AGateDevice
 from .profiles import DEFAULT_PROFILE, get_profile
 from .server import Faults, ModbusServer
-from .site import Site, SiteConfig
+from .site import REFERENCE_COUNTERS, Site, SiteConfig
 
 _HEX = "0123456789ABCDEF"
 
@@ -64,6 +64,8 @@ def mock_serial(seed: int) -> str:
 
 
 SETUPS = ("factory", "in-service")
+# The reference site read 1304 sno = 804 on 2026-10-07.
+REFERENCE_COMMISSIONED = "2024-07-25"
 
 
 @dataclass
@@ -84,6 +86,12 @@ class GatewayConfig:
     # set up, Modbus TCP on. ``modbus_enabled`` overrides either.
     setup: str = "factory"
     modbus_enabled: bool | None = None
+    # When it was commissioned (local date, YYYY-MM-DD): Direct Connect 1304 sno counts days
+    # since. Default: the day it starts (factory), or the reference site's date (in-service).
+    commissioned: str | None = None
+    # In-service only: run the site model over this many days before start-up, so history,
+    # today's totals and the lifetime counters are as if it had been running (max 105).
+    history_days: float = 0
     site: SiteConfig = field(default_factory=SiteConfig)
 
     @classmethod
@@ -99,6 +107,17 @@ class GatewayConfig:
         cfg = cls(**d)
         if cfg.setup not in SETUPS:
             raise ValueError(f"setup must be one of {list(SETUPS)}, not {cfg.setup!r}")
+        if cfg.history_days and cfg.setup != "in-service":
+            raise ValueError("history_days needs setup: in-service (a factory aGate has no past)")
+        if not 0 <= float(cfg.history_days) <= 105:
+            raise ValueError("history_days must be 0-105 (the aGate keeps about 105 days)")
+        if cfg.commissioned is not None:
+            import datetime as _dt
+            try:
+                _dt.date.fromisoformat(str(cfg.commissioned))
+            except ValueError:
+                raise ValueError(f"commissioned must be YYYY-MM-DD, not {cfg.commissioned!r}") from None
+            cfg.commissioned = str(cfg.commissioned)
         cfg.site = SiteConfig(seed=cfg.seed, **site)
         return cfg
 
@@ -127,7 +146,16 @@ class Gateway:
         self.serial = cfg.serial or mock_serial(cfg.seed)
         if clock is None:
             clock = ScaledClock(cfg.time_scale) if cfg.time_scale != 1.0 else SystemClock()
+        if cfg.setup == "factory":                      # fresh from the installer: totals at 0
+            for k in REFERENCE_COUNTERS:
+                if getattr(cfg.site, k) is None:
+                    setattr(cfg.site, k, 0.0)
         self.site = Site(cfg.site, clock)
+        if cfg.history_days:
+            self.site.backfill(float(cfg.history_days))
+        # Commissioning day, for Direct Connect sno (days since).
+        self.commissioned = cfg.commissioned or (
+            self.site.local_date(clock.now()) if cfg.setup == "factory" else REFERENCE_COMMISSIONED)
         self.site.serial = self.serial
         self.device = AGateDevice(self.site, self.profile, serial=self.serial)
         self.faults = Faults()

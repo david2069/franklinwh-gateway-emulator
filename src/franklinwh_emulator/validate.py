@@ -37,6 +37,10 @@ DOCS: dict[str, str] = {
     "setup": "factory (default: Modbus TCP off until a Direct Connect 1205 write) or in-service "
              "(already set up: Modbus TCP on)",
     "modbus_enabled": "start with the Modbus TCP Server on or off, whatever the setup",
+    "commissioned": "commissioning date, YYYY-MM-DD (Direct Connect sno); default: the start day "
+                    "(factory) or the reference site's 2024-07-25 (in-service)",
+    "history_days": "in-service: run the model over this many days before start (max 105) to fill "
+                    "the history, today's totals and the lifetime counters; ~0.2 s per day",
     "apower_units": "number of aPowers",
     "ac_type": "0 single phase, 1 split phase, 2 three phase",
     "phases": "legs wired, e.g. [L1, L2]; default from ac_type",
@@ -62,11 +66,11 @@ DOCS: dict[str, str] = {
     "export_limit_enforced": "enforce the grid code's export limit (default: tracked only)",
     "battery": "loss model: agate-measured, ideal, legacy, or {preset, ...}",
     "generator": "{installed, rated_w, ...} plus 1901 fields; null = none fitted",
-    "grid_import_wh": "lifetime grid import counter at start, Wh",
-    "grid_export_wh": "lifetime grid export counter at start, Wh",
-    "pv_wh": "lifetime PV counter at start, Wh",
-    "batt_discharge_wh": "lifetime battery discharge counter at start, Wh",
-    "batt_charge_wh": "lifetime battery charge counter at start, Wh",
+    "grid_import_wh": "lifetime grid import counter at start, Wh; default 0 (factory) or the reference aGate's (in-service)",
+    "grid_export_wh": "lifetime grid export counter at start, Wh; default 0 (factory) or the reference aGate's (in-service)",
+    "pv_wh": "lifetime PV counter at start, Wh; default 0 (factory) or the reference aGate's (in-service)",
+    "batt_discharge_wh": "lifetime battery discharge counter at start, Wh; default 0 (factory) or the reference aGate's (in-service)",
+    "batt_charge_wh": "lifetime battery charge counter at start, Wh; default 0 (factory) or the reference aGate's (in-service)",
 }
 
 _KINDS = {"int": "integer", "float": "number", "str": "string", "bool": "boolean",

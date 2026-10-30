@@ -58,8 +58,10 @@ def _cell_mv(soc: float) -> float:
     return float(_LFP_OCV[-1][1])
 
 
-# 1304 sno counts days since commissioning; the reference site read 804 on 2026-10-07.
-_COMMISSIONED_EPOCH_DAY = 20733 - 804
+# 1304 sno counts days since commissioning (the gateway's ``commissioned`` date; the reference
+# site read 804 on 2026-10-07, i.e. commissioned 2024-07-25).
+def _epoch_day(date: str) -> int:
+    return int(time.mktime(time.strptime(date, "%Y-%m-%d")) // 86400)
 
 
 def _refused(reason: int, **kw) -> dict:
@@ -218,7 +220,7 @@ class DcPayloads:
                    max(0.0, ll - lu - lf - lg) * lh / 1000, lg * lh / 1000, max(0.0, lf) * lh / 1000,
                    max(0.0, -lf) * lh / 1000, ll * lh / 1000]
         return _ok(
-            sno=max(0, epoch_day - _COMMISSIONED_EPOCH_DAY), dayType=req.get("dayType", 0),
+            sno=max(0, epoch_day - _epoch_day(self.gw.commissioned)), dayType=req.get("dayType", 0),
             date=date, pointMax=96,
             pointId=len(slots),
             rec_time=[f"{(i + 1) * 15 // 60:02d}:{(i + 1) * 15 % 60:02d}" for i in range(len(slots))],
