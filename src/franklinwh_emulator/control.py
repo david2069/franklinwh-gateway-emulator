@@ -21,8 +21,8 @@ from typing import TYPE_CHECKING
 
 from .schema import ACTIONS, check_body, schema
 from .server import Faults
-from .site import ALARMS, MODE_NAMES, W_PER_APOWER, WH_PER_APOWER
-from .weather import SKIES
+from .site import ALARMS, INV_NAMES, MODE_NAMES, RUN_NAMES, W_PER_APOWER, WH_PER_APOWER
+from .weather import SKIES, sun_position
 
 if TYPE_CHECKING:
     from .gateway import Gateway
@@ -55,6 +55,9 @@ def gateway_state(gw: "Gateway") -> dict:
         "dc_address": list(gw.dc_address) if gw.dc_address else None,
         "profile": gw.profile.name,
         "native_mode_name": MODE_NAMES.get(snap.native_mode, str(snap.native_mode)),
+        "run_status_name": RUN_NAMES.get(snap.run_status, str(snap.run_status)),
+        "inverter_state_name": INV_NAMES.get(snap.inverter_state, str(snap.inverter_state)),
+        "sun": _sun(site, snap.ts),
         "base_aliases": list(gw.profile.base_aliases),
         "write_rejects": list(gw.device.write_rejects),
         "write_bases": None if gw.profile.write_bases is None else list(gw.profile.write_bases),
@@ -98,6 +101,15 @@ def gateway_state(gw: "Gateway") -> dict:
             for c in site.loads.components},
     })
     return state
+
+
+def _sun(site, ts: float) -> dict | None:
+    """The sun's elevation at the site (None without a location)."""
+    loc = site.location
+    if loc.latitude is None or loc.longitude is None:
+        return None
+    zenith, _ = sun_position(ts, loc.latitude, loc.longitude)
+    return {"elevation_deg": round(90.0 - zenith, 1), "up": zenith < 90.0}
 
 
 def _num_or_none(body: dict, key: str):

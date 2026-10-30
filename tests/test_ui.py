@@ -155,3 +155,19 @@ print(JSON.stringify({{out, bad, blank: buildBody(S.grid, formFromBody(S.grid, {
     assert res["blank"] == {}
     assert res["modeOpts"] == [["", "— not set —"], ["1", "1 · Emergency Backup"],
                                ["2", "2 · Self-Consumption"], ["3", "3 · TOU"]]
+
+
+def test_state_has_agate_status_sun_and_temperatures(ui):
+    from franklinwh_emulator.clock import ManualClock
+    fleet, _ = ui
+    s = gateway_state(fleet["site"])
+    assert s["run_status_name"] in ("Standby", "Charging", "Discharging")
+    assert s["inverter_state_name"] in ("Running", "Standby", "Throttled", "Fault", "Off")
+    assert "cabinet_c" in s and "ambient_c" in s
+    assert gateway_state(fleet["us-split"])["sun"] is None          # no location, no sun
+    noon = Fleet.from_dict(FLEET, clock=ManualClock(1768446000.0))   # 2026-01-15 14:00 Sydney
+    night = Fleet.from_dict(FLEET, clock=ManualClock(1768474800.0))  # 22:00
+    day_sun = gateway_state(noon["site"])["sun"]
+    night_sun = gateway_state(night["site"])["sun"]
+    assert day_sun["up"] and day_sun["elevation_deg"] > 60
+    assert not night_sun["up"] and night_sun["elevation_deg"] < 0

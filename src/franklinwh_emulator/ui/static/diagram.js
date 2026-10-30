@@ -8,8 +8,16 @@
 const NOT_MODELLED = [
   'per-aPower SoC and power (one combined battery)', 'two PV inputs on the aGate',
   'aPower S DC hybrid', 'V2L', 'non-backup panel', 'service rating', 'EV battery SoC',
-  'hot-water temperature', 'tariff prices',
+  'hot-water temperature', 'tariff prices', 'remote (cloud) VPP mode',
+  'network connection (Ethernet, WiFi, 4G)',
 ];
+const SKY_LABELS = { clear: 'clear sky', broken: 'broken cloud', overcast: 'overcast', storm: 'storm' };
+function skyLabel(sky) { return SKY_LABELS[sky] || sky; }
+
+// Small inline icons (decorative; the text beside them says the same).
+const SUN_ICON = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"></circle>' +
+  [0, 45, 90, 135, 180, 225, 270, 315].map(a => `<line x1="12" y1="2.5" x2="12" y2="5" transform="rotate(${a} 12 12)"></line>`).join('') + '</svg>';
+const MOON_ICON = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 3.5a8.5 8.5 0 1 0 5 15 7 7 0 0 1-5-15z"></path></svg>';
 const IDLE_W = 10;
 const DASH_PERIOD_MS = 1000;   // one dash cycle; matches the CSS animation
 
@@ -27,11 +35,15 @@ function link(points, w, dir) {
   return `<path class="flow ${cls}" d="${d}" style="animation-delay:${delay}s"></path>`;
 }
 
-function node(x, y, w, h, title, value, sub, cls) {
+function node(x, y, w, h, title, value, sub, cls, lines) {
+  // ``lines``: extra small lines under the value (the aGate's status).
+  const extra = (lines || []).map((l, i) => `<text class="s" x="${w / 2}" y="${74 + i * 18}">${esc(l)}</text>`).join('');
+  const vy = lines && lines.length ? 48 : h / 2 + 10;
   return `<g class="node ${cls || ''}" transform="translate(${x - w / 2} ${y - h / 2})">
     <rect width="${w}" height="${h}" rx="12"></rect>
     <text class="t" x="${w / 2}" y="22">${esc(title)}</text>
-    ${value ? `<text class="v" x="${w / 2}" y="${h / 2 + 10}">${esc(value)}</text>` : ''}
+    ${value ? `<text class="v" x="${w / 2}" y="${vy}">${esc(value)}</text>` : ''}
+    ${extra}
     ${sub ? `<text class="s" x="${w / 2}" y="${h - 12}">${esc(sub)}</text>` : ''}
   </g>`;
 }
@@ -88,9 +100,14 @@ function renderDiagram(g) {
     (r.wh / 1000).toFixed(1) + ' kWh · ' + (r.w / 1000) + ' kW each' +
     (Math.abs(g.battery_w) < IDLE_W ? '' : g.battery_w > 0 ? ' · out' : ' · in')));
 
-  // aGate in the middle.
-  out.push(node(agate[0], agate[1], 140, 120, 'aGate', g.native_mode_name,
-    g.remote_control && g.remote_control.enabled ? 'VPP dispatch' : '', 'agate'));
+  // aGate in the middle: mode, then its status. Battery + = discharging (out of the battery).
+  const vpp = g.remote_control && g.remote_control.enabled;
+  out.push(node(agate[0], agate[1], 180, 156, 'aGate', g.native_mode_name,
+    vpp ? 'Modbus VPP' : '', vpp ? 'agate vpp' : 'agate', [
+      g.run_status_name + ' · ' + kwText(g.battery_w),
+      'SoC ' + Math.round(g.soc) + '% · inverter ' + g.inverter_state_name.toLowerCase(),
+      'cabinet ' + g.cabinet_c.toFixed(1) + ' °C',
+    ]));
 
   // Bottom row: generator and smart circuits.
   const gen = g.generator || {};
@@ -108,12 +125,17 @@ function renderDiagram(g) {
   });
 
   const w = g.weather;
-  const head = ['Weather: ' + (w ? (w.sky || w.model) : 'bell curve (no weather model)'),
+  const sun = g.sun;
+  const icon = sun ? (sun.up ? SUN_ICON : MOON_ICON) : '';
+  const head = [
+    sun ? (sun.up ? 'Day' : 'Night') + ' · sun ' + sun.elevation_deg + '°' : 'No location, so no sun position',
+    w ? skyLabel(w.sky || w.model) : 'bell curve (no weather model)',
     w && w.poa_w_m2 != null ? w.poa_w_m2 + ' W/m² on the array' : null,
-    g.ambient_c != null ? g.ambient_c.toFixed(1) + ' °C' : null].filter(Boolean).join(' · ');
+    'ambient ' + g.ambient_c.toFixed(1) + ' °C',
+    'cabinet ' + g.cabinet_c.toFixed(1) + ' °C (modelled)'].filter(Boolean).join(' · ');
   const label = `Energy flow for ${g.id}: grid ${kwText(g.grid_w)}, home ${kwText(g.load_w)}, ` +
     `solar ${kwText(g.solar_w)}, battery ${Math.round(g.soc)}% ${kwText(g.battery_w)}`;
-  return `<p class="diagram-head">${esc(head)}</p>
+  return `<p class="diagram-head">${icon}<span>${esc(head)}</span></p>
     <div class="diagram-wrap"><svg class="diagram" viewBox="0 50 1060 520" role="img" aria-label="${esc(label)}">
       ${links.join('')}${out.join('')}
     </svg></div>
