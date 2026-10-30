@@ -118,3 +118,10 @@ def test_mode_labels_and_the_other_numbering():
     assert DC_MODE_NUMBERS["Time-of-Use"] == 1                    # scheduling_type = 1
     for name, n in DC_MODE_NUMBERS.items():
         assert f"{n} {name}" in ACTIONS["mode"]["doc"]
+
+
+def test_every_boolean_says_what_true_and_false_do():
+    """A bare "boolean" left the owner guessing (offgrid on=false, #30)."""
+    bare = [(a, f) for a, spec in ACTIONS.items() for f, fs in spec["fields"].items()
+            if fs["type"] == "boolean" and not fs.get("doc") and a not in ("faults", "dc-faults")]
+    assert bare == []
