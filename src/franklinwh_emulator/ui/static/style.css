@@ -147,3 +147,12 @@ main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 .result.ok { color: var(--ok); background: var(--ok-bg); }
 .result.bad { color: var(--bad); border: 1px solid var(--bad); }
 @media (max-width: 1099px) { .layout-toggle { display: none; } }   /* narrow screens always stack */
+
+/* Out-of-date banner (the emulator restarted or changed) */
+.stale { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 16px; padding: 10px 12px;
+         border: 1px solid var(--warn); border-radius: 8px; color: var(--warn); background: var(--panel-2); }
+main.layout-right > .stale { grid-column: 1 / -1; }
+.stale span { flex: 1 1 260px; }
+.stale button { font: 600 14px var(--sans); border-radius: 8px; padding: 0 14px; min-height: 36px; cursor: pointer;
+                color: var(--bg); background: var(--warn); border: 0; }
+.stale button.secondary { color: var(--warn); background: transparent; border: 1px solid var(--warn); }

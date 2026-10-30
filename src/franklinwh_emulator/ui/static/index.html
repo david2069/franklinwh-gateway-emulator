@@ -21,6 +21,11 @@
 </header>
 <main :class="'layout-' + layout">
   <p class="status" :class="{ bad: error }" x-show="error || !loaded" x-text="error || 'Loading…'" role="status"></p>
+  <div class="stale" x-show="stale" role="alert">
+    <span x-text="stale"></span>
+    <button type="button" @click="location.reload()" x-text="staleNewCode ? 'Reload' : 'Reload page'"></button>
+    <button type="button" class="secondary" x-show="!staleNewCode" @click="stale = ''; version = null; checkVersion()">Dismiss</button>
+  </div>
   <div class="col-main">
 
   <section class="cards" aria-label="Gateways">

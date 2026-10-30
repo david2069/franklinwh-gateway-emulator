@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Web UI: notices a restart or new version (2026-10-30, #45)
+- The page checks `GET /version` every 5 s. If the emulator restarted, it says the gateways
+  started fresh (earlier actions not kept), with Reload and Dismiss; if it now runs a new
+  version, it says which and offers Reload. `GET /version` gains `started`.
+
 ### Appliance form offers the gateway's own appliances (2026-10-30, #43)
 - `appliance.name` is a dropdown of the active gateway's appliances, labelled with their smart
   circuit ("ev · SW2"); "this gateway has no appliances" when it has none (schema
