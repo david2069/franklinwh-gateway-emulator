@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Factory vs in-service energy: totals, commissioning, history (2026-10-31, #53)
+- A factory aGate starts with lifetime totals at 0 and is commissioned the day it starts
+  (Direct Connect `sno` 0). An in-service one keeps the reference aGate's totals and its
+  2024-07-25 commissioning date. Totals given in the fleet file win either way.
+- `commissioned: YYYY-MM-DD` sets `sno`. `history_days: N` (in-service, ≤ 105) runs the site
+  model over the N days before start-up so the 1303 history, today's 1301 totals and the
+  lifetime counters agree (~0.2 s per day per gateway). `Site.backfill()`.
+- Example fleet: `site` gets 7 days of history.
+- `SiteConfig` counter defaults are now `None` (= the reference values in `Site`).
+
 ### Generator: fit a working one from the page (2026-10-31, #51)
 - The generator action's `installed: true` now fits a working generator, as the fleet file's
   `generator: {installed: true}` does (feature on, 7 kW, auto start), for settings still at

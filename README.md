@@ -347,6 +347,26 @@ battery discharging.
 refreshing (stale `check_blocking_alarms()`) and `ac_type` being guessed from voltage. See
 [docs/FINDINGS.md](docs/FINDINGS.md).
 
+## Energy totals and history
+
+Lifetime totals are served as SunSpec 701 `TotWhAbs`/`TotWhInj` (grid import/export, split
+across legs), 714 `DCWhAbs`/`DCWhInj` (battery charge/discharge), 502 `OutWh` and extension
+15510–15513 (PV), and they keep counting as the model runs. Direct Connect 1301 has today's totals
+and 1303 the quarter-hour history.
+
+| | factory (default) | in-service |
+|---|---|---|
+| Lifetime totals at start | 0 | the reference aGate's (scan of 2026-10-07) |
+| Commissioned (1303 `sno`) | the day it starts | 2024-07-25 (the reference site) |
+| History | from start | from start, or `history_days: N` earlier |
+
+Any of them can be set per gateway: `grid_import_wh`, `grid_export_wh`, `pv_wh`,
+`batt_charge_wh`, `batt_discharge_wh` (Wh), and `commissioned: YYYY-MM-DD`. With
+`history_days: N` (in-service, at most 105) the site model runs over the N days before start-up
+(about 0.2 s per day per gateway), so the history, today's totals and the lifetime counters all
+agree; the totals given are as of the start of that period, and the SoC is wherever the model
+ends. An `open-meteo` gateway that isn't `offline` fetches those days.
+
 ## Location and time
 
 Each gateway can have its own location:

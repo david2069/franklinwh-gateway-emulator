@@ -150,6 +150,11 @@ class Location:
         return loc
 
 
+# Lifetime counters (Wh) read from the reference aGate's scan of 2026-10-07.
+REFERENCE_COUNTERS = {"grid_import_wh": 1_463_431, "grid_export_wh": 4_614_656, "pv_wh": 12_959_408,
+                      "batt_discharge_wh": 6_344_500, "batt_charge_wh": 6_478_740}
+
+
 @dataclass
 class SiteConfig:
     seed: int = 0
@@ -203,12 +208,13 @@ class SiteConfig:
     # oilmano*, manuSw) and hardware facts (crank_s, warmup_s, cooldown_s, min_run_s,
     # fuel_l). None = the reference site: feature off, nothing fitted. See generator.py.
     generator: dict | None = None
-    # Seeded starting values for the lifetime counters (Wh), from the reference scan.
-    grid_import_wh: float = 1_463_431
-    grid_export_wh: float = 4_614_656
-    pv_wh: float = 12_959_408
-    batt_discharge_wh: float = 6_344_500
-    batt_charge_wh: float = 6_478_740
+    # Starting values for the lifetime counters (Wh). None → the reference scan's
+    # (REFERENCE_COUNTERS); a factory gateway sets them to 0 (gateway.py).
+    grid_import_wh: float | None = None
+    grid_export_wh: float | None = None
+    pv_wh: float | None = None
+    batt_discharge_wh: float | None = None
+    batt_charge_wh: float | None = None
 
 
 def _battery_model(spec: Any) -> dict:
@@ -449,20 +455,45 @@ class Site:
         self._day_key: str | None = None
         self._day_base: dict[str, float] = {}
 
-        self.grid_import_wh = cfg.grid_import_wh
-        self.grid_export_wh = cfg.grid_export_wh
-        self.pv_wh = cfg.pv_wh
-        self.batt_discharge_wh = cfg.batt_discharge_wh
-        self.batt_charge_wh = cfg.batt_charge_wh
+        start = {k: REFERENCE_COUNTERS[k] if getattr(cfg, k) is None else float(getattr(cfg, k))
+                 for k in REFERENCE_COUNTERS}
+        self.grid_import_wh = start["grid_import_wh"]
+        self.grid_export_wh = start["grid_export_wh"]
+        self.pv_wh = start["pv_wh"]
+        self.batt_discharge_wh = start["batt_discharge_wh"]
+        self.batt_charge_wh = start["batt_charge_wh"]
         n = len(self.phases)
-        self.phase_import_wh = {ph: cfg.grid_import_wh / n for ph in self.phases}
-        self.phase_export_wh = {ph: cfg.grid_export_wh / n for ph in self.phases}
+        self.phase_import_wh = {ph: self.grid_import_wh / n for ph in self.phases}
+        self.phase_export_wh = {ph: self.grid_export_wh / n for ph in self.phases}
 
         self._t = self.clock.now()
         if self.replay is not None:
             self.replay.start(self._t)
         self._roll_day(self._t)
         self._last = self._instant(self._t)
+
+    def backfill(self, days: float, step_s: float = 60.0) -> None:
+        """Run the model over the ``days`` before now, as if the site had been running: the
+        quarter-hour history, today's totals and the lifetime counters advance together. The
+        configured state (SoC, counters) is the state at the start of that period."""
+        from .clock import ManualClock
+        real = self.clock
+        end = real.now()
+        sim = ManualClock(end - days * 86400.0)
+        with self.lock:
+            self.clock = sim
+            self._t = sim.now()
+            self._day_key = None
+            self.history.clear()
+            if self.replay is not None:
+                self.replay.start(self._t)
+            self._roll_day(self._t)
+            self._last = self._instant(self._t)
+        while sim.now() < end:
+            sim.advance(min(step_s, end - sim.now()))
+            self.step()
+        with self.lock:
+            self.clock = real
 
     def _healthy_utility(self) -> Utility:
         g = self.grid
