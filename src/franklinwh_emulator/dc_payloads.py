@@ -128,13 +128,12 @@ class DcPayloads:
 
     # -- login / identity ----------------------------------------------------------
     def login(self, req: dict) -> dict:
-        p = self.gw.profile
         return _ok(SyHdVersion=102, IBG_SN=self.gw.serial, FHP_NUM=self.units,
                    FHP_SN=[self.fhp_sn(i + 1) for i in range(self.units)],
                    protocolVer="V1.11.03", IBG_VER="V12R02B30D06_260304",
                    APP_VER="V2.0.0", AWS_VER="V1.0.0", SL_VER="V1.0.0",
                    BMS_VER="V11R50B03D00", INV_VER="V3.1.0", DCDC_VER="V1.0.5",
-                   METER_VER="V1.0.0", SUNSPEC_FW=p.firmware)
+                   METER_VER="V1.0.0")
 
     def device_check(self, req: dict) -> dict:
         return {**_ok(), "devNum": self.units, "isOver": 1,
