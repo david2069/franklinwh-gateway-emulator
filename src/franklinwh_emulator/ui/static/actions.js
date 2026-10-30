@@ -11,6 +11,7 @@ function typesOf(spec) { return [].concat(spec.type); }
 // How a field is entered: 'choice' (a select), 'number', 'text', 'list' (comma separated) or 'json'.
 function fieldKind(spec) {
   const t = typesOf(spec);
+  if (spec.options_from) return 'choice';            // options come from the gateway's state
   if (t.includes('array')) return 'list';
   if (t.includes('object')) return 'json';
   if (t.includes('boolean') || spec.enum) return 'choice';
@@ -18,9 +19,17 @@ function fieldKind(spec) {
   return 'text';
 }
 
-// The options of a 'choice' field, as [value, label] pairs; value '' = not set.
-function choiceOptions(spec) {
+// The options of a 'choice' field, as [value, label] pairs; value '' = not set. ``state`` (the
+// active gateway's) supplies the options of fields marked ``options_from``.
+function choiceOptions(spec, state) {
   const opts = [['', '— not set —']];
+  if (spec.options_from === 'appliances') {
+    const apps = (state && state.appliances) || {};
+    const names = Object.keys(apps);
+    if (!names.length) return [['', '— this gateway has no appliances —']];
+    for (const n of names) opts.push([n, n + (apps[n].circuit ? ' · SW' + apps[n].circuit : '')]);
+    return opts;
+  }
   if (typesOf(spec).includes('boolean')) opts.push(['true', 'true'], ['false', 'false']);
   const labels = spec.labels || {};
   for (const v of spec.enum || []) opts.push([String(v), labels[v] ? v + ' · ' + labels[v] : String(v)]);

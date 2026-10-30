@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Appliance form offers the gateway's own appliances (2026-10-30, #43)
+- `appliance.name` is a dropdown of the active gateway's appliances, labelled with their smart
+  circuit ("ev · SW2"); "this gateway has no appliances" when it has none (schema
+  `options_from: appliances`).
+- Errors name the fix: "this gateway has no appliances: add `loads:` to its fleet entry (e.g.
+  `loads: sydney-family`) and restart"; a wrong name lists the gateway's appliances. (It used to
+  say "site has no load components", where "site" meant the site model, not a gateway.)
+
 ### Breaking: Direct Connect always on, Modbus TCP off on a factory aGate (2026-10-30, #40)
 - As on a real aGate (owner, 2026-10-30): every aGate profile runs a Direct Connect listener (a
   free port unless `directconnect: {port: N}` is given), and Modbus TCP starts **off** until a

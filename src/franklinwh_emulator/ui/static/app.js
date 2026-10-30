@@ -65,7 +65,7 @@ function running() {
     action(name) { return this.schema.actions[name]; },
     fieldsOf(name) { return Object.entries(this.action(name).fields); },
     kind(spec) { return fieldKind(spec); },
-    options(spec) { return choiceOptions(spec); },
+    options(spec) { return choiceOptions(spec, this.current); },
     fieldId(name, field) { return 'f-' + name + '-' + field; },
     required(name, field) { return (this.action(name).required || []).includes(field); },
     hint(spec) {
