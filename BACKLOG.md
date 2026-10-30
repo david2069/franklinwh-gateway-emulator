@@ -276,6 +276,11 @@ only one protocol.
   re-discovery gets tested. Depends on DOCKER-IPS for real addresses.
 - Flaky-link modes: periodic stalls, partial reads, half-open sockets.
 
+### FLEET-UI: configure, run and watch fleets from a local page · `todo`
+**Why:** fleets, scenarios and control actions are reached only through files, `curl` and `ctl`.
+**Scope:** [docs/UI_PLAN.md](docs/UI_PLAN.md), phases 1–5. Waits for the owner's answers to its
+open questions.
+
 ### DOCKER-IPS: one IP per gateway · `todo`
 **Why:** LAN discovery (the bridge's planned setup wizard, `franklinwh-local scan`) needs
 real addresses on :502/:9000, not port offsets.
