@@ -1,0 +1,8 @@
+#141 Monitor — 2026-10-31
+Break check (server/DC hooks reverted): 3 of 5 tests in tests/test_monitor.py FAILED
+Headless Chrome smoke (scratch fleet, examples/fleet.yaml, ports 0): one Modbus client on 'site' + a refused second:
+  summary: Monitor 1 connected · 1 refused in the last hour · 0 req/s
+  row: site  127.0.0.1:<port> (3 s, 1 req) · 1 refused  | DC none
+  process: CPU 1.3 % · memory 27 MB (peak 38.9) · 2 threads · 3 tasks · loop lag 1.4 ms
+Full suite:
+567 passed in 66.47s (0:01:06)

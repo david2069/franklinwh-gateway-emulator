@@ -29,6 +29,7 @@ except ImportError as e:  # pragma: no cover - exercised only without the extra
                       "(pip install franklinwh-gateway-emulator[dc])") from e
 
 from .dc_payloads import DROP, DcPayloads
+from .monitor import ClientTable
 
 if TYPE_CHECKING:
     from .gateway import Gateway
@@ -48,6 +49,7 @@ class DirectConnectServer:
         self.request_log: list[tuple[float, int, Any]] = []   # (ts, cmdType, dataArea)
         self._server: asyncio.base_events.Server | None = None
         self._writers: set[asyncio.StreamWriter] = set()
+        self.clients = ClientTable()          # connected now (#141)
 
     @property
     def equip_no(self) -> str:
@@ -69,16 +71,20 @@ class DirectConnectServer:
     async def _client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         faults = self.gateway.dc_faults
         if faults.offline:
+            self.clients.refuse(writer.get_extra_info("peername"))
             writer.close()
             return
         stream = dc_protocol.FrameStream()
         self._writers.add(writer)
+        entry = self.clients.open(writer.get_extra_info("peername"))
         try:
             while True:
                 chunk = await reader.read(8192)
                 if not chunk:
                     return
                 for frame in stream.feed(chunk):
+                    if frame.is_request:
+                        self.clients.request(entry)
                     reply = self._reply(frame)
                     if reply is DROP:
                         return
@@ -94,6 +100,7 @@ class DirectConnectServer:
         except (ConnectionError, asyncio.IncompleteReadError):
             pass
         finally:
+            self.clients.close(entry)
             self._writers.discard(writer)
             writer.close()
 

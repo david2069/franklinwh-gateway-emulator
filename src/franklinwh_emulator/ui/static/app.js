@@ -27,6 +27,8 @@ function running() {
     restoreName: '',
     sessionMsg: null,  // {ok, text, details}: the last save/restore, shown until the next
     log: [],           // the emulator's action log (newest last)
+    mon: null,         // GET /monitor, polled only while the Monitor panel is open (#141)
+    monOpen: false,
     stale: '',          // why this page is out of date (the emulator restarted or changed)
     staleNewCode: false,
     layout: 'right',  // where the actions go: 'right' (beside, on wide screens) or 'below'
@@ -78,6 +80,7 @@ function running() {
         this.error = '';
         this.loaded = true;
         this._get('/log').then(l => { this.log = l; }).catch(() => {});
+        if (this.monOpen) this._get('/monitor').then(m => { this.mon = m; }).catch(() => {});
       } catch (e) {
         this.error = 'Can\'t reach the emulator: ' + e.message + '. Retrying every second.';
       }
@@ -273,6 +276,32 @@ function running() {
       }
     },
     recentLog() { return this.log.slice(-40).reverse(); },
+
+    // -- Monitor (#141): clients per gateway and overall, and the process ------------------------
+    setMonitor(open) {
+      this.monOpen = open;
+      if (open) this._get('/monitor').then(m => { this.mon = m; }).catch(() => {});
+    },
+    monTotals(m) {
+      const t = m.totals;
+      return t.connections + ' connected · ' + t.refused_1h + ' refused in the last hour · ' + t.requests_per_s + ' req/s';
+    },
+    monProcess(p) {
+      const up = Math.floor(p.uptime_s / 3600) + ' h ' + Math.floor(p.uptime_s % 3600 / 60) + ' min';
+      return 'Process ' + p.pid + ' · CPU ' + p.cpu_pct + ' % · memory ' + (p.rss_mb == null ? '?' : p.rss_mb) +
+             ' MB (peak ' + p.peak_rss_mb + ') · ' + p.threads + ' threads · ' + (p.asyncio_tasks == null ? '?' : p.asyncio_tasks) +
+             ' tasks · loop lag ' + p.loop_lag_ms + ' ms (max ' + p.loop_lag_max_ms + ') · up ' + up +
+             ' · ' + this.mon.totals.gateways + ' gateways, ' + this.mon.totals.with_clients + ' with clients';
+    },
+    monListener(l) {
+      if (!l) return '—';
+      if (!l.listening) return 'not listening';
+      const who = l.clients.map(c => c.peer + ' (' + Math.round(c.connected_s) + ' s, ' + c.requests + ' req)');
+      const parts = [who.length ? who.join(', ') : 'none'];
+      if (l.refused_1h) parts.push(l.refused_1h + ' refused, last ' + l.last_refused.peer + ' ' + Math.round(l.last_refused.ago_s) + ' s ago');
+      if (l.requests_per_s) parts.push(l.requests_per_s + ' req/s');
+      return parts.join(' · ');
+    },
     logLine(e) {
       return e.at.slice(11, 19) + ' · ' + e.gateway + ' · ' + e.action + ' ' + JSON.stringify(e.body) +
              (e.source !== 'api' ? ' · ' + e.source : '') + (e.ok ? '' : ' · ' + e.error);
