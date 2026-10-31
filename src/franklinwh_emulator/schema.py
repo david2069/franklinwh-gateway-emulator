@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import fields
 from typing import Any
 
-from .server import Faults
+from .server import DC_UNSUPPORTED_FAULTS, Faults
 from .site import ALARMS, MODE_NAMES, PV_INPUTS
 from .weather import SKIES
 
@@ -38,11 +38,13 @@ def _f(type_: str | list[str], doc: str = "", *, unit: str | None = None,
     return d
 
 
-def _fault_fields() -> dict[str, dict]:
+def _fault_fields(exclude: tuple[str, ...] = ()) -> dict[str, dict]:
     """From the ``Faults`` dataclass, so a new fault is described as soon as it exists."""
     kinds = {"float": "number", "bool": "boolean", "int": "integer", "dict": "object"}
     out = {}
     for f in fields(Faults):
+        if f.name in exclude:
+            continue
         ann = str(f.type)
         base = ann.split("|")[0].strip()
         out[f.name] = _f(kinds.get(base, "string"), nullable="None" in ann)
@@ -162,8 +164,8 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "examples": [{"latency_s": 0.5, "session_held": True}],
     },
     "dc-faults": {
-        "doc": "Direct Connect server fault injection.",
-        "fields": _fault_fields(),
+        "doc": "Direct Connect server fault injection (range_fault is Modbus TCP only).",
+        "fields": _fault_fields(exclude=DC_UNSUPPORTED_FAULTS),
         "examples": [{"latency_s": 0.5}],
     },
     "utility": {

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 import time
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -50,6 +51,7 @@ class DirectConnectServer:
         self._server: asyncio.base_events.Server | None = None
         self._writers: set[asyncio.StreamWriter] = set()
         self._active = 0
+        self._rng = random.Random(gateway.site.config.seed)   # which replies are slow: repeatable
         self.clients = ClientTable()          # connected now (#141)
 
     @property
@@ -71,7 +73,7 @@ class DirectConnectServer:
 
     def _busy(self) -> bool:
         limit = self.gateway.profile.dc_max_connections
-        return limit is not None and self._active >= limit
+        return self.gateway.dc_faults.session_held or (limit is not None and self._active >= limit)
 
     async def _client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         faults = self.gateway.dc_faults
@@ -107,6 +109,11 @@ class DirectConnectServer:
                 for frame in stream.feed(chunk):
                     if frame.is_request:
                         self.clients.request(entry)
+                        if faults.reset_after is not None:     # as Modbus TCP (#170)
+                            if faults.reset_after <= 0:
+                                faults.reset_after = None
+                                return
+                            faults.reset_after -= 1
                     reply = self._reply(frame)
                     if reply is DROP:
                         return
@@ -114,6 +121,8 @@ class DirectConnectServer:
                         continue
                     if faults.latency_s:
                         await asyncio.sleep(faults.latency_s)
+                    if faults.slow_p and faults.slow_ms and self._rng.random() < faults.slow_p:
+                        await asyncio.sleep(faults.slow_ms / 1000.0)
                     if faults.drop_responses > 0:
                         faults.drop_responses -= 1
                         continue

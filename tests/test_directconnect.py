@@ -403,6 +403,60 @@ def test_replies_echo_the_request_opt(dc, gw):
     assert dc.call(1407, {"opt": 1})["opt"] == 1            # refusals too (reason 4)
 
 
+# -- dc-faults act on Direct Connect, or are refused (#170) ---------------------------------------
+def _dc_login(gw, timeout=1.0):
+    c = DirectConnectClient(*gw.dc_address, timeout=timeout, retries=0)
+    c.transport.connect()
+    try:
+        c.login()
+        return c, True
+    except Exception:
+        return c, False
+
+
+def test_dc_session_held_refuses_the_client(gw):
+    gw.dc_faults.session_held = True
+    c, ok = _dc_login(gw)
+    c.transport.close()
+    assert not ok and gw.dc.clients.snapshot()["refused_1h"] == 1
+    gw.dc_faults.session_held = False
+    c, ok = _dc_login(gw)
+    c.transport.close()
+    assert ok
+
+
+def test_dc_reset_after_closes_the_connection(gw):
+    c, ok = _dc_login(gw)
+    assert ok
+    gw.dc_faults.reset_after = 1
+    assert c.call(1301, {"opt": 0})["result"] == 0     # one more request is answered
+    with pytest.raises(Exception):
+        c.call(1301, {"opt": 0})                        # then the connection is closed
+    c.transport.close()
+    assert gw.dc_faults.reset_after is None
+
+
+def test_dc_slow_replies(gw):
+    import time as _t
+    c, ok = _dc_login(gw, timeout=2)
+    assert ok
+    gw.dc_faults.slow_p, gw.dc_faults.slow_ms = 1.0, 400
+    t0 = _t.monotonic()
+    c.call(1301, {"opt": 0})
+    assert _t.monotonic() - t0 >= 0.35
+    gw.dc_faults.slow_p = 0.0
+    c.transport.close()
+
+
+def test_dc_range_fault_is_refused(gw):
+    from franklinwh_emulator.control import ApiError, apply
+    with pytest.raises(ApiError, match=r"unknown keys \['range_fault'\]"):
+        apply(gw, "dc-faults", {"range_fault": {"start": 0, "end": 10, "mode": "silent"}})
+    assert gw.dc_faults.range_fault is None
+    from franklinwh_emulator.schema import ACTIONS
+    assert "range_fault" not in ACTIONS["dc-faults"]["fields"] and "range_fault" in ACTIONS["faults"]["fields"]
+
+
 @pytest.mark.parametrize("grid_code, ac_type, phases, line_v", [
     ("as4777-au-a", 0, None, 241.8), ("as4777-au-a", 1, None, 483.6),
     ("as4777-au-a", 2, None, 418.8), ("as4777-au-a", 2, ["L1", "L2"], 418.8),
