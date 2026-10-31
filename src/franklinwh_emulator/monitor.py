@@ -30,6 +30,7 @@ class ClientTable:
         self.accepted = 0
         self.requests = 0                    # every request on this listener, all clients
         self.notify = None                   # (what, peer) -> None: the gateway's event log (#140)
+        self.last: dict | None = None        # the last client that left (#154)
 
     def open(self, peer) -> dict:
         self._next += 1
@@ -41,7 +42,12 @@ class ClientTable:
         return entry
 
     def close(self, entry: dict) -> None:
-        if self._open.pop(entry["id"], None) is not None and self.notify:
+        if self._open.pop(entry["id"], None) is None:
+            return
+        now = time.time()
+        self.last = {"peer": entry["peer"], "left": now, "stayed_s": now - entry["since"],
+                     "requests": entry["requests"]}
+        if self.notify:
             host, _, port = entry["peer"].rpartition(":")
             self.notify("left", (host, port) if host else entry["peer"])
 
@@ -74,6 +80,9 @@ class ClientTable:
             "requests": self.requests,
             "refused_1h": len(recent),
             "last_refused": None if not recent else {"peer": recent[-1][1], "ago_s": round(now - recent[-1][0], 1)},
+            "last_client": None if self.last is None else {
+                "peer": self.last["peer"], "ago_s": round(now - self.last["left"], 1),
+                "stayed_s": round(self.last["stayed_s"], 1), "requests": self.last["requests"]},
         }
 
 

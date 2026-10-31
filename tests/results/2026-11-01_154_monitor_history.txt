@@ -1,0 +1,16 @@
+#154 Monitor remembers clients that left — 2026-11-01
+
+pytest tests/test_monitor.py (with fix):
+6 passed in 0.18s
+
+break check (src reverted, test kept):
+FAILED tests/test_monitor.py::test_monitor_remembers_a_client_that_left - Key...
+1 failed, 5 passed in 0.19s
+
+full suite:
+580 passed in 32.22s
+
+UI smoke (headless Chrome, scratch emulator, ports 0; Modbus client connected, refused second, both closed):
+summary: Monitor 0 connected · 1 seen since start · 1 refused in the last hour · 0 req/s
+site: none now · last 127.0.0.1:<port> 2 s ago (0 s, 1 req) · 1 since start · 1 refused, last 127.0.0.1:<port> 3 s ago | none since start
+us-split: none since start | none since start
