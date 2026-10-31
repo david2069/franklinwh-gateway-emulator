@@ -1,0 +1,17 @@
+#150 Direct Connect client limit — 2026-11-01
+
+The aGate's :9000 limit is not measured: default stays unlimited; dc_max_connections opts in. Banner, CLAUDE.md coverage row, DIRECT_CONNECT.md and BRIDGE_INTEGRATION.md now scope the one-client limit to Modbus TCP.
+
+pytest tests/test_monitor.py:
+7 passed in 0.21s
+
+break check (src reverted, test kept):
+FAILED tests/test_monitor.py::test_direct_connect_limit_is_opt_in - ValueErro...
+1 failed, 6 passed in 0.20s
+
+full suite:
+587 passed in 32.25s
+
+banner (serve):
+agate: Modbus TCP off (factory; enable with Direct Connect 1205 sunsMdEn)  serial=<serial8>  profile=agate-v12r02b60d00-candidate  grid=as4777-au-a  legs=L1  modbus_max_connections=1
+agate: Direct Connect on 127.0.0.1:<port>  dc_max_connections=None

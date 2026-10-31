@@ -65,11 +65,12 @@ async def _run(gateways: list[Gateway], control_port: int | None, ui: bool = Fal
                   f"Modbus TCP off ({gw.config.setup}; enable with Direct Connect 1205 sunsMdEn)")
         print(f"{gw.config.id}: {modbus}  serial={gw.serial}  "
               f"profile={p.name}  grid={gw.site.grid.name}  legs={','.join(gw.site.phases)}  "
-              f"max_connections={p.max_connections}",
+              f"modbus_max_connections={p.max_connections}",
               flush=True)
         if gw.dc is not None:
             dh, dp = gw.dc_address
-            print(f"{gw.config.id}: Direct Connect on {dh}:{dp}", flush=True)
+            print(f"{gw.config.id}: Direct Connect on {dh}:{dp}  "
+                  f"dc_max_connections={p.dc_max_connections}", flush=True)
     api = None
     if control_port is not None:
         cls = ControlApi

@@ -80,6 +80,13 @@ reference aGate (1409, 1723, 1725, 1727 and the reads; one site); applied to eve
   socket kept open.
 - Out-of-band codes (e.g. the cloud relay codes 203/211): **the connection is closed.**
 
+## Connections
+
+The aGate's Direct Connect client limit has not been measured, so by default the emulator
+accepts any number of clients on :9000. To test client contention, opt in with
+`quirks: {dc_max_connections: 1}`: the extra client is closed (or left hanging with
+`busy_behaviour: hang`) and counted as refused in the Monitor, as on Modbus TCP.
+
 ## Faults
 
 `gw.dc_faults` (or `ctl <gw> dc-fault …`) are separate from the Modbus faults: `latency_s`,

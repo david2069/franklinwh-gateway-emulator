@@ -110,3 +110,37 @@ def test_monitor_process_and_rate(fleet):
 
 def test_rss_is_known_here():
     assert rss_mb() is None or rss_mb() > 0
+
+
+def test_direct_connect_limit_is_opt_in(clock):
+    """#150: no limit by default (unmeasured on the aGate); dc_max_connections: 1 refuses the
+    second client, as Modbus TCP does."""
+    pytest.importorskip("franklinwh_direct_connect_api")
+    from franklinwh_direct_connect_api.client import DirectConnectClient
+    from conftest import make_gateway
+
+    def login(gw):
+        c = DirectConnectClient(*gw.dc_address, timeout=1, retries=0)
+        c.transport.connect()
+        try:
+            c.login()
+            return c, True
+        except Exception:
+            return c, False
+
+    for quirks, second_ok in (({}, True), ({"dc_max_connections": 1}, False)):
+        gw = make_gateway(clock, quirks=quirks)
+        with gw:
+            c1, ok1 = login(gw)
+            c2, ok2 = login(gw)
+            assert ok1 and ok2 is second_ok, quirks
+            snap = gw.dc.clients.snapshot()
+            assert len(snap["clients"]) == (2 if second_ok else 1)
+            assert snap["refused_1h"] == (0 if second_ok else 1)
+            c2.transport.close()
+            c1.transport.close()
+            if not second_ok:                          # the first leaving frees the slot
+                assert _wait(lambda: gw.dc.clients.snapshot()["clients"] == [])
+                c3, ok3 = login(gw)
+                c3.transport.close()
+                assert ok3
