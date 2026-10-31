@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+From here on, one line per change; the detail is in each PR and its `tests/results/` file.
+
+### Added
+- Page: TOU schedule timeline (dispatch and tariff over 24 h) and an editor for its blocks and prices ([#61](https://github.com/david2069/franklinwh-gateway-emulator/pull/61)).
+- Enable or disable Modbus TCP with a real Direct Connect 1205 write, from the page or the `dc-modbus` action; state `modbus_listening` ([#64](https://github.com/david2069/franklinwh-gateway-emulator/pull/64)).
+- Reboot a gateway with a real Direct Connect 1721 write, from the page or the `dc-reboot` action; state `rebooting` ([#69](https://github.com/david2069/franklinwh-gateway-emulator/pull/69)).
+- `debug-mode` action: Direct Connect 1301 reports `run_status` 8 (Debug Mode) for client testing; not seen on the local channel ([#72](https://github.com/david2069/franklinwh-gateway-emulator/pull/72)).
+- `apower` action: switch an aPower off or on as its physical switch does; it then adds no power ([#73](https://github.com/david2069/franklinwh-gateway-emulator/pull/73)).
+- V12 candidate profile: a write to the 40000 mirror is answered with the base-0 address, as measured ([#77](https://github.com/david2069/franklinwh-gateway-emulator/pull/77)).
+- Direct Connect 1102 login: the full reply per aGate firmware, as measured, with per-aPower lists; profile field `dc_firmware` ([#79](https://github.com/david2069/franklinwh-gateway-emulator/pull/79)).
+
+### Changed
+- Direct Connect 1102 on the V12 candidate answers `result 1, reason -2` with the full manifest, as recorded on the reference aGate ([#81](https://github.com/david2069/franklinwh-gateway-emulator/pull/81)).
+
+### Fixed
+- Page: after a reload, "Actions on" showed the first gateway instead of the active one ([#65](https://github.com/david2069/franklinwh-gateway-emulator/pull/65)).
+- Session restore read a bare `on:` key as `true`; it now maps it back, as fleet files do ([#67](https://github.com/david2069/franklinwh-gateway-emulator/pull/67)).
+- Direct Connect 1102 sent `SUNSPEC_FW`, a key no aGate is known to send; removed ([#75](https://github.com/david2069/franklinwh-gateway-emulator/pull/75)).
+
 ### TOU schedule with dispatch codes and tariff periods (2026-10-31, #58)
 - In TOU mode the battery follows a schedule of blocks in the FranklinWH cloud format
   (franklinwh-cloud TOU guide): `startHourTime`/`endHourTime`, `waveType` (0, 1, 2, 4),
