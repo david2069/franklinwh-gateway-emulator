@@ -1,0 +1,6 @@
+#134 Direct Connect 1303 key set constant across dates — 2026-10-31
+Cause: the no-data reply (a date outside the site's history) lacked sectionEngy; dates with data had it.
+Fix: sectionEngy [0]*7 on no-data dates (inferred: no aGate reply for a no-data date has been read).
+Break check (fix reverted): test_energy_history_key_set_is_the_same_on_every_date FAILED
+Full suite:
+579 passed in 67.48s (0:01:07)
