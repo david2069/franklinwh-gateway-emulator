@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Direct Connect 1407 serves the gateway's TOU schedule (start times and tariff tiers, workday and weekend alike), so a client reading TOU over Direct Connect sees the schedule the page shows; it answered "not supported" ([#132](https://github.com/david2069/franklinwh-gateway-emulator/issues/132)).
 - Page: pick the detail card's gateway from a drop-down, filtered by country, state/province, postcode or timezone; Group by gains timezone ([#142](https://github.com/david2069/franklinwh-gateway-emulator/issues/142)).
 - Events per gateway: what it did on its own (mode, reserve and battery status, full or at reserve, grid lost and back, alarms, derating, breaker, FORCE, export over the limit, listeners, reboots, clients connecting, leaving or refused), in its local time; a panel on the detail card, `GET /gateways/<id>/events`, `events:` level and file ([#140](https://github.com/david2069/franklinwh-gateway-emulator/issues/140)).
 - Monitor: each gateway's Modbus TCP and Direct Connect clients (address, time connected, requests) and refusals in the last hour, plus the process's CPU, memory, threads, tasks and event-loop lag; a page panel and `GET /monitor` ([#141](https://github.com/david2069/franklinwh-gateway-emulator/issues/141)).

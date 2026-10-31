@@ -85,7 +85,8 @@ class DcPayloads:
             1101: self.login, 1105: self.device_check, 1831: self.battery_modules,
             1119: self.network_switches, 1201: self.time_location, 1205: self.der_comms,
             1251: self.compliance, 1301: self.power_flow, 1303: self.energy_history,
-            1403: self.mode_config, 1405: self.soc_settings, 1409: self.smart_circuits,
+            1403: self.mode_config, 1405: self.soc_settings, 1407: self.tou_schedule,
+            1409: self.smart_circuits,
             1411: self.smart_circuit_meter,
             1703: self.power_electronics, 1705: self.battery_cells,
             1707: self.ibg_run_status, 1709: self.relay_status, 1721: self.device_control,
@@ -366,6 +367,30 @@ class DcPayloads:
                 return _refused(-2)
             return _ok()                     # acknowledged, discarded: cloud-owned
         return _ok(**self.soc_block)
+
+    def tou_schedule(self, req: dict) -> dict:
+        """1408 from the site's TOU schedule (#132): block start times and tariff tiers, the
+        shape franklinwh_direct_connect_api.energy.decode_tou reads (``<day>Lv`` blocks,
+        ``<day>Time`` starts, ``<day>Flag`` waveType). One schedule serves every day, so
+        workday and weekend are the same; gaps read as off-peak, as the site fills them.
+        ``touStrategy`` 1 follows the library's fixture: inferred, not read from an aGate.
+        Writes are not emulated (the schedule is set through the control API)."""
+        if req.get("opt", 0) != 0:
+            return _refused(4)
+        times, flags, at = [], [], "00:00"
+        for b in sorted(self.site.tou_schedule, key=lambda b: b["startHourTime"]):
+            if b["startHourTime"] > at:                  # a gap: off-peak until this block
+                times.append(at)
+                flags.append(0)
+            times.append(b["startHourTime"])
+            flags.append(int(b["waveType"]))
+            at = b["endHourTime"]
+        if at < "24:00":
+            times.append(at)
+            flags.append(0)
+        n = len(times)
+        return _ok(touStrategy=1, workdayLv=n, workdayTime=list(times), workdayFlag=list(flags),
+                   weekendLv=n, weekendTime=list(times), weekendFlag=list(flags))
 
     def smart_circuits(self, req: dict) -> dict:
         """1410 from the site's circuits; a full-block write (opt:1) switches them, so the

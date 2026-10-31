@@ -367,3 +367,18 @@ def test_no_deprecated_library_name():
     old = re.compile(r"^\s*(from|import)\s+franklinwh_local\b", re.M)
     hits = [str(p) for p in src.rglob("*.py") if old.search(p.read_text())]
     assert hits == []
+
+
+def test_tou_schedule_1407(dc, gw):
+    """#132: 1407 serves the site's schedule, decodable by the client library."""
+    from franklinwh_direct_connect_api import energy
+    r = dc.tou_schedule()
+    assert r["result"] == 0 and r["workdayLv"] == 3 and r["weekendFlag"] == r["workdayFlag"]
+    blocks = energy.decode_tou(r, "workday")
+    assert [(b.start, b.end, b.wave_name) for b in blocks] == [
+        ("00:00", "17:00", "Off-Peak"), ("17:00", "21:00", "On-Peak"), ("21:00", "24:00", "Off-Peak")]
+    gw.site.set_tou_schedule([{"name": "Peak", "startHourTime": "16:00", "endHourTime": "20:00",
+                      "waveType": 2, "dispatchId": 6}])   # gaps either side read as off-peak
+    r = dc.tou_schedule()
+    assert (r["workdayTime"], r["workdayFlag"]) == (["00:00", "16:00", "20:00"], [0, 2, 0])
+    assert dc.call(1407, {"opt": 1})["reason"] == 4     # writes are not emulated
