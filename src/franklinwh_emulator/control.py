@@ -107,6 +107,9 @@ def gateway_state(gw: "Gateway") -> dict:
         "apower_rating": {"wh": WH_PER_APOWER, "w": W_PER_APOWER},   # per aPower, emulator constants
         "forced_alarms": dict(site.forced_alarms),
         "remote_control": asdict(site.remote),
+        # FORCE = an M704 setpoint is active (#91). Direct Connect then reports 1707 programme 9,
+        # which the app shows as "VPP Mode"; a FranklinWH-server VPP isn't modelled.
+        "force": site.force_status(),
         "self_reserve": site.self_reserve,
         "tou_reserve": site.tou_reserve,
         "weather": None if site.weather is None else {

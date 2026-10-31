@@ -187,7 +187,9 @@ class DcPayloads:
         zeros = [0] * len(ENERGY_CHANNELS)
         return _ok(
             # 8 = Debug Mode (cloud enum) only when injected (debug-mode action); not captured.
-            mode=pid, name=name, electricity_type=1, run_status=8 if self.gw.debug_mode else s.run_status,
+            # During an M704 force the name is empty; run_status still follows the battery (#91).
+            mode=pid, name="" if self.site.remote.enabled else name, electricity_type=1,
+            run_status=8 if self.gw.debug_mode else s.run_status,
             p_uti=round(s.grid_w, 1), p_sun=round(s.solar_w, 1), p_gen=round(s.generator_w, 1),
             p_fhp=round(s.battery_w, 1), p_load=round(s.load_w, 1),
             soc=round(s.soc, 1), t_amb=round(s.ambient_c, 1),
@@ -336,7 +338,9 @@ class DcPayloads:
         line, v1, v2 = self.legs(s)
         i_grid = round(abs(s.grid_w) / line, 1) if line > 1 else 0.0
         # No energyMode on V12R02B30D06 (the DC library documents it from the cloud payload).
-        return _ok(ibgRunStatus=pid, name="", electricity_type=1, dspRunstatus=4,
+        # 9 while an M704 force is on: measured on the reference aGate during a Modbus WSet force
+        # (fwh-direct-connect-bridge docs/RUN_STATUS_AND_MODE.md §4, 2026-10-12; #91).
+        return _ok(ibgRunStatus=9 if self.site.remote.enabled else pid, name="", electricity_type=1, dspRunstatus=4,
                    solarRelayStatus=int(relays["proximal"]), pvRelay2=int(relays["remote1"]),
                    loadRelay1Stat=0, loadRelay2Stat=0,
                    smartRelay1Status=int(circuits[1].on and not s.circuits_shed),

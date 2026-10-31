@@ -117,9 +117,9 @@ function renderDiagram(g) {
     (Math.abs(g.battery_w) < IDLE_W ? '' : g.battery_w > 0 ? ' · out' : ' · in')));
 
   // aGate in the middle: mode, then its status. Battery + = discharging (out of the battery).
-  const vpp = g.remote_control && g.remote_control.enabled;
+  const force = g.force;   // an M704 setpoint (FORCE); the app calls it VPP Mode
   out.push(node(agate[0], agate[1], 180, 156, 'aGate', g.native_mode_name,
-    vpp ? 'Modbus VPP' : '', vpp ? 'agate vpp' : 'agate', [
+    force ? 'FORCE · ' + force.direction : '', force ? 'agate vpp' : 'agate', [
       [g.run_status_name + ' · ' + kwText(g.battery_w), 'c-' + statusKey(g)],
       'SoC ' + Math.round(g.soc) + '% · ' + (g.grid_connected ? 'reserve ' + Math.round(g.active_reserve)
                                                              : 'off-grid floor ' + Math.round(g.offgrid_floor_soc)) + '%',

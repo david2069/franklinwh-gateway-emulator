@@ -329,3 +329,26 @@ def test_debug_mode_injection_changes_only_1301_run_status(gw, dc):
     assert s["debug_mode"] is True and s["run_status"] != 8          # Modbus/model unchanged
     apply(gw, "debug-mode", {"on": False})
     assert dc.power_flow()["run_status"] != 8 and gateway_state(gw)["debug_mode"] is False
+
+
+# The vpp action writes WSetPct (watts converted on the 5 kW rating), so every case is WSetPct.
+@pytest.mark.parametrize("body,direction,via", [({"watts": 3000}, "charge", "WSetPct"),
+                                                ({"watts": -2000}, "discharge", "WSetPct"),
+                                                ({"pct_hw": 40}, "discharge", "WSetPct"),
+                                                ({"watts": 0}, "standby", "WSetPct")])
+def test_force_reports_programme_9_and_empty_name(gw, dc, body, direction, via):
+    """#91: during an M704 force, 1707 ibgRunStatus reads 9 and 1301 name is empty (measured
+    by the DC bridge on the reference aGate, 2026-10-12); 1301 run_status follows the battery.
+    State calls it FORCE with its direction, not VPP."""
+    from franklinwh_emulator.control import apply, gateway_state
+    before_rs, before_pf = dc.ibg_run_status(), dc.power_flow()
+    assert before_rs["ibgRunStatus"] != 9 and before_pf["name"] and gateway_state(gw)["force"] is None
+    apply(gw, "vpp", body)
+    rs, pf = dc.ibg_run_status(), dc.power_flow()
+    assert rs["ibgRunStatus"] == 9 and pf["name"] == "" and pf["run_status"] != 8
+    assert pf["mode"] == before_pf["mode"]                          # 1301 mode: no evidence, unchanged
+    f = gateway_state(gw)["force"]
+    assert (f["direction"], f["via"]) == (direction, via)
+    apply(gw, "release", {})
+    assert dc.ibg_run_status()["ibgRunStatus"] == before_rs["ibgRunStatus"]
+    assert dc.power_flow()["name"] == before_pf["name"] and gateway_state(gw)["force"] is None
