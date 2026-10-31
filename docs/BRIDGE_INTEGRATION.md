@@ -49,7 +49,7 @@ Connect until a `1205` `sunsMdEn` write turns Modbus TCP on (about 3 s later).
 6. MQTT `franklinwh/<sid>/control/<slug>/set` is routed per device.
 7. The Controls tab and Force Release post to `/api/gateways/<viewed>/command` and hit the
    viewed gateway, not the default one.
-8. One client per gateway: the default profile serves `max_connections=1`. If anything other than
+8. One Modbus TCP client per gateway: the default profile serves `max_connections=1` (Direct Connect has no limit unless `dc_max_connections` is set). If anything other than
    the poller probes a mock, use `quirks={"max_connections": None}`.
 
 ## Semantics the two sides agreed

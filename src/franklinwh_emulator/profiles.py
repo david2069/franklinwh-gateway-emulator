@@ -68,6 +68,10 @@ class Profile:
 
     # -- Direct Connect ----------------------------------------------------------
     dc_pload_dup_bug: bool = True            # 1304 p_load repeats p_fhp (DEF-1303-PLOAD-DUP)
+    # Direct Connect clients at once; None = no limit. Unmeasured on the aGate, so no profile
+    # sets it: opt in (quirks: {dc_max_connections: 1}) to test client contention (#150).
+    # The extra client gets busy_behaviour, as on Modbus TCP.
+    dc_max_connections: int | None = None
 
 
 PROFILES: dict[str, Profile] = {

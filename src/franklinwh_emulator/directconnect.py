@@ -49,6 +49,7 @@ class DirectConnectServer:
         self.request_log: list[tuple[float, int, Any]] = []   # (ts, cmdType, dataArea)
         self._server: asyncio.base_events.Server | None = None
         self._writers: set[asyncio.StreamWriter] = set()
+        self._active = 0
         self.clients = ClientTable()          # connected now (#141)
 
     @property
@@ -68,15 +69,36 @@ class DirectConnectServer:
             await self._server.wait_closed()
             self._server = None
 
+    def _busy(self) -> bool:
+        limit = self.gateway.profile.dc_max_connections
+        return limit is not None and self._active >= limit
+
     async def _client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         faults = self.gateway.dc_faults
+        peer = writer.get_extra_info("peername")
         if faults.offline:
-            self.clients.refuse(writer.get_extra_info("peername"))
+            self.clients.refuse(peer)
             writer.close()
             return
+        if self._busy():                       # opt-in limit (#150), as Modbus TCP refuses
+            behaviour = self.gateway.profile.busy_behaviour
+            self.clients.refuse(peer)
+            log.info("%s: Direct Connect busy, %s client %s", self.equip_no, behaviour, peer)
+            if behaviour == "hang":
+                self._writers.add(writer)
+                try:
+                    while await reader.read(8192):
+                        pass               # port open, never answers
+                except (ConnectionError, asyncio.IncompleteReadError):
+                    pass
+                finally:
+                    self._writers.discard(writer)
+            writer.close()
+            return
+        self._active += 1
         stream = dc_protocol.FrameStream()
         self._writers.add(writer)
-        entry = self.clients.open(writer.get_extra_info("peername"))
+        entry = self.clients.open(peer)
         try:
             while True:
                 chunk = await reader.read(8192)
@@ -101,6 +123,7 @@ class DirectConnectServer:
             pass
         finally:
             self.clients.close(entry)
+            self._active -= 1
             self._writers.discard(writer)
             writer.close()
 
