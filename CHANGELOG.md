@@ -11,6 +11,7 @@ From here on, one line per change; the detail is in each PR and its `tests/resul
 - `debug-mode` action: Direct Connect 1301 reports `run_status` 8 (Debug Mode) for client testing; not seen on the local channel ([#72](https://github.com/david2069/franklinwh-gateway-emulator/pull/72)).
 - `apower` action: switch an aPower off or on as its physical switch does; it then adds no power ([#73](https://github.com/david2069/franklinwh-gateway-emulator/pull/73)).
 - V12 candidate profile: a write to the 40000 mirror is answered with the base-0 address, as measured ([#77](https://github.com/david2069/franklinwh-gateway-emulator/pull/77)).
+- Page: group gateways by location (country, state, city, postcode, site ID), compact cards, local time and timezone on every card; `location` gains `country`, `state`, `city`, `site_id` ([#92](https://github.com/david2069/franklinwh-gateway-emulator/pull/92)).
 - Direct Connect 1102 login: the full reply per aGate firmware, as measured, with per-aPower lists; profile field `dc_firmware` ([#79](https://github.com/david2069/franklinwh-gateway-emulator/pull/79)).
 
 ### Changed
