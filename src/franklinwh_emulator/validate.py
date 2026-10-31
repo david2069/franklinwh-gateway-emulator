@@ -30,7 +30,7 @@ DOCS: dict[str, str] = {
     "serial": "20-character serial; default derived from the seed",
     "host": "address the Modbus TCP Server binds to",
     "port": "Modbus TCP Server port; 0 = ephemeral",
-    "profile": "firmware profile (profiles.py), e.g. agate-v10r01b04d00",
+    "profile": "firmware profile (profiles.py): agate-v12r02b60d00-candidate (default), agate-v10r01b04d00, spec",
     "quirks": "overrides of the profile's switches",
     "time_scale": "site clock speed; > 1 fast-forwards",
     "dc_port": "Direct Connect port; 0 = ephemeral. aGate profiles always run one (see directconnect)",

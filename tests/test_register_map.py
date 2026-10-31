@@ -110,7 +110,7 @@ def test_faithful_profile_matches_reference_scan_static_points():
     from franklinwh_emulator.gateway import Gateway, GatewayConfig
     ref = json.loads((pathlib.Path(__file__).parent / "data"
                       / "reference_scan_static_2026-10-07.json").read_text())
-    gw = Gateway(GatewayConfig(setup="in-service", seed=7))
+    gw = Gateway(GatewayConfig(setup="in-service", seed=7, profile="agate-v10r01b04d00"))   # the scan's firmware
     assert [[m, gw.device.image.model_addr[m], gw.device.image.models[m].model_len]
             for m in gw.device.image.models] == ref["layout"]
     emu = _decode_image(gw)
@@ -185,7 +185,7 @@ def test_v12_candidate_mirrors_at_40000(clock):
 
 
 def test_addressing_switch_and_write_bases(clock):
-    gw = make_gateway(clock, seed=1)
+    gw = make_gateway(clock, seed=1, profile="agate-v10r01b04d00")    # no 40000 mirror to start
     wsetena = gw.device.image.ref(704, "WSetEna").address
     with gw:
         c = RawClient(*gw.address)

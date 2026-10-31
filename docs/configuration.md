@@ -81,7 +81,7 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 
 | Key | Type | Default | What it does |
 |---|---|---|---|
-| `profile` | string | `agate-v10r01b04d00` | firmware profile (profiles.py), e.g. agate-v10r01b04d00 |
+| `profile` | string | `agate-v12r02b60d00-candidate` | firmware profile (profiles.py): agate-v12r02b60d00-candidate (default), agate-v10r01b04d00, spec |
 | `quirks` | object | `{}` | overrides of the profile's switches |
 | `native_mode` | integer | `2` | Modbus 15507 numbering: 1 Emergency Backup, 2 Self-Consumption, 3 TOU (Direct Connect and the cloud number them differently) |
 | `self_reserve` | integer | `20` | Self-Consumption reserve, % |

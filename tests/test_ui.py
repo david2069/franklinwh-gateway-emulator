@@ -212,7 +212,7 @@ def test_state_has_firmware_and_active_reserve(ui):
     fleet, _ = ui
     gw = fleet["us-split"]
     s = gateway_state(gw)
-    assert s["firmware"] == "V10R01B04D00" and s["offgrid_floor_soc"] == 5.0
+    assert s["firmware"] == "V12R02B60D00 (candidate)" and s["offgrid_floor_soc"] == 5.0   # the default since #126
     apply(gw, "reserve", {"self": 25, "tou": 40})
     for mode, reserve in ((2, 25), (3, 40), (1, 100)):           # Self, TOU, Emergency Backup
         apply(gw, "mode", {"mode": mode})

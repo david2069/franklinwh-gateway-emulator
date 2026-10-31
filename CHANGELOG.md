@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Changed
+- **The default firmware profile is now `agate-v12r02b60d00-candidate`**, matching the reference aGate since its 2026-10-20 update: the 40000 mirror, 15509 = TOU reserve, 16001 = the active reserve, charge setpoints refused with exception 3, IBG V12R02B60D00 over Direct Connect. Set `profile: agate-v10r01b04d00` for the earlier behaviour ([#126](https://github.com/david2069/franklinwh-gateway-emulator/issues/126)).
+
 ### Added
 - Docs: a Model baseline page: the hardware against FranklinWH's published models, warranties and compatibility; a diagram of how location, weather, placement, controls and the grid drive the site model; each influence with its default and source.
 - Battery temperature limits: charging tapers off in the cold, charge and discharge derate when hot, a heater and fan draw power, and OVER_TEMP is raised and cleared automatically; on with `install:` or `battery_temperature`; card tag "derated: cold/hot" ([#111](https://github.com/david2069/franklinwh-gateway-emulator/issues/111)).
