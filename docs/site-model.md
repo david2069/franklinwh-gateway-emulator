@@ -189,5 +189,22 @@ install: {outdoor: {sun: afternoon, cover: roof}}            # sun: morning | af
 The cabinet follows its surroundings with a lag (`cabinet_lag_h`, 1.5 h) and runs warmer while
 charging or discharging (`self_heat_c_per_kw`, 3 °C per kW). All values are plausible, not
 measured; each can be set under `install:`. Without `install:` the cabinet is estimated as
-before (ambient + 8 °C + 1 °C per kW). Rain isn't modelled. How the temperature limits the
-battery comes next (#111).
+before (ambient + 8 °C + 1 °C per kW). Rain isn't modelled. 
+
+## Battery temperature limits
+
+With `install:` set (or `battery_temperature: true`), the cabinet temperature limits the battery,
+as LFP batteries are limited. Defaults are plausible, not measured; each is set under
+`battery_temperature:` (`false` turns it off):
+
+| | Default |
+|---|---|
+| Charging | full above 10 °C, tapering to none at 0 °C (`charge_full_c`, `charge_off_c`) |
+| Discharging | full above −10 °C, none at −20 °C (`discharge_full_c`, `discharge_off_c`) |
+| Hot | charge and discharge taper from 45 °C to none at 55 °C (`hot_derate_c`, `hot_off_c`) |
+| Heater | 300 W per aPower below 5 °C (`heater_w`, `heater_on_c`), drawn like a house load |
+| Fan | 60 W per aPower above 40 °C (`fan_w`, `fan_on_c`) |
+| OVER_TEMP | raised at 60 °C (stops the inverter), cleared at 55 °C (`over_temp_c`, `over_temp_clear_c`); one you set by hand is left alone |
+
+The state's `battery_temperature` shows the factors, heater and fan; cards show
+"derated: cold/hot". Region-locked power ratings (#113) are separate: policy, not physics.

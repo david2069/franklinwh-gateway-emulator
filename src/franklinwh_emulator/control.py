@@ -94,6 +94,7 @@ def gateway_state(gw: "Gateway") -> dict:
                       "ambient_c": site.ambient_override_c},
         "cap_forced_solar": site.config.cap_forced_solar,
         "pv_temperature": _pv_temperature(site, snap.ts),
+        "battery_temperature": _battery_temperature(site),
         # Placement and the temperature around the cabinet (#110); None = the original estimate.
         "install": None if site.install is None else {
             "label": site.install.label, "surroundings_c": round(site.surroundings_c(snap.ts), 1)},
@@ -156,6 +157,21 @@ def _sun(site, ts: float) -> dict | None:
         return None
     zenith, _ = sun_position(ts, loc.latitude, loc.longitude)
     return {"elevation_deg": round(90.0 - zenith, 1), "up": zenith < 90.0}
+
+
+def _battery_temperature(site) -> dict | None:
+    """The temperature limits on the battery now (#111); None when they're off."""
+    if site.batt_temp is None:
+        return None
+    t = site.battery_temp_c()
+    fd, fc = site.battery_temperature_factors()
+    derated = None
+    if fd < 1 or fc < 1:
+        derated = "hot" if t >= site.batt_temp["hot_derate_c"] else "cold"
+    from .thermal import aux_load_w
+    return {"battery_c": round(t, 1), "discharge_factor": round(fd, 3), "charge_factor": round(fc, 3),
+            "derated": derated, "aux_w": aux_load_w(t, site.batt_temp, site.apower_units_on()),
+            "over_temp_auto": site.over_temp_auto}
 
 
 def _pv_temperature(site, ts: float) -> dict | None:

@@ -113,3 +113,40 @@ def lag(value: float, target: float, dt_s: float, tau_h: float) -> float:
     if tau_h <= 0:
         return target
     return target + (value - target) * math.exp(-dt_s / (tau_h * 3600.0))
+
+
+# -- battery temperature limits (#111) --------------------------------------------------------
+# Plausible LFP-style limits, not measured: each can be set per gateway (battery_temperature).
+# The battery's temperature is taken as the cabinet's.
+BATTERY_THERMAL = {
+    "charge_off_c": 0.0, "charge_full_c": 10.0,          # cold: no charging at 0 °C, full at 10 °C
+    "discharge_off_c": -20.0, "discharge_full_c": -10.0,
+    "hot_derate_c": 45.0, "hot_off_c": 55.0,             # hot: both taper from 45 °C to 0 at 55 °C
+    "heater_on_c": 5.0, "heater_w": 300.0,               # per aPower
+    "fan_on_c": 40.0, "fan_w": 60.0,                     # per aPower
+    "over_temp_c": 60.0, "over_temp_clear_c": 55.0,      # OVER_TEMP raised / cleared
+}
+
+
+def _ramp(t: float, off: float, full: float) -> float:
+    """0 at ``off``, 1 at ``full``, linear between (either direction)."""
+    if off == full:
+        return 1.0 if (t >= full if full >= off else t <= full) else 0.0
+    return min(1.0, max(0.0, (t - off) / (full - off)))
+
+
+def battery_factors(t: float, p: dict) -> tuple[float, float]:
+    """(discharge factor, charge factor) at battery temperature ``t`` °C."""
+    hot = _ramp(t, p["hot_off_c"], p["hot_derate_c"])
+    return (min(_ramp(t, p["discharge_off_c"], p["discharge_full_c"]), hot),
+            min(_ramp(t, p["charge_off_c"], p["charge_full_c"]), hot))
+
+
+def aux_load_w(t: float, p: dict, units: int) -> dict[str, float]:
+    """Heater and fan power (W) drawn at battery temperature ``t``."""
+    out = {}
+    if t < p["heater_on_c"]:
+        out["battery_heater"] = p["heater_w"] * units
+    if t > p["fan_on_c"]:
+        out["battery_fan"] = p["fan_w"] * units
+    return out

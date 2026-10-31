@@ -72,6 +72,9 @@ DOCS: dict[str, str] = {
     "install": "where the aGate/aPower sits: {indoor: heated|unheated|uninsulated} or {outdoor: {sun: "
                "morning|afternoon|all-day|shade, cover: none|roof|enclosure}}, plus cabinet_lag_h, "
                "self_heat_c_per_kw, room_c; drives the cabinet temperature. Default: ambient + 8 °C",
+    "battery_temperature": "battery temperature limits (overrides of thermal.BATTERY_THERMAL: charge/"
+                           "discharge taper, hot derate, heater, fan, OVER_TEMP); false = off; "
+                           "default on when install is set",
     "pv_temperature": "PV output falls as panels heat up: {temp_coeff (per °C, -0.004), noct (°C, 45), "
                       "ref_cell_c (°C, 45: the 0.85 efficiency's typical warm day)}; false = off",
     "export_limit_enforced": "enforce the grid code's export limit (default: tracked only)",

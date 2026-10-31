@@ -100,6 +100,9 @@
           <template x-for="o in overrideList(g)" :key="o"><span class="tag warn" x-text="o"></span></template>
           <span class="tag" x-show="g.episode_phase" x-text="'episode: ' + g.episode_phase"></span>
           <template x-for="n in g.apower_off" :key="'ap' + n"><span class="tag warn" x-text="'aPower ' + n + ' switched off'"></span></template>
+          <span class="tag warn" x-show="g.battery_temperature && g.battery_temperature.derated"
+                x-text="g.battery_temperature && ('derated: ' + g.battery_temperature.derated + ' · ' + g.battery_temperature.battery_c + ' °C')"
+                title="Battery power limited by temperature"></span>
           <span class="tag warn" x-show="g.debug_mode" title="Direct Connect 1821 enable 1: the battery is stopped">Debug Mode</span>
         </div>
       </button>

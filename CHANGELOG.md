@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Battery temperature limits: charging tapers off in the cold, charge and discharge derate when hot, a heater and fan draw power, and OVER_TEMP is raised and cleared automatically; on with `install:` or `battery_temperature`; card tag "derated: cold/hot" ([#111](https://github.com/david2069/franklinwh-gateway-emulator/issues/111)).
 - Installation placement (`install:` indoor heated/unheated/uninsulated, or outdoor with its sun and cover) drives the cabinet temperature: it follows its surroundings with a lag and warms with battery power; Modbus `TmpCab` and the UI follow ([#110](https://github.com/david2069/franklinwh-gateway-emulator/issues/110)).
 - PV output falls as the panels heat up (NOCT cell temperature, −0.4 %/°C relative to a typical 45 °C cell, so calibrated outputs are kept); `pv_temperature` per gateway, `false` turns it off; state and diagram show the cell temperature and its effect ([#109](https://github.com/david2069/franklinwh-gateway-emulator/issues/109)).
 
