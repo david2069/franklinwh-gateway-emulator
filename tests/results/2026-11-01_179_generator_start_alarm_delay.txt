@@ -1,0 +1,31 @@
+#179 Generator startDelTime = fail-to-start alarm delay — 2026-11-01
+
+Basis: FranklinWH PCS Technical Brief (2024-04-07) p.12, app Generator Setting: 'Alarm delay after starting fails 1800 s'; text: generator takes over when SoC drops below the reserved threshold. North America document; the DC 1901 field is the same on AU firmware, so the meaning is applied to both (the field is one setting).
+
+pytest tests/test_generator.py:
+15 passed in 0.04s
+
+break check (src reverted, tests kept):
+2 failed, 13 passed in 0.04s
+
+scenario offgrid-generator-ags:
+scenario offgrid-generator-ags (offline): PASS
+  ok   t=600s home gen_state expected 0 got 0
+  ok   t=600s home generator_w expected 0 got 0.0
+  ok   t=1200s home grid_connected expected False got False
+  ok   t=1200s home gen_state expected 1 got 1
+  ok   t=1500s home gen_state expected 1 got 1
+  ok   t=1500s home generator_w expected '>4000' got 4900.0
+  ok   t=1500s home battery_w expected '<-3000' got -3700.0
+  ok   t=3000s home gen_state expected 0 got 0
+  ok   t=3000s home generator_w expected 0 got 0.0
+  ok   t=7200s home gen_state expected 1 got 1
+  ok   t=11100s home gen_state expected 1 got 1
+  ok   t=11100s home generator_w expected '>4000' got 4900.0
+  ok   t=11520s home grid_connected expected True got True
+  ok   t=11520s home generator_w expected 0 got 0.0
+  ok   t=11520s home gen_state expected 2 got 2
+  ok   t=12000s home gen_state expected 0 got 0
+
+full suite:
+606 passed in 32.68s
