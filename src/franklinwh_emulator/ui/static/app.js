@@ -5,6 +5,13 @@
  * Results and errors show on the page; no toasts.
  */
 const POLL_MS = 1000;
+const DOCS_URL = 'https://david2069.github.io/franklinwh-gateway-emulator/';
+// Each actions group's docs page (sections of the docs site).
+const GROUP_DOCS = {
+  'Grid and phases': 'grid/', 'Inputs': 'site-model/#weather', 'Battery and modes': 'control-api/',
+  'Loads': 'site-model/#house-load', 'Generator': 'site-model/#generator-ags', 'CSIP and comms': 'grid/',
+  'Alarms and faults': 'emulated/#protocol-detail',
+};
 const VERSION_CHECK_MS = 5000;
 
 function running() {
@@ -133,6 +140,10 @@ function running() {
         this.busy = '';
       }
     },
+
+    // -- links to the docs site ---------------------------------------------------------------
+    docsUrl(page) { return DOCS_URL + page; },
+    groupDocs(group) { return GROUP_DOCS[group] || 'control-api/'; },
 
     // -- Modbus TCP on/off through the gateway's own Direct Connect listener (1205 sunsMdEn) ---
     modbusText(g) {

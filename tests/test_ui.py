@@ -372,3 +372,24 @@ def test_no_hard_coded_celsius_in_the_page():
     for name in ("index.html", "app.js", "diagram.js"):
         text = (STATIC / name).read_text()
         assert " °C'" not in text and ' °C"' not in text, name
+
+
+def test_docs_links_point_at_real_pages_and_sections():
+    """The page's Docs and ? links target pages and headings that exist in docs/."""
+    import re as _re
+    root = Path(__file__).parents[1] / "docs"
+    app = (STATIC / "app.js").read_text()
+    html = (STATIC / "index.html").read_text()
+    targets = _re.findall(r"'([a-z-]+/(?:#[a-z0-9-]+)?)'", app[app.index("const GROUP_DOCS"):app.index("};", app.index("const GROUP_DOCS"))])
+    targets += _re.findall(r"docsUrl\('([a-z-]+/(?:#[a-z0-9-]+)?)'\)", html)
+    assert targets
+
+    def slug(h):
+        return _re.sub(r"[^a-z0-9 -]", "", h.lower()).strip().replace(" ", "-")
+    for t in targets:
+        page, _, anchor = t.partition("#")
+        md = root / (page.rstrip("/") + ".md")
+        assert md.exists(), t
+        if anchor:
+            heads = [slug(h) for h in _re.findall(r"^#+ (.+)$", md.read_text(), _re.M)]
+            assert anchor in heads, (t, heads)

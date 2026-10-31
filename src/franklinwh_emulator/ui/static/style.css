@@ -282,3 +282,13 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
 .cards.compact .card .soc { font-size: 16px; }
 .cards.compact .card .soc small { display: inline; margin-left: 6px; }
 .cards.compact .tags { margin-top: 6px; }
+
+/* Links to the docs site */
+.docs-link { font: 13px var(--sans); color: var(--text-2); border: 1px solid var(--line); border-radius: 8px;
+  padding: 0 12px; min-height: 36px; display: inline-flex; align-items: center; text-decoration: none; background: var(--panel); }
+.docs-link:hover { border-color: var(--ok); color: var(--ok); }
+.help { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-left: 4px;
+  border: 1px solid var(--line); border-radius: 999px; font: 600 11px var(--sans); color: var(--muted); text-decoration: none;
+  vertical-align: middle; }
+.help:hover, .help:focus-visible { color: var(--ok); border-color: var(--ok); outline: none; }
+.docs-link:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
