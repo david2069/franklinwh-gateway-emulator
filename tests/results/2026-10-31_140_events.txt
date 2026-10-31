@@ -1,0 +1,7 @@
+#140 Event log per gateway — 2026-10-31
+Break check (site watch + client notify hooks removed): 4 of 7 tests in tests/test_events.py FAILED
+Headless Chrome smoke (scratch fleet, examples/fleet.yaml, ports 0): au-2phase set to Emergency Backup, then 3 rounds of one Modbus client + a refused second:
+  Mode Self-Consumption → Emergency Backup; Reserve 20 % → 100 %; Battery Discharging → Charging (5.00 kW, SoC 38.3 %)
+  Modbus TCP client 127.0.0.1 connected / refused / left, each (×3), folded
+Full suite:
+574 passed in 44.73s

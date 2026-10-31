@@ -92,6 +92,8 @@ class GatewayConfig:
     # In-service only: run the site model over this many days before start-up, so history,
     # today's totals and the lifetime counters are as if it had been running (max 105).
     history_days: float = 0
+    # The gateway's event log (#140): off | normal | verbose, or {level, file}.
+    events: Any = None
     site: SiteConfig = field(default_factory=SiteConfig)
 
     @classmethod
@@ -125,6 +127,8 @@ class GatewayConfig:
                 raise ValueError(f"commissioned must be YYYY-MM-DD, not {cfg.commissioned!r}") from None
             cfg.commissioned = str(cfg.commissioned)
         cfg.site = SiteConfig(seed=cfg.seed, **site)
+        from .events import EventLog
+        EventLog.from_config(cfg.events)               # check it now, not at start-up
         return cfg
 
 
@@ -163,9 +167,16 @@ class Gateway:
         self.commissioned = cfg.commissioned or (
             self.site.local_date(clock.now()) if cfg.setup == "factory" else REFERENCE_COMMISSIONED)
         self.site.serial = self.serial
+        from .events import EventLog
+        site = self.site
+        self.events = EventLog.from_config(
+            cfg.events, site_time=lambda ts: site.local_datetime(ts).isoformat(timespec="seconds"),
+            clock_now=lambda: site.clock.now())
+        self.site.events = self.events                 # after backfill: its days aren't events
         self.device = AGateDevice(self.site, self.profile, serial=self.serial)
         self.faults = Faults()
         self.server = ModbusServer(self.device, cfg.host, cfg.port, self.faults)
+        self.server.clients.notify = lambda what, peer: self.events.client("Modbus TCP", what, peer)
         self.dc_faults = Faults()
         self.dc = None
         is_agate = self.profile.name != "spec"          # every other profile is an aGate
@@ -174,6 +185,7 @@ class Gateway:
         if cfg.dc_port is not None:
             from .directconnect import DirectConnectServer
             self.dc = DirectConnectServer(self, cfg.host, cfg.dc_port)
+            self.dc.clients.notify = lambda what, peer: self.events.client("Direct Connect", what, peer)
         self._loop: _LoopThread | None = None
         self._own_loop = False
         self._event_loop: asyncio.AbstractEventLoop | None = None
@@ -219,6 +231,7 @@ class Gateway:
         stopped (house to the grid, 1301 run_status 2 -> 0) and resumed when it was turned
         off (2026-10-23; one site, a candidate)."""
         self.debug_mode = bool(on)
+        self.events.add("debug", "Debug Mode on: battery stopped" if on else "Debug Mode off")
         with self.site.lock:
             self.site.step()
             self.site.battery_held = self.debug_mode
@@ -243,6 +256,7 @@ class Gateway:
             return
         delay = self.reboot_s if down_s is None else down_s
         self.rebooting = True
+        self.events.add("reboot", f"Rebooting: both listeners down for {delay:g} s")
 
         async def cycle():
             try:
@@ -255,6 +269,7 @@ class Gateway:
                     await self.dc.start()
             finally:
                 self.rebooting = False
+                self.events.add("reboot", "Back up after the reboot")
         loop.call_soon_threadsafe(lambda: asyncio.ensure_future(cycle()))
 
     def episode(self, down_s: float, offgrid_s: float) -> None:
@@ -269,6 +284,7 @@ class Gateway:
 
         async def run():
             self.episode_phase = "down"
+            self.events.add("episode", f"Episode: utility lost, listeners down for {down_s:g} s")
             self.site.set_grid(available=False)
             await self.server.stop(rst=True)
             if self.dc is not None:
@@ -279,6 +295,7 @@ class Gateway:
             if self.dc is not None:
                 await self.dc.start()
             self.episode_phase = "offgrid"
+            self.events.add("episode", f"Episode: listeners back, islanded for {offgrid_s:g} s")
             await asyncio.sleep(offgrid_s)
             self.site.restore_grid()
             self.episode_phase = None
@@ -302,8 +319,10 @@ class Gateway:
         running = self.server._server is not None
         if self.modbus_enabled and not running:
             await self.server.start()
+            self.events.add("modbus", f"Modbus TCP Server opened on port {self.server.port}")
         elif not self.modbus_enabled and running:
             await self.server.stop()
+            self.events.add("modbus", "Modbus TCP Server closed")
 
     async def stop_async(self) -> None:
         await self._stop_all()

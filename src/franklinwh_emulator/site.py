@@ -387,6 +387,7 @@ class Site:
         self.config = cfg = config or SiteConfig()
         self.clock = clock or SystemClock()
         self.lock = threading.RLock()
+        self.events = None                 # the gateway's EventLog (#140), set after backfill
         rng = random.Random(cfg.seed)
         self.solar_peak_w = cfg.solar_peak_w or (3500 + 2500 * rng.random())
         self.home_base_w = cfg.home_base_w or (400 + 400 * rng.random())
@@ -1537,6 +1538,8 @@ class Site:
             self.csip.tick(self._t)
             self._protect(self._t)
             self._last = self._instant(self._t)
+            if self.events is not None:
+                self.events.watch(self, self._last)
             return self._last
 
     # -- control entry points (protocol frontends and the control API) ------------

@@ -273,6 +273,15 @@
           <p class="result" x-show="result('tou-editor')" :class="result('tou-editor') && (result('tou-editor').ok ? 'ok' : 'bad')"
              x-text="result('tou-editor') && result('tou-editor').text" role="status"></p>
         </div>
+        <details class="events" @toggle="eventsOpen = $event.target.open">
+          <summary><span x-text="'Events (' + eventsFor().length + ')'"></span>
+            <span class="sub">what this gateway did: mode, battery, grid, alarms, clients</span></summary>
+          <p class="empty" x-show="events.level === 'off'">Off for this gateway (<code>events: off</code> in its fleet entry).</p>
+          <p class="empty" x-show="events.level !== 'off' && !eventsFor().length">Nothing yet. Changes show here as the model runs.</p>
+          <ul class="log">
+            <template x-for="e in eventsFor().slice().reverse()" :key="e.seq"><li :class="'ev-' + e.kind" x-text="eventLine(e)"></li></template>
+          </ul>
+        </details>
       </div>
     </template>
   </section>

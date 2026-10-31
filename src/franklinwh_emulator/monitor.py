@@ -29,16 +29,21 @@ class ClientTable:
         self.refused: deque[tuple[float, str]] = deque(maxlen=10_000)   # (time, peer)
         self.accepted = 0
         self.requests = 0                    # every request on this listener, all clients
+        self.notify = None                   # (what, peer) -> None: the gateway's event log (#140)
 
     def open(self, peer) -> dict:
         self._next += 1
         self.accepted += 1
         entry = {"id": self._next, "peer": _peer(peer), "since": time.time(), "requests": 0, "last": None}
         self._open[self._next] = entry
+        if self.notify:
+            self.notify("connected", peer)
         return entry
 
     def close(self, entry: dict) -> None:
-        self._open.pop(entry["id"], None)
+        if self._open.pop(entry["id"], None) is not None and self.notify:
+            host, _, port = entry["peer"].rpartition(":")
+            self.notify("left", (host, port) if host else entry["peer"])
 
     def request(self, entry: dict | None) -> None:
         self.requests += 1
@@ -48,6 +53,8 @@ class ClientTable:
 
     def refuse(self, peer) -> None:
         self.refused.append((time.time(), _peer(peer)))
+        if self.notify:
+            self.notify("refused", peer)
 
     def refused_recent(self, now: float | None = None) -> list[tuple[float, str]]:
         now = time.time() if now is None else now

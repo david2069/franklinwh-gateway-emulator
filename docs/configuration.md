@@ -76,6 +76,7 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 | `directconnect` | object | — | Direct Connect (TCP 9000) frontend: {port: 9020}; 0 = ephemeral |
 | `setup` | string | `factory` | factory (default: Modbus TCP off until a Direct Connect 1205 write) or in-service (already set up: Modbus TCP on) |
 | `modbus_enabled` | boolean | — | start with the Modbus TCP Server on or off, whatever the setup |
+| `events` | any | — | off \| normal (default) \| verbose, or {level, file}: what the gateway did (mode, battery status, trips, alarms, clients); file appends JSON lines |
 
 ### aGate firmware and behaviour
 

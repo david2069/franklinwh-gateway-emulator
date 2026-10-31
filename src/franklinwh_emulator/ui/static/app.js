@@ -29,6 +29,8 @@ function running() {
     log: [],           // the emulator's action log (newest last)
     mon: null,         // GET /monitor, polled only while the Monitor panel is open (#141)
     monOpen: false,
+    events: { gateway: null, level: 'normal', list: [], rev: 0 },   // the active gateway's event log (#140)
+    eventsOpen: false,
     stale: '',          // why this page is out of date (the emulator restarted or changed)
     staleNewCode: false,
     layout: 'right',  // where the actions go: 'right' (beside, on wide screens) or 'below'
@@ -81,6 +83,7 @@ function running() {
         this.loaded = true;
         this._get('/log').then(l => { this.log = l; }).catch(() => {});
         if (this.monOpen) this._get('/monitor').then(m => { this.mon = m; }).catch(() => {});
+        this.pollEvents();
       } catch (e) {
         this.error = 'Can\'t reach the emulator: ' + e.message + '. Retrying every second.';
       }
@@ -276,6 +279,28 @@ function running() {
       }
     },
     recentLog() { return this.log.slice(-40).reverse(); },
+
+    // -- Events (#140): the active gateway's own log; only new entries are fetched -------------
+    async pollEvents() {
+      const gw = this.active;
+      if (!gw) return;
+      const same = this.events.gateway === gw;
+      const since = same ? this.events.rev : 0;          // entries added, or folded into, since
+      try {
+        const r = await this._get('/gateways/' + encodeURIComponent(gw) + '/events?since=' + since);
+        if (this.active !== gw) return;
+        const list = (same ? this.events.list : []).filter(e => !r.events.some(n => n.seq === e.seq));
+        const all = list.concat(r.events).sort((a, b) => a.seq - b.seq).slice(-200);
+        const rev = r.events.reduce((m, e) => Math.max(m, e.rev), same ? this.events.rev : 0);
+        this.events = { gateway: gw, level: r.level, list: all, rev };
+      } catch (e) { /* the poll reports a down emulator */ }
+    },
+    eventsFor() { return this.events.gateway === this.active ? this.events.list : []; },
+    eventLine(e) {
+      const at = (e.site_time || e.at).slice(11, 19);
+      const last = (e.last_site_time || e.last_at || '').slice(11, 19);
+      return at + ' · ' + e.text + (e.count > 1 ? ' (×' + e.count + ', last ' + last + ')' : '');
+    },
 
     // -- Monitor (#141): clients per gateway and overall, and the process ------------------------
     setMonitor(open) {

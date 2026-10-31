@@ -37,6 +37,7 @@ DOCS: dict[str, str] = {
     "setup": "factory (default: Modbus TCP off until a Direct Connect 1205 write) or in-service "
              "(already set up: Modbus TCP on)",
     "modbus_enabled": "start with the Modbus TCP Server on or off, whatever the setup",
+    "events": "off | normal (default) | verbose, or {level, file}: what the gateway did (mode, battery status, trips, alarms, clients); file appends JSON lines",
     "commissioned": "commissioning date, YYYY-MM-DD (Direct Connect sno); default: the start day "
                     "(factory) or the reference site's 2024-07-25 (in-service)",
     "history_days": "in-service: run the model over this many days before start (max 105) to fill "
