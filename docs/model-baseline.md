@@ -17,6 +17,7 @@ Each value is marked by where it comes from:
 Every arrow is evaluated at each step of the site clock, which runs in real time, scaled, or
 manual in tests. The hardware (how many aPowers, PV inputs, generator, smart circuits) sets the
 ratings throughout. The dashed arrow closes the loop: charging and discharging warm the cabinet.
+Dashed boxes are planned. The diagram is drawn by `tools/gen_model_flow.py`: edit it there.
 
 ## Hardware baseline
 
@@ -71,7 +72,10 @@ Not emulated yet: aPower 2, aPower S, MAC 1, aHub, per-aPower SoC, and model-spe
 | Battery temperature limits | charge 0 → 10 °C, discharge −20 → −10 °C, both 45 → 55 °C; heater 300 W < 5 °C, fan 60 W > 40 °C; OVER_TEMP 60/55 °C | on with `install` | plausible | `battery_temperature` |
 | Battery losses | charge/discharge efficiency, standby drain | agate-measured | measured | `battery` |
 | House loads | home load; aircon/heating follow the outside air | built-in curve | plausible; presets | `loads` |
-| Grid code | trips, ride-through, reconnect, volt-watt, frequency-watt, export limit | from phases | documented | `grid_code` |
+| Grid code | trips, ride-through, reconnect, volt-watt, frequency-watt | from phases | documented | `grid_code` |
+| Utility (DNSP) export limit | grid export: tracked (breaches counted) or enforced (battery and PV curtail) | Ausgrid: 10 kW single-phase, 5 kW/phase | documented (Ausgrid NS194) | `grid_code`, `export_limit_enforced` |
+| Utility import limit, own `utility:` block | grid import capped | — | planned [#123](https://github.com/david2069/franklinwh-gateway-emulator/issues/123) | `utility` |
+| Service main breaker | grid draw above its rating trips the site off the grid | — | planned [#123](https://github.com/david2069/franklinwh-gateway-emulator/issues/123) | `service` |
 | Mode, reserves, TOU | battery target | Self-Consumption, 20 % | measured (mode numbers), documented (TOU format) | `native_mode`, `tou_schedule` |
 
 **Home (indoor) temperature isn't modelled.** Aircon and heating appliances respond to the
