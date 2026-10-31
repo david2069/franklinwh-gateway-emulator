@@ -435,7 +435,7 @@ class ControlApi:
         return {"level": ev.level, "dropped": ev.dropped, "events": ev.recent(limit, since)}
 
     def monitor(self) -> dict:
-        rows, conns, refused, rate = [], 0, 0, 0.0
+        rows, conns, refused, rate, accepted = [], 0, 0, 0.0, 0
         for gid, gw in self.gateways.items():
             row = {"id": gid}
             for name, srv, listening in (("modbus", gw.server, gw.server._server is not None),
@@ -447,6 +447,7 @@ class ControlApi:
                 snap.update(listening=listening, port=srv.port,
                             requests_per_s=self._rate(gid, name, snap["requests"]))
                 conns += len(snap["clients"])
+                accepted += snap["accepted"]
                 refused += snap["refused_1h"]
                 rate += snap["requests_per_s"]
                 row[name] = snap
@@ -454,7 +455,7 @@ class ControlApi:
         active = sum(1 for r in rows if (r["modbus"] and r["modbus"]["clients"]) or (r["dc"] and r["dc"]["clients"]))
         return {"process": self.process.snapshot(),
                 "totals": {"gateways": len(rows), "with_clients": active, "connections": conns,
-                           "refused_1h": refused, "requests_per_s": round(rate, 2)},
+                           "accepted": accepted, "refused_1h": refused, "requests_per_s": round(rate, 2)},
                 "gateways": rows}
 
     # -- action log, sessions ------------------------------------------------------------

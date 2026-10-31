@@ -65,6 +65,22 @@ def test_monitor_shows_the_client_and_the_refused_second(fleet):
     assert _wait(lambda: fleet["a"].server.clients.snapshot()["clients"] == [])
 
 
+def test_monitor_remembers_a_client_that_left(fleet):
+    """#154: a short visit must still show once the client has gone."""
+    c = RawClient(*fleet["a"].address)
+    c.read(0, 2)
+    c.close()
+    assert _wait(lambda: fleet["a"].server.clients.snapshot()["clients"] == [])
+    m = monitor(fleet)
+    a = next(g for g in m["gateways"] if g["id"] == "a")["modbus"]
+    b = next(g for g in m["gateways"] if g["id"] == "b")["modbus"]
+    assert a["clients"] == [] and a["accepted"] == 1
+    assert a["last_client"]["peer"].startswith("127.0.0.1:") and a["last_client"]["requests"] == 1
+    assert a["last_client"]["ago_s"] >= 0 and a["last_client"]["stayed_s"] >= 0
+    assert b["last_client"] is None and b["accepted"] == 0
+    assert m["totals"]["accepted"] == 1 and m["totals"]["connections"] == 0
+
+
 def test_monitor_counts_direct_connect_clients(fleet):
     pytest.importorskip("franklinwh_direct_connect_api")
     from franklinwh_direct_connect_api.client import DirectConnectClient

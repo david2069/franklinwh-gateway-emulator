@@ -311,7 +311,7 @@ function running() {
     },
     monTotals(m) {
       const t = m.totals;
-      return t.connections + ' connected · ' + t.refused_1h + ' refused in the last hour · ' + t.requests_per_s + ' req/s';
+      return t.connections + ' connected · ' + t.accepted + ' seen since start · ' + t.refused_1h + ' refused in the last hour · ' + t.requests_per_s + ' req/s';
     },
     monProcess(p) {
       const up = Math.floor(p.uptime_s / 3600) + ' h ' + Math.floor(p.uptime_s % 3600 / 60) + ' min';
@@ -320,11 +320,19 @@ function running() {
              ' tasks · loop lag ' + p.loop_lag_ms + ' ms (max ' + p.loop_lag_max_ms + ') · up ' + up +
              ' · ' + this.mon.totals.gateways + ' gateways, ' + this.mon.totals.with_clients + ' with clients';
     },
+    ago(s) {
+      return s < 90 ? Math.round(s) + ' s ago' : s < 5400 ? Math.round(s / 60) + ' min ago' : Math.round(s / 3600) + ' h ago';
+    },
     monListener(l) {
       if (!l) return '—';
       if (!l.listening) return 'not listening';
       const who = l.clients.map(c => c.peer + ' (' + Math.round(c.connected_s) + ' s, ' + c.requests + ' req)');
-      const parts = [who.length ? who.join(', ') : 'none'];
+      const parts = [who.length ? who.join(', ') : l.accepted ? 'none now' : 'none since start'];
+      if (!who.length && l.last_client) {        // #154: who was here, so a short visit still shows
+        const c = l.last_client;
+        parts.push('last ' + c.peer + ' ' + this.ago(c.ago_s) + ' (' + Math.round(c.stayed_s) + ' s, ' + c.requests + ' req)');
+      }
+      if (l.accepted) parts.push(l.accepted + ' since start');
       if (l.refused_1h) parts.push(l.refused_1h + ' refused, last ' + l.last_refused.peer + ' ' + Math.round(l.last_refused.ago_s) + ' s ago');
       if (l.requests_per_s) parts.push(l.requests_per_s + ' req/s');
       return parts.join(' · ');
