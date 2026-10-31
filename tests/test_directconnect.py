@@ -401,3 +401,25 @@ def test_replies_echo_the_request_opt(dc, gw):
     assert dc.call(1821, {"opt": 1, "enable": 0})["opt"] == 1
     assert dc.call(1409, {"opt": 0})["opt"] == 0 and dc.call(1301, {"opt": 0})["opt"] == 0
     assert dc.call(1407, {"opt": 1})["opt"] == 1            # refusals too (reason 4)
+
+
+@pytest.mark.parametrize("grid_code, ac_type, phases, line_v", [
+    ("as4777-au-a", 0, None, 241.8), ("as4777-au-a", 1, None, 483.6),
+    ("as4777-au-a", 2, None, 418.8), ("as4777-au-a", 2, ["L1", "L2"], 418.8),
+    ("ieee1547-cat2", 1, None, 240.0), ("ieee1547-cat2", 2, None, 207.8),
+])
+def test_grid_line_vol_is_line_to_line(clock, grid_code, ac_type, phases, line_v):
+    """#151: three phase gives √3 × line-to-neutral, as the key's "line V" says and as split
+    phase already did; single and split phase unchanged. Currents are unchanged."""
+    site = {"ac_type": ac_type, "grid_code": grid_code}
+    if phases:
+        site["phases"] = phases
+    g = make_gateway(clock, site=site)
+    g.site.solar_override_w, g.site.load_override_w = 0, 3000
+    s = g.site.step()
+    rs = g.dc.payloads.ibg_run_status({})
+    assert abs(rs["gridLineVol"] / 10 - line_v) <= 0.15, rs["gridLineVol"]
+    legs_v = [p.v_ln for p in s.phases.values()]
+    if ac_type == 2:
+        assert rs["gridVol1"] == round(legs_v[0], 1)                      # legs stay L-N
+        assert rs["gridCurr1"] == round(abs(s.grid_w) / s.v_ln, 1)      # as before #151

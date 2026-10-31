@@ -1,0 +1,18 @@
+#151 Three-phase gridLineVol is line-to-line — 2026-11-01
+
+Modelled (no three-phase read). Single and split phase unchanged; gridVol1/2 stay L-N; gridCurr/loadCurr/inverterCurr unchanged.
+
+pytest tests/test_directconnect.py:
+45 passed in 2.94s
+
+break check (src reverted, test kept):
+3 failed, 3 passed, 39 deselected in 0.05s
+
+gridLineVol after the fix:
+  as4777-au-a    ac_type=0 legs=('L1',)  gridLineVol=2418  gridVol1/2=120.9/120.9
+  as4777-au-a    ac_type=1 legs=('L1', 'L2')  gridLineVol=4836  gridVol1/2=241.8/241.8
+  as4777-au-a    ac_type=2 legs=('L1', 'L2', 'L3')  gridLineVol=4188  gridVol1/2=241.8/241.8
+  as4777-au-a    ac_type=2 legs=('L1', 'L2')  gridLineVol=4188  gridVol1/2=241.8/241.8
+  ieee1547-cat2  ac_type=0 legs=('L1',)  gridLineVol=1200  gridVol1/2=60.0/60.0
+  ieee1547-cat2  ac_type=1 legs=('L1', 'L2')  gridLineVol=2400  gridVol1/2=120.0/120.0
+  ieee1547-cat2  ac_type=2 legs=('L1', 'L2', 'L3')  gridLineVol=2078  gridVol1/2=120.0/120.0
