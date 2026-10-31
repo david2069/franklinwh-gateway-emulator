@@ -97,6 +97,12 @@ class GatewayConfig:
     @classmethod
     def from_dict(cls, d: dict) -> "GatewayConfig":
         d = dict(d)
+        from .utility import ALIASES, pick_block       # utility / dnsp / lines_company: one block
+        block = pick_block(d)
+        for k in ALIASES:
+            d.pop(k, None)
+        if block is not None:
+            d["utility"] = block
         site_keys = {f.name for f in fields(SiteConfig)}
         site = {k: d.pop(k) for k in list(d) if k in site_keys and k != "seed"}
         if "modbus" in d:                 # YAML shorthand: modbus: {port: 5020, host: ...}

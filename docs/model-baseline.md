@@ -73,9 +73,10 @@ Not emulated yet: aPower 2, aPower S, MAC 1, aHub, per-aPower SoC, and model-spe
 | Battery losses | charge/discharge efficiency, standby drain | agate-measured | measured | `battery` |
 | House loads | home load; aircon/heating follow the outside air | built-in curve | plausible; presets | `loads` |
 | Grid code | trips, ride-through, reconnect, volt-watt, frequency-watt | from phases | documented | `grid_code` |
-| Utility (DNSP) export limit | grid export: tracked (breaches counted) or enforced (battery and PV curtail) | Ausgrid: 10 kW single-phase, 5 kW/phase | documented (Ausgrid NS194) | `grid_code`, `export_limit_enforced` |
-| Utility import limit, own `utility:` block | grid import capped | — | planned [#123](https://github.com/david2069/franklinwh-gateway-emulator/issues/123) | `utility` |
-| Service main breaker | grid draw above its rating trips the site off the grid | — | planned [#123](https://github.com/david2069/franklinwh-gateway-emulator/issues/123) | `service` |
+| Grid code's declared export limit | grid export tracked (breaches counted), or enforced with `export_limit_enforced` | Ausgrid: 10 kW single-phase, 5 kW/phase | documented (Ausgrid NS194) | `grid_code`, `export_limit_enforced` |
+| Utility rules (utility / DNSP / lines company) | export allowed, limited or prohibited; import limit (stop grid charging, then discharge); no battery export; all enforced, as PCS settings | none | export limits documented; behaviour plausible | `utility` (or `dnsp`, `lines_company`) |
+| Service main breaker | the site holds import below it; overload trips it (inverse time, plausible) and the site islands until reset | none | plausible | `service` |
+| Direct Connect 1701 install profile | serve and store the PCS fields | — | planned [#123](https://github.com/david2069/franklinwh-gateway-emulator/issues/123) | — |
 | Mode, reserves, TOU | battery target | Self-Consumption, 20 % | measured (mode numbers), documented (TOU format) | `native_mode`, `tou_schedule` |
 
 **Home (indoor) temperature isn't modelled.** Aircon and heating appliances respond to the

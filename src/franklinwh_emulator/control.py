@@ -95,6 +95,16 @@ def gateway_state(gw: "Gateway") -> dict:
         "cap_forced_solar": site.config.cap_forced_solar,
         "pv_temperature": _pv_temperature(site, snap.ts),
         "battery_temperature": _battery_temperature(site),
+        # The grid operator's rules and the main breaker (#123).
+        "utility_rules": None if site.utility_rules is None else {
+            **asdict(site.utility_rules),
+            "export_limit_in_force_w": site.utility_rules.export_limit(len(site.phases))},
+        "import_cap_w": site.import_cap_w(),
+        "import_clipped_w": round(site.import_clipped_w, 1),
+        "service": None if site.service is None else {
+            "main_breaker_a": site.service.main_breaker_a,
+            "rating_w": round(site.service.rating_w(site.grid.nominal_v_ln, len(site.phases))),
+            "trip_progress": round(site.breaker_progress, 3), "open": site.main_breaker_open},
         # Placement and the temperature around the cabinet (#110); None = the original estimate.
         "install": None if site.install is None else {
             "label": site.install.label, "surroundings_c": round(site.surroundings_c(snap.ts), 1)},
@@ -225,6 +235,14 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
             gw.set_addressing(**body)
         elif action == "episode":
             gw.episode(float(body["down_s"]), float(body["offgrid_s"]))
+        elif action == "utility":
+            if body.get("clear"):
+                site.set_utility(None)
+            else:
+                site.set_utility({k: v for k, v in body.items() if k != "clear"})
+        elif action == "service":
+            if body.get("reset"):
+                site.reset_main_breaker()
         elif action == "debug-mode":
             gw.set_debug_mode(bool(body["on"]))
         elif action == "pv":

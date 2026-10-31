@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Grid operator rules (`utility:`, also `dnsp:` or `lines_company:`): export allowed, limited or prohibited, an import limit, no battery export; enforced as PCS settings. A main breaker (`service:`) holds import below its rating and trips on overload until reset. Actions `utility`, `service`; card tags ([#123](https://github.com/david2069/franklinwh-gateway-emulator/issues/123)).
 - Page: a °C / °F toggle; every shown temperature converts; °F by default for US-region browsers; the emulator stays metric ([#119](https://github.com/david2069/franklinwh-gateway-emulator/issues/119)).
 
 ### Changed
