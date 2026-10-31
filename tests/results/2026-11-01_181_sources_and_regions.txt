@@ -1,0 +1,10 @@
+#181 Docs: sources and regions — 2026-11-01
+
+mkdocs build --strict: ok (page in nav, links resolve)
+check_pii --scan:
+✅ SUCCESS: No PII leaks found!
+
+full suite:
+597 passed in 32.23s
+
+Sources cited: FranklinWH PV Curtailment White Paper (2025-05-14), PCS Technical Brief (2024-04-07), support article on PV curtailment; model codes from franklinwh-cloud const/device_catalog.json (inferred) and franklinwh-direct-connect-api 1102 reads (fwh-local).
