@@ -46,6 +46,9 @@ class Profile:
 
     # -- reversion ---------------------------------------------------------------
     reversion_effective: bool = False        # WSetRvrtTms countdown is cosmetic (PICS Issue 4)
+    # Inverted (V12): the countdown starts when WSetRvrtTms is written; while it runs the
+    # reversion value (WSetPctRvrt / WSetRvrt) applies, after it the setpoint; WSetEna stays 1.
+    reversion_inverted: bool = False
 
     # -- read-side quirks --------------------------------------------------------
     tou_reserve_mirrors_self: bool = True    # 15509 always reads 15508
@@ -86,6 +89,7 @@ PROFILES: dict[str, Profile] = {
         wsetpct_max_abs_raw=100,         # m704_wsetpct_accepted_range: raw 0..+100 accepted
         refuse_charge=True,              # m704_wset_negative_refused, m704_wsetpct_accepted_range
         ext_read_end=15600,              # ext_unpopulated_ranges: 15514-15599 read 0, no exception
+        reversion_inverted=True,         # m704_wsetrvrttms_reversion (2026-10-22, 3 of 3 runs)
     ),
     "spec": Profile(
         name="spec",
@@ -158,6 +162,7 @@ QUIRK_BASIS: dict[str, tuple[object, tuple[str, ...]]] = {
     "islanded_15016": (None, ("ext_15016_status",)),
     "wsetpct_max_abs_raw": (None, ("m704_wsetpct_accepted_range",)),
     "ext_read_end": (15517, ("ext_unpopulated_ranges",)),
+    "reversion_inverted": (False, ("m704_wsetrvrttms_reversion",)),
     "refuse_charge": (False, ("m704_wset_negative_refused", "m704_wsetpct_accepted_range")),
 }
 

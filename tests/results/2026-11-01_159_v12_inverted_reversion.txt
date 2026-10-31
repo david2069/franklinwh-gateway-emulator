@@ -1,0 +1,16 @@
+#159 V12 inverted M704 reversion — 2026-11-01
+
+Basis: franklinwh-modbus 0.11.0 firmware_quirks.json m704_wsetrvrttms_reversion (V12R02B60D00 measured 2026-10-22, 3 of 3 runs, 1 site; V10R01B04D00 measured 2026-03-13: cosmetic).
+
+pytest tests/test_writes.py tests/test_quirks_drift.py:
+24 passed in 0.22s
+
+break check (src reverted, tests kept):
+FAILED tests/test_writes.py::test_v12_reversion_is_inverted - assert [(500, 1...
+1 failed, 18 passed in 0.15s
+
+full suite:
+586 passed (rebased on #172)
+
+Repro from the issue (WSetMod 0, WSetPct +100, WSetPctRvrt 0, WSetEnaRvrt 1, WSetRvrtTms 12 s, WSetEna 1; poll every 3 s), V12 profile:
+t=3 DCW=0 WSetEna=1 Rem=9 | t=6 0/1/6 | t=9 0/1/3 | t=15..24 DCW=500 WSetEna=1 Rem=0

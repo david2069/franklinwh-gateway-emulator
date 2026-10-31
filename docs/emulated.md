@@ -54,6 +54,9 @@ stops at the active mode's reserve, under VPP control too. The clock can be real
 runs since 2026-10-20 ("candidate": measured on one site). It serves the 40000 mirror,
 answers mirror writes with the base-0 address, holds the TOU reserve in 15509 and the active
 mode's reserve in 16001, and refuses charge setpoints and WSetPct above +100 % with exception 3.
+Its M704 reversion is inverted: a `WSetRvrtTms` write starts the countdown, the reversion value
+(`WSetPctRvrt` / `WSetRvrt`) applies while it runs, the setpoint after it; `WSetEna` stays 1
+(`reversion_inverted: true`; firmware_quirks `m704_wsetrvrttms_reversion`, 3 of 3 runs, one site).
 `agate-v10r01b04d00` is the earlier firmware (the May and October scans), described below.
 Every flag can be overridden via `quirks:`.
 
@@ -64,7 +67,8 @@ Every flag can be overridden via `quirks:`.
 - M704 `WSetPct`: hardware sign, **positive = discharge**, as a percentage of the 5 kW rating
   (`WSetPct_SF = -1`), saturating beyond ±100 %. `WSet` (WSetMod = 1): positive = discharge too
   (measured on V12R02B60D00, franklinwh-modbus `m704_wset_sign`; assumed on V10R01B04D00).
-- `WSetRvrtTms` counts down in `WSetRvrtRem`, but expiry does **not** release control (PICS Issue 4).
+- `WSetRvrtTms` counts down in `WSetRvrtRem`, but expiry does **not** release control and the
+  reversion value is never applied (PICS Issue 4; measured on V10R01B04D00, 2026-03-13).
 - Accepted but discarded: `715.ControllerHb`, `715.LocRemCtl` (always 1 = Local, even during
   VPP), M702 rate settings (stay 0xFFFF), `WMaxLimPctEna`, `VarSetEna`, and extension writes.
 - Extension 15507–15509 writes are acknowledged and never applied. Change mode and reserves from

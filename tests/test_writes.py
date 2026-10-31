@@ -6,6 +6,7 @@ from conftest import RawClient, make_gateway
 
 WSETENA, WSETMOD, WSET, WSETPCT = 318, 319, 320, 324
 WSETENARVRT, WSETRVRTTMS, WSETRVRTREM = 326, 327, 329
+WSETRVRT, WSETPCTRVRT = 322, 325
 CONTROLLER_HB, LOCREMCTL = 1092, 1089
 WCHARTEMAX = 259
 
@@ -87,6 +88,50 @@ def test_reversion_effective_in_spec_profile(clock):
         clock.advance(31)
         assert c.read(WSETENA, 1) == [0]
         c.close()
+
+
+def test_v12_reversion_is_inverted(clock):
+    """V12R02B60D00 (firmware_quirks m704_wsetrvrttms_reversion, 3 of 3 runs; #159): the
+    reversion value applies while WSetRvrtTms counts down, the setpoint after; WSetEna stays 1.
+    The issue's repro: WSetPct +100 (10 %), WSetPctRvrt 0, WSetRvrtTms 12 s."""
+    gw = make_gateway(clock, profile="agate-v12r02b60d00-candidate")
+    with gw:
+        gw.site.solar_override_w, gw.site.load_override_w = 0, 1000
+        c = RawClient(*gw.address)
+        c.write(WSETMOD, 0)
+        c.write(WSETPCT, 100)
+        c.write(WSETPCTRVRT, 0)
+        c.write(WSETENARVRT, 1)
+        c.write(WSETRVRTTMS, [0, 12])
+        c.write(WSETENA, 1)
+        seen = []
+        for _ in range(8):                             # poll every 3 s, as the repro did
+            clock.advance(3)
+            seen.append((s16(c.read(1048, 1)[0]), c.read(WSETENA, 1)[0], c.read(WSETRVRTREM, 2)[1]))
+        assert seen[:3] == [(0, 1, 9), (0, 1, 6), (0, 1, 3)]          # reversion value (0)
+        assert seen[4:] == [(500, 1, 0)] * 4                          # then the setpoint
+        assert c.read(WSETPCTRVRT, 1) == [0] and c.read(WSETPCT, 1) == [100]
+        # The countdown restarts on the next WSetRvrtTms write, with a non-zero reversion value.
+        c.write(WSETPCTRVRT, 50)
+        c.write(WSETRVRTTMS, [0, 6])
+        clock.advance(1)
+        assert s16(c.read(1048, 1)[0]) == 200          # 5 % of 5 kW, rounded to 100 W
+        clock.advance(6)
+        assert s16(c.read(1048, 1)[0]) == 500
+        c.close()
+
+
+def test_v10_reversion_still_cosmetic_with_a_reversion_value(client, gateway, clock):
+    """V10 (measured 2026-03-13): the countdown runs and nothing else changes (#159)."""
+    gateway.site.solar_override_w, gateway.site.load_override_w = 0, 1000
+    client.write(WSETPCT, 100)
+    client.write(WSETPCTRVRT, 0)
+    client.write(WSETRVRTTMS, [0, 12])
+    client.write(WSETENA, 1)
+    clock.advance(3)
+    assert s16(client.read(1048, 1)[0]) == 500
+    clock.advance(12)
+    assert s16(client.read(1048, 1)[0]) == 500 and client.read(WSETENA, 1) == [1]
 
 
 def test_discarded_writes_are_acknowledged(client):

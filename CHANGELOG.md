@@ -15,6 +15,7 @@
 
 ### Fixed
 - V12 profile: extension reads 15517–15599 return 0, not exception 2, as swept on V12R02B60D00; V10 still ends at 15516 (#160).
+- V12 profile: M704 reversion is inverted as measured on V12R02B60D00: a `WSetRvrtTms` write starts the countdown, the reversion value (`WSetPctRvrt` / `WSetRvrt`) applies while it runs, the setpoint after; `WSetEna` stays 1. V10 is unchanged (#159).
 - Diagram: the Meter box shows the service rating (main breaker amps and kW), the trip progress and "tripped"; "no rating set" without `service` (#156).
 - Monitor: a client that has left is no longer shown as "none"; each listener shows the last client and how many since start, and the header counts all seen (#154).
 - Direct Connect 1303 has the same keys on every date: a date with no data now carries `sectionEngy` (zeros) instead of leaving it out ([#134](https://github.com/david2069/franklinwh-gateway-emulator/issues/134)).

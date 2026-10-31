@@ -292,6 +292,9 @@ class RemoteControl:
     revert_s: int = 60            # WSetRvrtTms
     revert_deadline: float | None = None
     revert_effective: bool = False  # hardware reversion actually releases control
+    revert_inverted: bool = False   # V12: the reversion value applies during the countdown (#159)
+    revert_watts: int = 0           # WSetRvrt, positive = charge (as ``watts``)
+    revert_pct_hw: float = 0.0      # WSetPctRvrt, positive = discharge (as ``pct_hw``)
 
     def remaining(self, now: float) -> int:
         if self.revert_deadline is None:
@@ -995,11 +998,13 @@ class Site:
     def _remote_target(self) -> float:
         """Requested battery power (internal sign) while M704 control is enabled."""
         r = self.remote
+        reverting = (r.revert_inverted and r.revert_enabled and r.revert_deadline is not None
+                     and self._t < r.revert_deadline)  # V12: the reversion value, until expiry
         if r.mode == 1:
-            return -float(r.watts)                     # WSet: positive = charge
+            return -float(r.revert_watts if reverting else r.watts)   # WSet: positive = charge
         # WSetPct is a percentage of the 5 kW *rating* (M702 does not scale with
         # aPower count); values beyond ±100 % saturate at the rating.
-        pct = max(-100.0, min(100.0, r.pct_hw))
+        pct = max(-100.0, min(100.0, r.revert_pct_hw if reverting else r.pct_hw))
         return pct / 100.0 * W_PER_APOWER
 
     def _native_target(self, solar: float, load: float, hour: float) -> float:
@@ -1566,6 +1571,10 @@ class Site:
             was_enabled = r.enabled
             for k, v in changes.items():
                 setattr(r, k, v)
+            if r.revert_inverted:                      # V12: the countdown starts on the write
+                if "revert_s" in changes:
+                    r.revert_deadline = (self._t + r.revert_s) if r.revert_s > 0 else None
+                return
             if r.enabled and (not was_enabled or "revert_s" in changes):
                 r.revert_deadline = (self._t + r.revert_s) if (r.revert_enabled and r.revert_s > 0) else None
             if not r.enabled:
