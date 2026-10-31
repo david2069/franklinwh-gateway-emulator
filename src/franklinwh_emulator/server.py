@@ -61,6 +61,10 @@ class Faults:
         return rf.get("mode", "exception") if address <= rf["end"] and address + n - 1 >= rf["start"] else None
 
 
+# Faults that only make sense on Modbus TCP: ranges are register addresses (#170).
+DC_UNSUPPORTED_FAULTS = ("range_fault",)
+
+
 class ModbusServer:
     def __init__(self, device: AGateDevice, host: str = "127.0.0.1", port: int = 0,
                  faults: Faults | None = None):

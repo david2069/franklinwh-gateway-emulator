@@ -89,8 +89,11 @@ accepts any number of clients on :9000. To test client contention, opt in with
 
 ## Faults
 
-`gw.dc_faults` (or `ctl <gw> dc-fault …`) are separate from the Modbus faults: `latency_s`,
-`offline`, `drop_responses`, and `exception` (replies `result:1, reason:<n>`).
+`gw.dc_faults` (or `ctl <gw> dc-fault …`) are separate from the Modbus faults and act the same
+way: `latency_s`, `offline`, `session_held` (the next client is refused as if another holds the
+session, per `busy_behaviour`), `drop_responses`, `reset_after` (close after N more requests),
+`slow_p`/`slow_ms`, and `exception` (replies `result:1, reason:<n>`). `range_fault` is Modbus TCP
+only (register ranges) and is refused here.
 
 ## Cross-protocol consistency
 

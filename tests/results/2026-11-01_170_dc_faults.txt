@@ -1,0 +1,14 @@
+#170 dc-faults act or are refused — 2026-11-01
+
+pytest tests/test_directconnect.py -k dc_:
+6 passed, 37 deselected in 1.08s
+
+break check (src and docs reverted, tests kept):
+FAILED tests/test_directconnect.py::test_dc_session_held_refuses_the_client
+FAILED tests/test_directconnect.py::test_dc_reset_after_closes_the_connection
+FAILED tests/test_directconnect.py::test_dc_slow_replies - AssertionError: as...
+FAILED tests/test_directconnect.py::test_dc_range_fault_is_refused - Failed: ...
+4 failed, 2 passed, 37 deselected in 0.70s
+
+full suite:
+597 passed (rebased on #175)

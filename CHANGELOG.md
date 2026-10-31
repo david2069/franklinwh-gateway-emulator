@@ -14,6 +14,7 @@
 - Page: a °C / °F toggle; every shown temperature converts; °F by default for US-region browsers; the emulator stays metric ([#119](https://github.com/david2069/franklinwh-gateway-emulator/issues/119)).
 
 ### Fixed
+- Direct Connect faults act as on Modbus TCP: `session_held` refuses the next client, `reset_after` closes after N requests, `slow_p`/`slow_ms` delay replies; `range_fault` (register ranges) is refused on `dc-faults` instead of being stored and ignored (#170).
 - Direct Connect 1707 `gridLineVol` on three phase is the line-to-line voltage (√3 × line-to-neutral, about 419 V on AU and 208 V on US supplies), as the key's meaning and split phase already did; currents unchanged (#151).
 - Direct Connect: an opt-in client limit (`quirks: {dc_max_connections: 1}`) refuses extra clients as Modbus TCP does; the default stays unlimited because the aGate's :9000 limit is unmeasured. The banner, coverage table and docs no longer imply a one-client limit on :9000 (#150).
 - V12 profile: extension reads 15517–15599 return 0, not exception 2, as swept on V12R02B60D00; V10 still ends at 15516 (#160).
