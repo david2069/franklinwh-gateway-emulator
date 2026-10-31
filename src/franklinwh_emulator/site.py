@@ -52,8 +52,8 @@ from .gridcodes import GridCode, default_grid_code, get_grid_code, interpolate
 from .generator import Generator
 from .replay import Replay, ReplayConfig
 from .loads import DEFAULT_CIRCUITS, Circuit, Component, Context, LoadModel
-from .weather import Weather, WeatherConfig
-from . import tou
+from .weather import Weather, WeatherConfig, sun_position
+from . import thermal, tou
 
 WH_PER_APOWER = 13_600          # 713.WHRtg on a single-aPower aGate
 W_PER_APOWER = 5_000            # continuous charge/discharge per aPower
@@ -226,6 +226,10 @@ class SiteConfig:
     # PV output falls as the panels heat up (#109): {"temp_coeff" (per °C), "noct" (°C),
     # "ref_cell_c" (°C)}; false turns it off. None = PV_TEMPERATURE.
     pv_temperature: dict | bool | None = None
+    # Where the aGate/aPower is installed (#110): {"indoor": heated|unheated|uninsulated} or
+    # {"outdoor": {"sun": morning|afternoon|all-day|shade, "cover": none|roof|enclosure}}.
+    # None = the original cabinet estimate (ambient + 8 °C + 1 °C per kW).
+    install: dict | None = None
     # The grid code's export limit is the connection-agreement limit. Whether the aGate
     # itself enforces it is a separate question: on the reference Ausgrid site it does
     # not (local 1903 grid_feed_max = -1, cloud notControlExportSolar = true), so the
@@ -387,6 +391,9 @@ class Site:
         self.rate_w = W_PER_APOWER * max(1, cfg.apower_units)
         # aPowers switched off at their physical switch (set_apower). They add no power; the
         # one combined SoC and capacity stay as they were (per-aPower SoC isn't modelled).
+        self.install = thermal.Install.from_dict(cfg.install)
+        self._ambient_lag: dict[str, float] | None = None     # 1 h / 8 h smoothed outside air
+        self.cabinet_state_c: float | None = None            # integrated cabinet temperature
         if cfg.pv_temperature is False:
             self.pv_temp = None
         else:
@@ -1229,7 +1236,7 @@ class Site:
         return Snapshot(
             ts=ts, solar_w=solar, load_w=load, battery_w=batt, grid_w=grid,
             soc=self.soc, native_mode=self.native_mode, remote=self.remote.enabled,
-            ambient_c=ambient, cabinet_c=ambient + 8.0 + abs(batt) / 1000.0,
+            ambient_c=ambient, cabinet_c=self._cabinet_c(ts, ambient, batt),
             grid_import_wh=self.grid_import_wh, grid_export_wh=self.grid_export_wh,
             pv_wh=self.pv_wh, batt_discharge_wh=self.batt_discharge_wh,
             batt_charge_wh=self.batt_charge_wh,
@@ -1257,6 +1264,42 @@ class Site:
             limits.append(ctl["opModExpLimW"])
         return min(limits) if limits else None
 
+    # -- cabinet temperature (#110) -------------------------------------------------------------
+    def surroundings_c(self, ts: float, ambient: float | None = None) -> float | None:
+        """The temperature around the cabinet for its placement; None without ``install``."""
+        inst = self.install
+        if inst is None:
+            return None
+        ambient = self.ambient_c(ts) if ambient is None else ambient
+        lagged = self._ambient_lag or {"1h": ambient, "8h": ambient}
+        elev = az = poa = None
+        loc = self.location
+        if loc.latitude is not None and loc.longitude is not None:
+            zenith, az = sun_position(ts, loc.latitude, loc.longitude)
+            elev = 90.0 - zenith
+        if self.weather is not None:
+            poa = self.weather.poa(ts)
+        return thermal.surroundings_c(inst, ambient, lagged, thermal.sun_on_cabinet(inst, elev, az, poa))
+
+    def _cabinet_c(self, ts: float, ambient: float, battery_w: float) -> float:
+        if self.install is None:
+            return ambient + 8.0 + abs(battery_w) / 1000.0
+        if self.cabinet_state_c is not None:
+            return self.cabinet_state_c
+        return self.surroundings_c(ts, ambient) + self.install.self_heat_c_per_kw * abs(battery_w) / 1000.0
+
+    def _advance_cabinet(self, ts: float, dt: float, snap: "Snapshot") -> None:
+        amb = snap.ambient_c
+        if self._ambient_lag is None:
+            self._ambient_lag = {"1h": amb, "8h": amb}
+        else:
+            self._ambient_lag = {"1h": thermal.lag(self._ambient_lag["1h"], amb, dt, 1.0),
+                                 "8h": thermal.lag(self._ambient_lag["8h"], amb, dt, 8.0)}
+        target = (self.surroundings_c(ts, amb)
+                  + self.install.self_heat_c_per_kw * abs(snap.battery_w) / 1000.0)
+        now = self.cabinet_state_c if self.cabinet_state_c is not None else target
+        self.cabinet_state_c = thermal.lag(now, target, dt, self.install.cabinet_lag_h)
+
     def _advance(self, dt: float, end: float | None = None) -> None:
         self._protect(self._t)
         ts = self._t + dt if end is None else end
@@ -1272,6 +1315,8 @@ class Site:
                 self.self_reserve = state.get("self_reserve", self.self_reserve)
                 self.tou_reserve = state.get("tou_reserve", self.tou_reserve)
         snap = self._instant(ts, dt)
+        if self.install is not None:
+            self._advance_cabinet(ts, dt, snap)
         hours = dt / 3600
         bm = self.battery_model
         if snap.battery_w > 0:

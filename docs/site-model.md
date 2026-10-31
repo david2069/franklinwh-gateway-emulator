@@ -167,3 +167,27 @@ generator: {installed: true, rated_w: 7000, genStartElec: 20, genCloseElec: 80,
 - **Interpretations, not observed on hardware:** what `startDelTime` measures, `manoDate`,
   `genRelayOpen` with a generator fitted, and refusing partial 1901 writes. The reference site
   has no generator.
+
+## Installation placement and cabinet temperature
+
+`install:` says where the aGate and aPower sit, and drives the cabinet temperature (Modbus
+`701.TmpCab`, the UI):
+
+```yaml
+install: {indoor: heated}                                   # or unheated (garage), uninsulated (shed)
+install: {outdoor: {sun: afternoon, cover: roof}}            # sun: morning | afternoon | all-day | shade
+                                                             # cover: none | roof | enclosure
+```
+
+| Placement | Temperature around the cabinet |
+|---|---|
+| indoor, heated | about 20 °C (`room_c`), a little of the outside air |
+| indoor, unheated | the outside air smoothed over ~8 h, plus 4 °C |
+| indoor, uninsulated | the outside air smoothed over ~1 h, plus 1 °C |
+| outdoor | the outside air plus sun on the cabinet: up to 15 °C uncovered, 6 °C in an enclosure (+2 °C shelter), 3 °C under a roof, scaled by the sun's height and the cloud, and by the side it faces (east = morning, west = afternoon) |
+
+The cabinet follows its surroundings with a lag (`cabinet_lag_h`, 1.5 h) and runs warmer while
+charging or discharging (`self_heat_c_per_kw`, 3 °C per kW). All values are plausible, not
+measured; each can be set under `install:`. Without `install:` the cabinet is estimated as
+before (ambient + 8 °C + 1 °C per kW). Rain isn't modelled. How the temperature limits the
+battery comes next (#111).
