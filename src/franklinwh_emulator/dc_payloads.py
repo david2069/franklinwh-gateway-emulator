@@ -213,7 +213,8 @@ class DcPayloads:
         empty = {"sno": 0, "pointMax": 96, "pointId": 0, "rec_time": [], "p_uti": [],
                  "p_gen": [], "p_fhp": [], "p_load": [],
                  **{c: 0 for c in ENERGY_CHANNELS},
-                 "sharp": [0] * 7, "peak": [0] * 7, "flat": [0] * 7, "valley": [0] * 7}
+                 "sharp": [0] * 7, "peak": [0] * 7, "flat": [0] * 7, "valley": [0] * 7,
+                 "sectionEngy": [0] * 7}          # same key set on every date (#134; inferred)
         if not isinstance(date, str) or len(date) != 10 or date[4] != "-":
             return _refused(-1, **empty)
         self.site.step()

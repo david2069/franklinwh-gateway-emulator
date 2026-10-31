@@ -74,6 +74,15 @@ def test_energy_history_needs_date(dc):
     assert dc.call(1303, {"opt": 0})["result"] == 1
 
 
+def test_energy_history_key_set_is_the_same_on_every_date(dc, clock):
+    """#134: a date with no data had no sectionEngy, so the key set varied by date."""
+    clock.advance(3600)
+    today = dc.energy_history(TODAY)
+    for date in ("2025-12-31", "2020-01-01"):              # before the site started: no data
+        other = dc.energy_history(date)
+        assert set(other) == set(today) and other["sectionEngy"] == [0] * 7, date
+
+
 def test_mode_set_reaches_modbus(dc, gw):
     modes = dc.mode_list()
     assert {m["scheduling_type"] for m in modes["list"]} == {1, 2, 3}
