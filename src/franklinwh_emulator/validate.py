@@ -69,6 +69,8 @@ DOCS: dict[str, str] = {
     "tou_rates": "prices per tariff period, {waveType: {buy, sell}} in $/kWh (display only)",
     "cap_forced_solar": "forced solar (pv solar_w) can't exceed the solar model's value now, 0 at "
                         "night (default true); false = use it as given (lab tests)",
+    "pv_temperature": "PV output falls as panels heat up: {temp_coeff (per °C, -0.004), noct (°C, 45), "
+                      "ref_cell_c (°C, 45: the 0.85 efficiency's typical warm day)}; false = off",
     "export_limit_enforced": "enforce the grid code's export limit (default: tracked only)",
     "battery": "loss model: agate-measured, ideal, legacy, or {preset, ...}",
     "generator": "{installed, rated_w, ...} plus 1901 fields; null = none fitted",

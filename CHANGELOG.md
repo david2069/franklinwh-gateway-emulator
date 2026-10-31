@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- PV output falls as the panels heat up (NOCT cell temperature, −0.4 %/°C relative to a typical 45 °C cell, so calibrated outputs are kept); `pv_temperature` per gateway, `false` turns it off; state and diagram show the cell temperature and its effect ([#109](https://github.com/david2069/franklinwh-gateway-emulator/issues/109)).
+
 ## 0.2.1 (2026-10-31)
 
 ### Added
