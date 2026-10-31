@@ -1,0 +1,12 @@
+#180 phase 2: NA models default to no battery export — 2026-11-01
+
+Basis: FranklinWH PCS Technical Brief (2024-04-07), 'ESS Import Only Mode … factory preset'. North America only; AU/NZ unchanged. Owner go-ahead 2026-11-01.
+
+pytest tests/test_utility_limits.py:
+9 passed in 0.14s
+
+break check (src reverted, test kept):
+1 failed, 8 passed in 0.14s
+
+full suite:
+605 passed in 32.57s

@@ -104,6 +104,7 @@ def gateway_state(gw: "Gateway") -> dict:
             **asdict(site.utility_rules),
             "export_limit_in_force_w": site.utility_rules.export_limit(len(site.phases))},
         "import_cap_w": site.import_cap_w(),
+        "battery_export": site.battery_export(),            # PCS setting, else the model's default
         "import_clipped_w": round(site.import_clipped_w, 1),
         "service": None if site.service is None else {
             "main_breaker_a": site.service.main_breaker_a,
