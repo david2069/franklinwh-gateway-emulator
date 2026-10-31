@@ -50,6 +50,7 @@ nav:
   - Home: index.md
   - Getting started: getting-started.md
   - Configuration: configuration.md
+  - Model baseline: model-baseline.md
   - Web UI: ui.md
   - Guide:
       - What is emulated: emulated.md

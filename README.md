@@ -73,6 +73,7 @@ from [`docs/`](docs/), so these links also work on GitHub:
 | | |
 |---|---|
 | [Getting started](docs/getting-started.md) | install, run one gateway or a fleet, use it from Python |
+| [Model baseline](docs/model-baseline.md) | the hardware, and how location, weather, placement and controls drive the model, with a diagram |
 | [Configuration](docs/configuration.md) | describe each site: aGate, aPowers, PV, grid, accessories, location; where it's saved |
 | [Web UI](docs/ui.md) | the optional web page, with screenshots |
 | [What is emulated](docs/emulated.md) | protocols, profiles and the choices where sources disagree |
