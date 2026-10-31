@@ -1,0 +1,7 @@
+#142 Gateway picker on the detail card — 2026-10-31
+Break check (groups.js change reverted): tests/test_ui.py::test_picker_filters FAILED
+Headless Chrome smoke (scratch fleet, examples/fleet.yaml, ports 0):
+  drop-down: 7 gateways; Country any/AU/US; AU -> 4 of 7 (site, au-3phase, au-2phase, fresh), states NSW/SA/VIC
+  AU + SA -> au-2phase only, selected in the detail card and 'Actions on'; filters kept after reload
+Full suite:
+575 passed in 45.82s

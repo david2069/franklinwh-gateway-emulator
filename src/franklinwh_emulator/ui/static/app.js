@@ -38,6 +38,7 @@ function running() {
     compact: false,   // one-line cards
     tempUnit: 'C',    // temperatures shown in °C or °F (units.js); the emulator stays metric
     collapsed: {},    // group label -> true when collapsed
+    pickFilters: {},  // the detail card's gateway picker: field -> value ('' = any) (#142)
     forms: {},        // action -> {field: raw string}
     results: {},      // "<gateway>/<action>" -> {ok, text}
     touDrafts: {},    // gateway -> the TOU editor's draft (tou.js), while it is open
@@ -57,6 +58,7 @@ function running() {
         this.compact = localStorage.getItem('emulator.compact') === '1';
         this.tempUnit = localStorage.getItem('emulator.tempUnit') || defaultTempUnit(navigator.language);   // US → °F
         this.collapsed = JSON.parse(localStorage.getItem('emulator.collapsed') || '{}') || {};
+        this.pickFilters = JSON.parse(localStorage.getItem('emulator.pickFilters') || '{}') || {};
       } catch (e) { /* private mode */ }
       if (!TEMP_UNITS[this.tempUnit]) this.tempUnit = defaultTempUnit(navigator.language);
       setTempUnit(this.tempUnit);
@@ -363,6 +365,32 @@ function running() {
     toggleLayout() {
       this.layout = this.layout === 'right' ? 'below' : 'right';
       try { localStorage.setItem('emulator.layout', this.layout); } catch (e) { /* private mode */ }
+    },
+
+    // -- the detail card's gateway picker (#142): filters narrow the drop-down ------------------
+    pickOptions(f) { return pickValues(this.gateways, this.pickFilters, f); },
+    pickList() {
+      const list = pickGateways(this.gateways, this.pickFilters);
+      const cur = this.current;                 // shown even when the filters leave it out
+      return cur && !list.includes(cur) ? [cur].concat(list) : list;
+    },
+    pickLabel(g) {
+      const inside = pickGateways([g], this.pickFilters).length > 0;
+      return g.id + (inside ? '' : ' (outside the filters)');
+    },
+    pickCount() {
+      const n = pickGateways(this.gateways, this.pickFilters).length;
+      return Object.values(this.pickFilters).some(Boolean) ? n + ' of ' + this.gateways.length + ' gateways' : '';
+    },
+    setPickFilter(f, v) {
+      this.pickFilters = { ...this.pickFilters, [f]: v };
+      // A value the narrower filters no longer offer is cleared.
+      for (const [g] of PICK_FILTERS) {
+        if (this.pickFilters[g] && !this.pickOptions(g).includes(this.pickFilters[g])) this.pickFilters[g] = '';
+      }
+      const list = pickGateways(this.gateways, this.pickFilters);
+      if (list.length && !list.some(x => x.id === this.active)) this.select(list[0].id);
+      try { localStorage.setItem('emulator.pickFilters', JSON.stringify(this.pickFilters)); } catch (e) { /* private mode */ }
     },
 
     select(id) {

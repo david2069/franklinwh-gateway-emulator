@@ -311,3 +311,16 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
 .events .log { list-style: none; margin: 0; padding: 0 0 8px; font: 12px var(--mono); color: var(--text-2); max-height: 320px; overflow-y: auto; }
 .events .log li { padding: 2px 0; word-break: break-word; }
 .events .log li.ev-alarm, .events .log li.ev-breaker { color: var(--bad); }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* Gateway picker on the detail card (#142) */
+.picker { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 4px; }
+.picker h2 { margin: 0; }
+.pick-gw { font: 600 15px var(--mono); color: var(--ok); background: var(--panel);
+           border: 1px solid var(--ok); border-radius: 8px; padding: 6px 10px; min-height: 40px; cursor: pointer; }
+.pick-filter { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.pick-filter select { font: 13px var(--sans); color: var(--text-2); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; min-height: 36px; cursor: pointer; }
+.pick-gw:focus-visible, .pick-filter select:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
+.picker .pick-count { margin: 0; }
