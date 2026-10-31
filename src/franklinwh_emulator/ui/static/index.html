@@ -81,6 +81,7 @@
         </div>
         <div class="tz" x-text="localTimeText(g)"></div>
         <div class="fw" x-text="'Firmware ' + g.firmware"></div>
+        <div class="fw" x-show="g.model" x-text="modelText(g)" :title="modelTitle(g)"></div>
         <div class="addr">
           <div x-text="g.modbus_enabled ? 'Modbus TCP ' + addr(g.address) : 'Modbus TCP off'"
                :class="{ off: !g.modbus_enabled }"

@@ -413,6 +413,16 @@ function running() {
     // Direction as a word after the value: battery out = discharging; grid in = importing.
     batteryDir(g) { return Math.abs(g.battery_w) < 1 ? '' : (g.battery_w > 0 ? ' out' : ' in'); },
     gridDir(g) { return Math.abs(g.grid_w) < 1 ? '' : (g.grid_w > 0 ? ' in' : ' out'); },
+    // Hardware models (#180): "aGate X-01-AU · 2× aPower X-01-AU (13.6 kWh, 5 kW)".
+    modelText(g) {
+      const m = g.model, p = m.apower;
+      return m.agate.name + ' · ' + p.units + '× ' + p.name + ' (' + p.kwh + ' kWh, ' + p.kw + ' kW)';
+    },
+    modelTitle(g) {
+      const m = g.model;
+      return 'aGate code ' + m.agate.code + ' (' + m.agate.skus.join(' / ') + ', ' + m.agate.status + '); aPower code ' +
+             m.apower.code + ' (' + m.apower.skus.join(' / ') + ', ' + m.apower.status + '); region ' + m.region;
+    },
     gridState(g) {
       if (g.grid_connected) return 'grid connected';
       return 'islanded' + (g.trip_reason ? ' · ' + g.trip_reason : '');

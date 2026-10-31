@@ -127,6 +127,10 @@ class GatewayConfig:
                 raise ValueError(f"commissioned must be YYYY-MM-DD, not {cfg.commissioned!r}") from None
             cfg.commissioned = str(cfg.commissioned)
         cfg.site = SiteConfig(seed=cfg.seed, **site)
+        from . import models                           # check the hardware models now (#180)
+        from .gridcodes import default_grid_code, get_grid_code
+        hz = get_grid_code(cfg.site.grid_code or default_grid_code(cfg.site.ac_type)).nominal_hz
+        models.resolve(cfg.site.model, country=str((cfg.site.location or {}).get("country") or ""), hz=hz)
         from .events import EventLog
         EventLog.from_config(cfg.events)               # check it now, not at start-up
         return cfg

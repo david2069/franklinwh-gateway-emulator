@@ -1,0 +1,19 @@
+#180 phase 1: hardware models and capabilities — 2026-11-01
+
+Catalogue: fwhai device_catalog_seed.json (franklinwh-ha-integrator 7596edf) = franklinwh-cloud device_catalog.json 1.1.0 codes/SKUs (inferred; 102 measured) + FranklinWH datasheet specs; charge kW/peak from the PV Curtailment White Paper (NA). Keyed by code (fwh-local / franklinwh-cloud DEF-CATALOG-SKU-NOT-A-STABLE-KEY).
+
+pytest tests/test_models.py:
+7 passed in 0.03s
+
+break check (src reverted, tests kept):
+7 failed in 0.05s
+
+full suite:
+604 passed in 32.39s
+
+mkdocs build --strict: ok
+
+UI smoke (headless Chrome, examples/fleet.yaml):
+site       aGate X-01-AU · 2× aPower X-01-AU (13.6 kWh, 5 kW)   codes 102 / 2, AU/NZ
+us-split   aGate X 20 (US) · 1× aPower X-10 (13.6 kWh, 5 kW)  codes 103 / 0, NA
+spec       no model (not an aGate)

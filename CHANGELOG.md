@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Hardware models: each gateway has an aGate and an aPower model (`model: {agate, apower}`), keyed by the codes FranklinWH reports (aGate `sysHdVersion` 100–104, aPower `peHwVersion` 0–7), with SKU and name as labels. Defaults by region: AU/NZ 102 + 2, North America 103 + 0. The aPower model sets kWh, kW and charge kW per unit (aPower 2 charges at 8 kW). Direct Connect 1102 serves the codes, cards show the model, and `validate` refuses mismatched regions or frequencies. Defaults keep today's 13.6 kWh / 5 kW (#180).
 - Docs: Sources and regions, which cites the FranklinWH PV Curtailment White Paper and PCS Technical Brief, scopes them to North America (US, Canada) apart from AU/NZ models, and lists the aGate/aPower model codes (#181).
 - Cards: the border turns red when the gateway is faulted (alarm, main breaker tripped, injected fault) and dashed orange when offline (rebooting, episode down, listener offline); the tooltip says why (#168).
 - Example fleet: every gateway has a service rating (63 A AU, 200 A US), shown on the diagram; a week in Self-Consumption and in Emergency Backup trips none (#156).

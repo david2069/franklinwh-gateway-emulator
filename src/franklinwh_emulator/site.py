@@ -53,11 +53,9 @@ from .generator import Generator
 from .replay import Replay, ReplayConfig
 from .loads import DEFAULT_CIRCUITS, Circuit, Component, Context, LoadModel
 from .weather import Weather, WeatherConfig, sun_position
-from . import thermal, tou
+from . import models, thermal, tou
 from .utility import Service, Utility as UtilityRules, trip_seconds
 
-WH_PER_APOWER = 13_600          # 713.WHRtg on a single-aPower aGate
-W_PER_APOWER = 5_000            # continuous charge/discharge per aPower
 VA_PER_APOWER = 5_800           # 702.VAMaxRtg (S rated for volt-var)
 # Battery losses against the SoC scale, fitted on 30 days of the reference aGate (one aPower,
 # 10 s samples, Sep–Oct 2026; docs/CALIBRATION.md): discharging 12.45 kWh moves SoC by 100 %,
@@ -252,6 +250,9 @@ class SiteConfig:
     # oilmano*, manuSw) and hardware facts (crank_s, warmup_s, cooldown_s, min_run_s,
     # fuel_l). None = the reference site: feature off, nothing fitted. See generator.py.
     generator: dict | None = None
+    # Hardware models (#180): {agate: code|SKU|name, apower: …}; None → the region's defaults.
+    # The aPower model sets capacity and power per unit (models.py).
+    model: dict | None = None
     # Starting values for the lifetime counters (Wh). None → the reference scan's
     # (REFERENCE_COUNTERS); a factory gateway sets them to 0 (gateway.py).
     grid_import_wh: float | None = None
@@ -395,12 +396,10 @@ class Site:
         self.solar_peak_w = cfg.solar_peak_w or (3500 + 2500 * rng.random())
         self.home_base_w = cfg.home_base_w or (400 + 400 * rng.random())
         default_soc = 25 + 20 * rng.random()
-        self.capacity_wh = WH_PER_APOWER * max(1, cfg.apower_units)
         self.battery_model = _battery_model(cfg.battery)
         self.generator = Generator(cfg.generator)
         self.gen_wh = 0.0
         self._islanded_since: float | None = None
-        self.rate_w = W_PER_APOWER * max(1, cfg.apower_units)
         # aPowers switched off at their physical switch (set_apower). They add no power; the
         # one combined SoC and capacity stay as they were (per-aPower SoC isn't modelled).
         self.install = thermal.Install.from_dict(cfg.install)
@@ -478,6 +477,12 @@ class Site:
         self.load_override_w: float | None = None
         self.ambient_override_c: float | None = None
         self.location = Location.from_dict(cfg.location)
+        # Hardware models (#180): the aPower model sets capacity and power per unit.
+        self.model = models.resolve(cfg.model, country=self.location.country or "",
+                                    hz=self.grid.nominal_hz)
+        self.apower_w = self.model.apower.kw * 1000
+        self.capacity_wh = self.model.apower.kwh * 1000 * max(1, cfg.apower_units)
+        self.rate_w = self.apower_w * max(1, cfg.apower_units)
         if self.location.timezone:
             self.tz: tzinfo | None = ZoneInfo(self.location.timezone)
         elif cfg.tz_offset_hours is not None:
@@ -1005,7 +1010,7 @@ class Site:
         # WSetPct is a percentage of the 5 kW *rating* (M702 does not scale with
         # aPower count); values beyond ±100 % saturate at the rating.
         pct = max(-100.0, min(100.0, r.revert_pct_hw if reverting else r.pct_hw))
-        return pct / 100.0 * W_PER_APOWER
+        return pct / 100.0 * self.apower_w
 
     def _native_target(self, solar: float, load: float, hour: float) -> float:
         net = load - solar                             # >0 deficit, <0 surplus
@@ -1019,7 +1024,8 @@ class Site:
 
     def _limits(self, floor: float, dt: float) -> tuple[float, float]:
         """(max discharge W, max charge W) given rate, SoC, floor and step length."""
-        max_dis = max_chg = float(self.rate_w)
+        max_dis = float(self.rate_w)
+        max_chg = self.model.apower.charge_w * self.apower_units_on()   # aPower 2: 8 kW of 10
         if dt > 0:
             hours = dt / 3600
             bm = self.battery_model
@@ -1710,7 +1716,7 @@ class Site:
         with self.lock:
             self.step()
             (self.apower_off.discard if on else self.apower_off.add)(n)
-            self.rate_w = W_PER_APOWER * self.apower_units_on()
+            self.rate_w = self.apower_w * self.apower_units_on()
 
     def set_circuit(self, n: int, on: bool) -> None:
         with self.lock:

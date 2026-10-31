@@ -29,7 +29,8 @@ from typing import TYPE_CHECKING
 from .monitor import ProcessMonitor
 from .schema import ACTIONS, check_body, schema
 from .server import Faults
-from .site import ALARMS, INV_NAMES, MODE_NAMES, RUN_NAMES, W_PER_APOWER, WH_PER_APOWER
+from . import models
+from .site import ALARMS, INV_NAMES, MODE_NAMES, RUN_NAMES
 from .weather import SKIES, sun_position
 
 if TYPE_CHECKING:
@@ -122,7 +123,10 @@ def gateway_state(gw: "Gateway") -> dict:
         "pv_inputs": dict(site.config.pv_inputs),
         "apower_units": site.config.apower_units,
         "apower_off": sorted(site.apower_off),                # switched off at the unit (#71)
-        "apower_rating": {"wh": WH_PER_APOWER, "w": W_PER_APOWER},   # per aPower, emulator constants
+        # Per aPower, from its model (#180).
+        "apower_rating": {"wh": round(site.model.apower.kwh * 1000), "w": round(site.apower_w)},
+        "model": (None if gw.profile.name == "spec"           # not an aGate: no FranklinWH model
+                  else models.describe(site.model, max(1, site.config.apower_units))),
         "forced_alarms": dict(site.forced_alarms),
         "remote_control": asdict(site.remote),
         # FORCE = an M704 setpoint is active (#91). Direct Connect then reports 1707 programme 9,
@@ -290,7 +294,7 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
         elif action == "vpp":
             # A VPP dispatch as franklinwh-modbus sends it: watts (+ charge) or pct_hw.
             if "watts" in body:
-                pct = -float(body["watts"]) / W_PER_APOWER * 100.0
+                pct = -float(body["watts"]) / gw.site.apower_w * 100.0
             else:
                 pct = float(body["pct_hw"])
             site.update_remote(enabled=True, mode=0, pct_hw=pct,
