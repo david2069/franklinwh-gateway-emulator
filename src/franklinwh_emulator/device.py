@@ -30,6 +30,7 @@ ILLEGAL_ADDRESS = 2
 ILLEGAL_VALUE = 3
 
 EXT_START, EXT_END = 15000, 15517          # exclusive end; 15514-15516 read 0 (#3)
+# Reads may go further: Profile.ext_read_end (V12: to 15599, all 0, #160). Writes stop at EXT_END.
 HIRES_START, HIRES_END = 16000, 16500
 
 # 15000–15043 as dumped from a live aGate (FRANKLINWH_EXTENSIONS_MANIFEST.md); live
@@ -66,7 +67,7 @@ class AGateDevice:
         self.profile = profile
         self.serial = serial
         self.image = SunSpecImage(load_baseline(profile.baseline))
-        self.ext = [0] * (EXT_END - EXT_START)
+        self.ext = [0] * (max(EXT_END, profile.ext_read_end) - EXT_START)
         self.hires = [0] * (HIRES_END - HIRES_START)
         for a, v in _DIAG_STATIC.items():
             self.ext[a - EXT_START] = v
@@ -130,7 +131,7 @@ class AGateDevice:
             a = self._sunspec_offset(address, count)
             if a is not None:
                 return self.image.read(a, count)
-            if EXT_START <= address and address + count <= EXT_END:
+            if EXT_START <= address and address + count <= self.profile.ext_read_end:
                 return self.ext[address - EXT_START:address - EXT_START + count]
             if HIRES_START <= address and address + count <= HIRES_END:
                 return self.hires[address - HIRES_START:address - HIRES_START + count]

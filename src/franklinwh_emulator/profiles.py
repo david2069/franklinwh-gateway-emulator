@@ -58,6 +58,7 @@ class Profile:
     soc_whole_percent: bool = True           # 713.SoC moves in 1 % steps (raw ×10, so 550, 560…)
     unused_phase_registers: str = "zero"     # 701 points of unwired legs: "zero" | "unimplemented"
     islanded_15016: int | None = None        # 15016 while islanded; None = stays static
+    ext_read_end: int = 15517                # extension reads end here (exclusive); past it: exception 2
     reserve_16001: str = "self"              # "self" reserve | the "active" mode's reserve
     wsetpct_max_abs_raw: int | None = None   # 704.WSetPct writes beyond ±this raw: exception 3
     refuse_charge: bool = False              # negative 704.WSet / WSetPct writes: exception 3
@@ -84,6 +85,7 @@ PROFILES: dict[str, Profile] = {
         reserve_16001="active",
         wsetpct_max_abs_raw=100,         # m704_wsetpct_accepted_range: raw 0..+100 accepted
         refuse_charge=True,              # m704_wset_negative_refused, m704_wsetpct_accepted_range
+        ext_read_end=15600,              # ext_unpopulated_ranges: 15514-15599 read 0, no exception
     ),
     "spec": Profile(
         name="spec",
@@ -155,6 +157,7 @@ QUIRK_BASIS: dict[str, tuple[object, tuple[str, ...]]] = {
     "reserve_16001": (ALWAYS, ("ext_16001_reserve",)),
     "islanded_15016": (None, ("ext_15016_status",)),
     "wsetpct_max_abs_raw": (None, ("m704_wsetpct_accepted_range",)),
+    "ext_read_end": (15517, ("ext_unpopulated_ranges",)),
     "refuse_charge": (False, ("m704_wset_negative_refused", "m704_wsetpct_accepted_range")),
 }
 

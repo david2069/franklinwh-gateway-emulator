@@ -61,10 +61,24 @@ def test_extension_and_hires_ranges(client, gateway):
     assert abs(hires[0] - ext[6]) <= 50
     assert client.read(15020, 1) == [13600]             # WHRtg mirror
     # 15514-15516 exist on the reference aGate and read 0 (2026-10-14, 897 samples, charging;
-    # franklinwh-gateway-emulator#3). The map ends after 15516.
+    # franklinwh-gateway-emulator#3). On V10 (this fixture) 15517+ was never read, so the map
+    # ends after 15516; V12 reads further (#160, below).
     assert client.read(15514, 3) == [0, 0, 0]
     assert len(client.read(15500, 17)) == 17
     assert client.read(15517, 1) == ("exc", ILLEGAL_ADDRESS)
+
+
+def test_v12_extension_reads_to_15599(clock):
+    """V12: 15514-15599 read 0 without exceptions (firmware_quirks ext_unpopulated_ranges,
+    10-register sweep, 2026-10-20; #160). Writes there stay unmeasured: exception 2."""
+    gw = make_gateway(clock, profile="agate-v12r02b60d00-candidate")
+    for a in range(15514, 15600, 10):
+        n = min(10, 15600 - a)
+        assert gw.device.read(a, n) == [0] * n, a
+    assert len(gw.device.read(15500, 100)) == 100
+    assert gw.device.read(15600, 1) == ILLEGAL_ADDRESS
+    assert gw.device.read(15595, 6) == ILLEGAL_ADDRESS
+    assert gw.device.write(15517, [1]) == ILLEGAL_ADDRESS
 
 
 def test_nameplate(client, gateway):

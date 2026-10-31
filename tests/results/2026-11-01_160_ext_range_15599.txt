@@ -1,0 +1,13 @@
+#160 V12 extension reads to 15599 — 2026-11-01
+
+Basis: franklinwh-modbus 0.11.0 firmware_quirks.json ext_unpopulated_ranges (V12R02B60D00, measured 2026-10-20, 10-register sweep, 1 site).
+
+pytest tests/test_register_map.py tests/test_quirks_drift.py:
+26 passed in 0.12s
+
+break check (src reverted, tests kept):
+FAILED tests/test_register_map.py::test_v12_extension_reads_to_15599 - Assert...
+1 failed, 20 passed in 0.11s
+
+full suite:
+584 passed in 31.58s
