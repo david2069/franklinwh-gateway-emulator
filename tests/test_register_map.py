@@ -116,7 +116,8 @@ def test_faithful_profile_matches_reference_scan_static_points():
     emu = _decode_image(gw)
     diffs = [(mid, p, v, emu[mid].get(p)) for mid, pts in ref["points"].items()
              for p, v in pts.items() if emu[mid].get(p) != v]
-    assert diffs == []
+    # Model 1 Opt says "Emulator <version>" on purpose (#106); the aGate reads "Option Name".
+    assert diffs == [("1", "Opt", "Option Name", emu["1"]["Opt"])]
 
 
 def test_curves_unimplemented_for_non_au_grid_codes():
@@ -239,3 +240,13 @@ def test_force_via_wset_over_modbus(clock):
         f = gateway_state(gw)["force"]
         c.close()
     assert (f["direction"], f["via"]) == ("discharge", "WSet")
+
+
+def test_model1_says_emulator(clock):
+    """#106: Model 1 Opt names the emulator and its version; Mn/Md/Vr stay as on the aGate."""
+    from franklinwh_emulator import __version__
+    gw = make_gateway(clock, seed=7)
+    im = gw.device.image
+    assert im.get(1, "Opt") == f"Emulator {__version__}"
+    assert (im.get(1, "Md"), im.get(1, "Vr")) == ("aGate X", gw.profile.firmware)
+    assert im.get(1, "SN").startswith("MOCK")

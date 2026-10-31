@@ -78,3 +78,11 @@ the registers asked for); `range-fault clear` ends it.
 **Found with the emulator:** franklinwh-modbus bugs, including `read_alarms()` never
 refreshing (stale `check_blocking_alarms()`) and `ac_type` being guessed from voltage. See
 [docs/FINDINGS.md](FINDINGS.md).
+
+## Telling the emulator from a real aGate
+
+- Modbus TCP: SunSpec Model 1 `Opt` reads `Emulator <version>` (the real aGate reads
+  "Option Name"). `Mn`, `Md` and `Vr` are the aGate's, so model and firmware detection work as
+  on hardware.
+- Serials (Model 1 `SN`, Direct Connect `IBG_SN`) start with `MOCK`.
+- Direct Connect has no free-text identity field yet; the serial is the marker there.
