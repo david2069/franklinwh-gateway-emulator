@@ -105,3 +105,12 @@ def test_na_full_battery_cuts_pv_at_62_2_hz_until_97(clock):
 def test_au_full_battery_only_clips_pv_to_the_house(clock):
     gw, s, snap = _offgrid_full(clock)
     assert not s.pv_cutoff and snap.solar_w == pytest.approx(2000, abs=50) and snap.hz == 50.0
+
+
+def test_x02_au_follows_the_au_datasheet(clock):
+    """System Datasheet aGate X-01-AU & aPower X-02-AU V1.7: SKU APR-05K15V1-AU, 15 kWh, 5 kW."""
+    m = models.resolve({"apower": "APR-05K15V1-AU"}, hz=50)
+    assert (m.apower.code, m.apower.kwh, m.apower.kw, m.apower.peak_kw) == (7, 15.0, 5.0, 10.0)
+    assert m.apower.skus[0] == "APR-05K15V1-AU"                        # the datasheet's SKU first
+    gw = make_gateway(clock, site={"apower_units": 2, "model": {"apower": 7}})
+    assert gw.site.capacity_wh == 30000 and gw.device.read(15020, 1) == [30000]

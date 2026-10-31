@@ -101,10 +101,13 @@ APOWERS: dict[int, APowerModel] = {m.code: m for m in (
                 None, None, 4, 15.0, 5.0, "inferred", "aPower S V2"),
     APowerModel(6, ("APR-05K15V1-US",), "aPower X-10", "aPower X", NA, 60, 13.6, 5.0, 10.0,
                 _X_CHARGE, _X_PEAK, 0, None, 5.0, "inferred", "hardware revision V15"),
-    # Not in fwhai's catalogue: 15 kWh from the AU warranty; the datasheet SKU differs from the
-    # catalogue's (franklinwh-cloud DEF-CATALOG-SKU-NOT-A-STABLE-KEY). Power as aPower X-01-AU.
-    APowerModel(7, ("APR-05K13V2-AU", "APR-05K15V1-AU"), "aPower X-02-AU", "aPower X", AUNZ, 50,
-                15.0, 5.0, 10.0, None, None, 0, None, 5.0, "inferred", "power assumed as X-01-AU"),
+    # FranklinWH System Datasheet aGate X-01-AU & aPower X-02-AU (V1.7, 2026-09-10): SKU
+    # APR-05K15V1-AU, 15 kWh usable (16 kWh rated, 93.75 % DoD), 5 kW / 5 kVA, peak 10 kW for
+    # 10 s, 89 % round trip. The catalogue's SKU for code 7 is APR-05K13V2-AU (SKUs drift); the
+    # code itself is still inferred.
+    APowerModel(7, ("APR-05K15V1-AU", "APR-05K13V2-AU"), "aPower X-02-AU", "aPower X", AUNZ, 50,
+                15.0, 5.0, 10.0, None, None, 0, None, 5.0, "inferred",
+                "specs documented (AU datasheet V1.7); peak 10 kW for 10 s"),
 )}
 
 DEFAULTS = {AUNZ: (102, 2), NA: (103, 0)}
