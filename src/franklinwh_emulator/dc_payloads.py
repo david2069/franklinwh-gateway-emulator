@@ -16,6 +16,7 @@ Request semantics copied from the real device:
 
 from __future__ import annotations
 
+import math
 import time
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -112,13 +113,19 @@ class DcPayloads:
         """(line V, leg-1 V, leg-2 V) as the aGate X reports them. Its power stage is split
         phase internally: on a 230 V single-phase site both legs read half the line voltage
         (reference AU site: gridLineVol 2424, gridVol1 = gridVol2 = 121.2) and carry the same
-        current."""
+        current. Three phase: the line-to-line voltage, √3 × line-to-neutral (#151; modelled,
+        no three-phase read)."""
         v = s.v_ln
         if self.site.config.ac_type == 0:
             return v, v / 2, v / 2
         legs = [st.v_ln for st in s.phases.values()]
         v2 = legs[1] if len(legs) > 1 else 0.0
-        return (legs[0] + v2 if self.site.config.ac_type == 1 else v), legs[0], v2
+        return (legs[0] + v2 if self.site.config.ac_type == 1 else v * math.sqrt(3)), legs[0], v2
+
+    def amps_v(self, line: float) -> float:
+        """The voltage the reported currents divide by: the line voltage, except on three
+        phase where it stays line-to-neutral, as before #151."""
+        return line / math.sqrt(3) if self.site.config.ac_type == 2 else line
 
     def fhp_sn(self, dev_id: int) -> str:
         return self.synth.apower_serial(dev_id)
@@ -269,8 +276,9 @@ class DcPayloads:
         dcdc = 6 if per < -50 else (7 if per > 50 else 4)
         packv = round(_cell_mv(s.soc) * 16.0 / 1000.0, 1)
         line, v1, v2 = self.legs(s)
-        i_load = round(s.load_w / line, 1) if line > 1 else 0.0
-        i_inv = round(abs(per) / line, 1) if line > 1 else 0.0
+        va = self.amps_v(line)
+        i_load = round(s.load_w / va, 1) if va > 1 else 0.0
+        i_inv = round(abs(per) / va, 1) if va > 1 else 0.0
         return _ok(id=dev, batVol=packv, gridVol1=round(v1, 1), gridVol2=round(v2, 1),
                    inverterVolt1=round(v1, 1), inverterVolt2=round(v2, 1),
                    positiveBusVolt=200, negativeBusVolt=200, middleBusVolt=342.7,
@@ -339,7 +347,8 @@ class DcPayloads:
         grid = 1 if s.grid_connected else 0
         circuits = self.site.circuits
         line, v1, v2 = self.legs(s)
-        i_grid = round(abs(s.grid_w) / line, 1) if line > 1 else 0.0
+        va = self.amps_v(line)
+        i_grid = round(abs(s.grid_w) / va, 1) if va > 1 else 0.0
         # No energyMode on V12R02B30D06 (the DC library documents it from the cloud payload).
         # 9 while an M704 force is on: measured on the reference aGate during a Modbus WSet force
         # (fwh-direct-connect-bridge docs/RUN_STATUS_AND_MODE.md §4, 2026-10-12; #91).
