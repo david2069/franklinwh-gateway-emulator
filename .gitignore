@@ -9,3 +9,4 @@ dist/
 private/
 emulator-workspace/
 site/
+.DS_Store

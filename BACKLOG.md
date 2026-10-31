@@ -297,6 +297,23 @@ map, ratings, which protocols it answers, and how its readings differ from an aG
 and behaviours are not inferred from the aGate's. The UI's "not modelled" list already names
 aPower S. Related: the Direct Connect API quirks file is keyed by aGate/aPower model.
 
+**Source in hand (US models only):** *FranklinWH Backwards Compatibility Statement* US V1.1,
+26 Oct 2026 (owner-supplied PDF, kept locally). It gives which aGate/MAC goes with which
+aPower, and the limits a fleet file should be checked against:
+
+| Controller | aPower X (1.0, 1.3) | aPower 2 | aPower S | Limits |
+|---|---|---|---|---|
+| aGate X 1.0/1.1 | yes | yes | no | aPower X only: max 15; X + aPower 2: max 8 |
+| aGate X 1.3/1.3.1 | yes | yes | yes | max 15 aPowers, of which up to 8 aPower S; with an aHub, 120/240 V only |
+| MAC 1 (+ EQB or ConnectDER meter socket adapter) | no | yes | yes | max 4 aPowers; 120/240 V only |
+
+Ratings it states: aPower X 13.6 kWh / 5 kW; aPower 2 15 kWh / 10 kW; aPower S 15 kWh /
+11.5 kW, with integrated inverters and a direct PV connection. The accessories are per aGate
+generation: Generator Module, Smart Circuits Module and Split CT kits for 1.0/1.1 vs 1.3/1.3.1;
+Backup Expansion Lug Kit, Main Load Relay and Inner Panel for 1.3/1.3.1; aPbox. Each model's
+warranty term and capacity retention are on #115. AU/NZ models (aGate AGT-R1V1-AU, aPower
+X-01-AU 13.6 kWh and X-02-AU 15 kWh) are in the AU warranty; no AU compatibility statement yet.
+
 ### DOCKER-IPS: one IP per gateway · `todo`
 **Why:** LAN discovery (the bridge's planned setup wizard, `franklinwh-local scan`) needs
 real addresses on :502/:9000, not port offsets. And when several emulated aGates share one
