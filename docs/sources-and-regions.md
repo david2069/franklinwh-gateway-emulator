@@ -121,5 +121,7 @@ Direct Connect itself.
 Each emulated gateway has an aGate and an aPower model (`model:`,
 [Configuration](configuration.md)). It is keyed by these codes and defaults by region: AU/NZ
 102 + 2, North America 103 + 0. Direct Connect 1102 serves the codes, and the aPower model sets
-capacity, power and charge power. Behaviour taken from the North American documents is not
-switched on yet: it will apply to North American models only (#180 phase 2).
+capacity, power and charge power. Behaviour taken from the North American documents applies to
+North American models only: no battery export by default, and the off-grid full-battery PV
+cut-off (62.2 Hz, resume below 97 %). The generator's `startDelTime` meaning applies to both
+regions, because it is one 1901 field. The rest is tracked in #180 phase 2.

@@ -56,6 +56,9 @@ from .weather import Weather, WeatherConfig, sun_position
 from . import models, thermal, tou
 from .utility import Service, Utility as UtilityRules, trip_seconds
 
+# Off-grid full-battery PV cut-off, North American models (PV Curtailment White Paper, #178).
+PV_CUTOFF_HZ = 62.2
+PV_RESUME_SOC = 97.0
 VA_PER_APOWER = 5_800           # 702.VAMaxRtg (S rated for volt-var)
 # Battery losses against the SoC scale, fitted on 30 days of the reference aGate (one aPower,
 # 10 s samples, Sep–Oct 2026; docs/CALIBRATION.md): discharging 12.45 kWh moves SoC by 100 %,
@@ -454,6 +457,8 @@ class Site:
             raise ValueError(f"unknown PV inputs {sorted(bad)}; choose from {PV_INPUTS}")
 
         self.soc = cfg.initial_soc if cfg.initial_soc is not None else default_soc
+        # Off-grid full-battery PV cut-off (North America, #178): set at 100 %, cleared below 97 %.
+        self.pv_cutoff = False
         if cfg.native_mode not in MODE_NAMES:
             raise ValueError(f"native_mode must be one of {sorted(MODE_NAMES)}")
         self.native_mode = cfg.native_mode
@@ -1173,8 +1178,12 @@ class Site:
             max_dis, max_chg = self._limits(self.config.offgrid_floor_soc, dt)
             if faulted:
                 max_dis = max_chg = 0.0
-            gen_w = self.generator.output_w(load - solar_avail, max_chg)
-            net = load - solar_avail - gen_w
+            # North America: with the battery full the aGate raises its frequency to 62.2 Hz and
+            # AC PV stops entirely until SoC is below 97 % (FranklinWH PV Curtailment White
+            # Paper). Elsewhere PV is only clipped to what the house and battery take.
+            pv_in = 0.0 if self.pv_cutoff else solar_avail
+            gen_w = self.generator.output_w(load - pv_in, max_chg)
+            net = load - pv_in - gen_w
             on_circuits = [n for n, c in comps.items() if c is not None and c.circuit and demand[n] > 0]
             if net > max_dis and on_circuits:
                 # Short of power off-grid: the aGate sheds smart circuits first.
@@ -1182,14 +1191,15 @@ class Site:
                     demand[n] = 0.0
                 circuits_shed = True
                 load = sum(demand.values())
-                gen_w = self.generator.output_w(load - solar_avail, max_chg)
-                net = load - solar_avail - gen_w
+                gen_w = self.generator.output_w(load - pv_in, max_chg)
+                net = load - pv_in - gen_w
+            clipped = solar_avail - pv_in
             if net >= 0:
                 batt = min(net, max_dis)
                 shed = net - batt
             else:
                 batt = -min(-net, max_chg)
-                clipped = -net + batt                    # surplus the battery can't take
+                clipped += -net + batt                   # surplus the battery can't take
             solar = solar_avail - clipped
             served = load - shed
             grid = 0.0
@@ -1203,7 +1213,7 @@ class Site:
                 gen_w = 0.0
             else:
                 v_legs = {ph: g.nominal_v_ln for ph in self.phases}
-                hz = g.nominal_hz
+                hz = PV_CUTOFF_HZ if self.pv_cutoff else g.nominal_hz
                 inv = INV_RUNNING
             if batt < -50:
                 run = RUN_OFFGRID_CHARGING
@@ -1507,6 +1517,12 @@ class Site:
             if rec and rec.get("soc") is not None and rec["soc"] >= 99.5:
                 self.soc = 100.0
         self.soc = max(0.0, min(100.0, self.soc))
+        if snap.grid_connected or self.model.region != models.NA:
+            self.pv_cutoff = False
+        elif self.soc >= 99.95:
+            self.pv_cutoff = True
+        elif self.soc < PV_RESUME_SOC:
+            self.pv_cutoff = False
         # Per-leg metering: totals are the sums of each leg's import and export.
         for ph, st in snap.phases.items():
             if st.grid_w > 0:

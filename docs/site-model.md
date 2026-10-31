@@ -125,6 +125,12 @@ loads:
 - **Off-grid shedding.** When islanded and short of battery, the aGate sheds smart circuits
   before anything else. Per-circuit `soc_low_cutoff` (1410 `SwXSocLowSet`) drops a circuit
   below that SoC.
+- **Off-grid PV curtailment.** When islanded, PV is clipped to what the house and battery take.
+  On North American models, once the battery is full the aGate raises its frequency to
+  62.2 Hz and AC PV stops entirely. The house runs on the battery until SoC is below 97 %,
+  then PV resumes (FranklinWH PV Curtailment White Paper; 701.Hz and 1707 `gridFreq` show
+  the 62.2 Hz). AU/NZ models only clip, since there is no AU/NZ document
+  ([Sources and regions](sources-and-regions.md)).
 - **Placement and overrides.** Components can sit on a specific `leg` of a 3-phase supply.
   `ctl <gw> appliance kettle on|off|auto` forces one.
 - **Presets:** `sydney-family`, `small-flat`.
