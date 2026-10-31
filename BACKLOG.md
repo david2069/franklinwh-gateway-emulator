@@ -336,6 +336,7 @@ route. An HA add-on is a good option among them, not the only one.
 | ROCOF / vector-shift trips | Listed in Australia A; matters only for anti-islanding test rigs. | `parked` |
 | Real IEEE 2030.5 server/client (TLS, resource tree) | Large. The behavioural CSIP model covers control-logic testing. | `parked` |
 | 705–712 curve contents | Not in the scan; read-only interest. | `parked` |
+| MIRROR-MODE: mirror a live gateway, simulate on top | Owner, 2026-10-31: useful, not critical. The emulator mirrors a live aGate's metrics read-only and serves them on its own ports; simulated actions apply on top as an overlay that never reaches the aGate; clearing them returns to the live values. The live data comes **only through the Modbus or Direct Connect bridge's API**, never a direct :502/:9000 connection: one Modbus client, and the bridge already holds it. Close to the existing `replay` (recorded metrics) with a live feed. Uses: test controllers and automations on today's real conditions without risk to the aGate; reproduce a field problem; rehearse a VPP or TOU schedule; demos. | `parked` |
 | CLOUD-API-EMULATOR: FranklinWH Cloud API emulator | Owner, 2026-10-31: a future improvement, **in a separate repo** (not this one). It would emulate the cloud's metrics and control, as franklinwh-cloud calls them. This repo emulates only the aGate's local interfaces (Modbus TCP, Direct Connect). A cloud emulator could drive the same site model through this repo's control API. | `parked` |
 
 ---
