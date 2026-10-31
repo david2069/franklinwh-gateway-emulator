@@ -107,10 +107,10 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "examples": [{"base_aliases": [40000], "write_bases": [0]}],
     },
     "debug-mode": {
-        "doc": "Make Direct Connect 1301 report run_status 8, Debug Mode (a FranklinWH remote-support "
-               "session), to test clients. 8 is in the cloud enum; no capture shows the local channel "
-               "sending it. Nothing else changes (Modbus, 1707, the battery).",
-        "fields": {"on": _f("boolean", "true = 1301 run_status reads 8; false = the model's own")},
+        "doc": "Debug Mode, as the installer app's Tools switch (Direct Connect 1821 enable; a 1821 "
+               "write does the same). While on, the battery stops when grid-connected: the house "
+               "runs from the grid and 1301 run_status reads 0, as on the reference aGate (one site).",
+        "fields": {"on": _f("boolean", "true = Debug Mode on (1821 enable 1); false = off")},
         "required": ["on"],
         "examples": [{"on": True}, {"on": False}],
     },
