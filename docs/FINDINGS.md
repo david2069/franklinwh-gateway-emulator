@@ -21,7 +21,7 @@ their docs. Each item says where it belongs; fixes to other repos are theirs to 
 | # | Finding | Evidence | Suggested fix |
 |---|---|---|---|
 | D2 | The catalog, `client.ibg_run_status` docstring and `SyntheticSite` give **1708 an `energyMode` field**. The reference aGate (V12R02B30D06) does not send it. It sends `electricity_type`, `dspRunstatus`, grid/load currents, `gridVol2`, `genVoltage` and `isTripPhs*En`, which the synthetic site lacks. Other synthetic gaps: 1202 `timezone` is the *standard* offset with a separate `DST` flag, and `laitude`/`longitude` are strings; 1302 has no `devNum` and an `infi_status` list; 1726 has no `reason`. | Read-only capture of 20 commands on 2026-10-07 ([CALIBRATION.md](CALIBRATION.md#direct-connect-payloads)). | Mark `energyMode` as cloud-only; align `SyntheticSite` with the captured key sets. |
-| D3 | **Unconfirmed Direct Connect cmdTypes 1207/1209/1821/1823/1825**, read on the reference site. 1821/1823/1825 are the app's `debugMode`/`powerOn`/`chargeDevice`: one-shot maintenance fields that ignore `id`. **Never write them** on a live site. | Read-only `opt:0` via the Local Bridge, 2026-10-07. | Mark 1821–1825 `dangerous_write` in the client. |
+| D3 | **Unconfirmed Direct Connect cmdTypes 1207/1209/1821/1823/1825**, read on the reference site. 1821/1823/1825 are the app's `debugMode`/`powerOn`/`chargeDevice`: one-shot maintenance fields that ignore `id`. **Never write 1823/1825** on a live site; 1821 (debugMode) only with the owner present (owner, 2026-10-31; hardware_test_protocol.md Rule 2). | Read-only `opt:0` via the Local Bridge, 2026-10-07. | Mark 1821–1825 `dangerous_write` in the client. |
 | D1 | `franklinwh-local health` probes Modbus on **port 502 literally**, not on the `port` that `1205 der_comms` reports. It reports "DOWN" plus a spurious "config says ON but :502 is DOWN" warning whenever Modbus is on another port. | Live run against the emulator with Modbus on 5034: `der_comms` said `tcp 127.0.0.1:5034`, `health` said `:502 DOWN`. | Probe `der_comms["port"]` (default 502). |
 
 ## franklinwh-local-bridge
@@ -52,7 +52,7 @@ Profile, Bind/Unbind and Summary.
 | Settings → Modbus → **SPAN Panel → "Connect to SPAN Panel?"** | **none in the app's local enum** | It shows Sunspec Modbus IP and port 502, then "connect aGate **ETH2** to SPAN **AUX Comms (ETH-1)**", then "The FHP is ready for SPAN Panel integration." Not shown in the owner view. |
 
 **Writes to 15507–15509 are acknowledged and discarded on the reference site** (SunSpec 704
-control works). Never write Direct Connect 1821/1823/1825 on a live site.
+control works). Never write Direct Connect 1823/1825 on a live site; 1821 only with the owner present.
 
 **The AU guide's EMS screenshot labels 1708:**
 - "Mains voltage L1/L2 119.0 V, line L1_L2 237.8 V" confirms the two half-voltage legs on

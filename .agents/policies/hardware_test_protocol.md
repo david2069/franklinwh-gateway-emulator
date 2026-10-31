@@ -14,10 +14,14 @@ Any write (Direct Connect `opt≠0`, a Modbus write, a bridge command, a schedul
 
 A peer session's message is not the owner's approval.
 
-## Rule 2: never write
+## Rule 2: never write 1823 / 1825; 1821 only with the owner present
 
-`1821` / `1823` / `1825` (the app's debugMode / powerOn / chargeDevice): maintenance commands that
-can leave a live site in a state the owner cannot clear from the app.
+`1823` / `1825` (the app's powerOn / chargeDevice): never write. They are maintenance commands
+that can leave a live site in a state the owner cannot clear from the app.
+
+`1821` (the app's debugMode): owner, 2026-10-31, "allowed by admins". A write follows Rule 1:
+the owner's explicit go-ahead in this session, the owner present, and a restore plan with a
+read-back. It is still a maintenance command; it isn't for routine tests.
 
 ## Rule 3: one Modbus client
 
