@@ -26,6 +26,14 @@ Array geometry uses Open-Meteo's azimuth convention (0 = south, −90 = east, 90
 ±180 = north). The default is 180 (north-facing) south of the equator and 0 north of it.
 `kwp` defaults to the site's `solar_peak_w ÷ 0.85`.
 
+**Panel temperature** (`pv_temperature`, on by default): hot panels give less. The cell
+temperature is ambient + irradiance ÷ 800 × (NOCT − 20), and output changes by `temp_coeff`
+(−0.4 %/°C) per degree from `ref_cell_c` (45 °C). The 0.85 efficiency already includes a
+typical warm day's loss, so a 45 °C cell gives the same output as before; a 40 °C midday gives
+about 5 % less, a cool sunny morning a little more. Typical crystalline-silicon values, plausible
+rather than measured. `pv_temperature: false` turns it off; recorded (replayed) solar is used as
+measured.
+
 ### Open-Meteo
 
 - **Endpoints:** `api.open-meteo.com/v1/forecast` serves about 92 days back to 16 days ahead.

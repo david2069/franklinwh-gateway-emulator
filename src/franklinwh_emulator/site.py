@@ -161,6 +161,17 @@ class Location:
         return loc
 
 
+# PV temperature loss (#109). Typical crystalline-silicon values, plausible not measured. The
+# 0.85 system efficiency already includes the loss of a typical warm day, so the change is
+# relative to a 45 °C cell: hotter panels give less, cooler ones a little more.
+PV_TEMPERATURE = {"temp_coeff": -0.004, "noct": 45.0, "ref_cell_c": 45.0}
+
+
+def pv_cell_c(ambient_c: float, poa_w_m2: float, noct: float) -> float:
+    """Cell temperature from the NOCT model: NOCT is the cell temperature at 800 W/m², 20 °C."""
+    return ambient_c + max(0.0, poa_w_m2) / 800.0 * (noct - 20.0)
+
+
 # Lifetime counters (Wh) read from the reference aGate's scan of 2026-10-07.
 REFERENCE_COUNTERS = {"grid_import_wh": 1_463_431, "grid_export_wh": 4_614_656, "pv_wh": 12_959_408,
                       "batt_discharge_wh": 6_344_500, "batt_charge_wh": 6_478_740}
@@ -212,6 +223,9 @@ class SiteConfig:
     # Forced solar (pv solar_w) can't exceed what the solar model gives now (0 at night, #56).
     # False: the forced value is used as given; for lab tests where PV is an input.
     cap_forced_solar: bool = True
+    # PV output falls as the panels heat up (#109): {"temp_coeff" (per °C), "noct" (°C),
+    # "ref_cell_c" (°C)}; false turns it off. None = PV_TEMPERATURE.
+    pv_temperature: dict | bool | None = None
     # The grid code's export limit is the connection-agreement limit. Whether the aGate
     # itself enforces it is a separate question: on the reference Ausgrid site it does
     # not (local 1903 grid_feed_max = -1, cloud notControlExportSolar = true), so the
@@ -373,6 +387,14 @@ class Site:
         self.rate_w = W_PER_APOWER * max(1, cfg.apower_units)
         # aPowers switched off at their physical switch (set_apower). They add no power; the
         # one combined SoC and capacity stay as they were (per-aPower SoC isn't modelled).
+        if cfg.pv_temperature is False:
+            self.pv_temp = None
+        else:
+            given = dict(cfg.pv_temperature or {})
+            bad = set(given) - set(PV_TEMPERATURE)
+            if bad:
+                raise ValueError(f"pv_temperature: unknown keys {sorted(bad)}; known {sorted(PV_TEMPERATURE)}")
+            self.pv_temp = {**PV_TEMPERATURE, **{k: float(v) for k, v in given.items()}}
         self.apower_off: set[int] = set()
         # Debug Mode (DC 1821 enable): the battery stops while grid-connected (candidate, #101).
         self.battery_held = False
@@ -608,17 +630,37 @@ class Site:
         return model
 
     def solar_model_w(self, ts: float) -> float:
-        """What the solar model gives now: replayed data, the weather model, or the bell curve."""
+        """What the solar model gives now: replayed data (as measured), or the weather model or
+        the bell curve, each with the panel-temperature loss (#109)."""
         if self.replay is not None:
             v = self.replay.solar_w(ts)
             if v is not None:
                 return v
+        poa, base = self._solar_poa_w(ts)
+        return base * self.pv_temperature_factor(ts, poa)[1]
+
+    def _solar_poa_w(self, ts: float) -> tuple[float, float]:
+        """(irradiance on the array W/m², PV output before the temperature loss W)."""
         if self.weather is not None:
-            return self.weather.solar_w(ts)
+            poa = self.weather.poa(ts)
+            return poa, max(0.0, poa / 1000.0 * self.weather.kwp * self.weather.cfg.efficiency * 1000.0)
         hour = self.local_hour(ts)
         factor = max(0.0, math.sin((hour - 6.0) * math.pi / 14.0)) if 6.0 <= hour <= 20.0 else 0.0
         cloud = 0.88 + 0.12 * math.sin(ts / 15.0 + self.config.seed * 0.7)
-        return max(0.0, self.solar_peak_w * factor ** 1.3 * cloud)
+        base = max(0.0, self.solar_peak_w * factor ** 1.3 * cloud)
+        return base / self.solar_peak_w * 1000.0 if self.solar_peak_w else 0.0, base   # peak ≈ 1000 W/m²
+
+    def pv_temperature_factor(self, ts: float, poa: float | None = None) -> tuple[float | None, float]:
+        """(cell °C, output factor). (None, 1.0) when turned off or in the dark."""
+        t = self.pv_temp
+        if t is None:
+            return None, 1.0
+        if poa is None:
+            poa = self._solar_poa_w(ts)[0]
+        if poa <= 0:
+            return None, 1.0
+        cell = pv_cell_c(self.ambient_c(ts), poa, t["noct"])
+        return cell, max(0.0, 1.0 + t["temp_coeff"] * (cell - t["ref_cell_c"]))
 
     def load_w(self, ts: float) -> float:
         if self.load_override_w is not None:

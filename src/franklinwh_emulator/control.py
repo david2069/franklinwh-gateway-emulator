@@ -93,6 +93,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "overrides": {"solar_w": site.solar_override_w, "load_w": site.load_override_w,
                       "ambient_c": site.ambient_override_c},
         "cap_forced_solar": site.config.cap_forced_solar,
+        "pv_temperature": _pv_temperature(site, snap.ts),
         "base_aliases": list(gw.profile.base_aliases),
         "write_rejects": list(gw.device.write_rejects),
         "write_bases": None if gw.profile.write_bases is None else list(gw.profile.write_bases),
@@ -152,6 +153,14 @@ def _sun(site, ts: float) -> dict | None:
         return None
     zenith, _ = sun_position(ts, loc.latitude, loc.longitude)
     return {"elevation_deg": round(90.0 - zenith, 1), "up": zenith < 90.0}
+
+
+def _pv_temperature(site, ts: float) -> dict | None:
+    """The panel-temperature loss now (#109); None when it's off."""
+    if site.pv_temp is None:
+        return None
+    cell, factor = site.pv_temperature_factor(ts)
+    return {"cell_c": None if cell is None else round(cell, 1), "factor": round(factor, 3), **site.pv_temp}
 
 
 def _num_or_none(body: dict, key: str):

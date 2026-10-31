@@ -143,12 +143,19 @@ function renderDiagram(g) {
 
   const w = g.weather;
   const sun = g.sun;
+  // PV cell temperature and its effect on output (#109), e.g. "PV cells 58 °C (−5 %)".
+  const pvTempText = t => {
+    if (!t || t.cell_c == null) return null;
+    const pct = Math.round((t.factor - 1) * 100);
+    return 'PV cells ' + Math.round(t.cell_c) + ' °C (' + (pct > 0 ? '+' : pct < 0 ? '−' : '±') + Math.abs(pct) + ' %)';
+  };
   const icon = sun ? (sun.up ? SUN_ICON : MOON_ICON) : '';
   const head = [
     sun ? (sun.up ? 'Day' : 'Night') + ' · sun ' + sun.elevation_deg + '°' : 'No location, so no sun position',
     w ? skyLabel(w.sky || w.model) : 'bell curve (no weather model)',
     w && w.poa_w_m2 != null ? w.poa_w_m2 + ' W/m² on the array' : null,
     'ambient ' + g.ambient_c.toFixed(1) + ' °C' + (forced('ambient_c') ? ' (forced)' : ''),
+    pvTempText(g.pv_temperature),
     forced('solar_w') ? (g.cap_forced_solar
       ? 'solar forced to ' + kwText(ov.solar_w) + (g.solar_w < ov.solar_w - 1 ? ', capped at ' + kwText(g.solar_w) + ' by the sun' : '')
       : 'solar forced to ' + kwText(ov.solar_w) + ', not capped by the sun') : null,
