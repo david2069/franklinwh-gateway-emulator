@@ -43,7 +43,7 @@ def test_page_and_its_files(ui):
     page = body.decode()
     refs = re.findall(r'(?:src|href)="/static/([^"]+)"', page)
     assert set(refs) == {"style.css", "app.js", "diagram.js", "actions.js", "tou.js",
-                         "groups.js", "alpinejs-3.14.1.min.js"}
+                         "groups.js", "units.js", "alpinejs-3.14.1.min.js"}
     for name in refs:
         status, ctype, _ = get(f"{base}/static/{name}")
         assert status == 200
@@ -79,7 +79,7 @@ def test_page_reads_only_fields_the_state_has(ui):
     """Every g.<field> / current.<field> the page uses exists in the control API's state."""
     fleet, _ = ui
     state = gateway_state(fleet["site"])
-    text = "".join((STATIC / n).read_text() for n in ("index.html", "app.js", "diagram.js", "actions.js", "tou.js", "groups.js"))
+    text = "".join((STATIC / n).read_text() for n in ("index.html", "app.js", "diagram.js", "actions.js", "tou.js", "groups.js", "units.js"))
     used = set(re.findall(r"\b(?:g|current)\.([a-z_]+)", text))
     assert used and used <= set(state), sorted(used - set(state))
     leg_fields = set(re.findall(r"\bleg\.([a-z_]+)", text))
@@ -345,3 +345,30 @@ print(JSON.stringify({{none: view('none'), country: view('country'), state: view
     assert r["city"][0] == ["AU · NSW · Sydney", False, ["a"]]
     assert r["site"] == [["s1", False, ["a"]], ["no site id", True, ["b", "c", "d"]]]
     assert (r["t0"], r["t3"], r["t1"]) == ("11:45 · Australia/Sydney", "00:45 · UTC+00:00", "")
+
+
+# -- °F alongside °C (#119) ---------------------------------------------------------------------
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_temperature_units(tmp_path):
+    import subprocess
+    harness = tmp_path / "units.js"
+    harness.write_text((STATIC / "units.js").read_text() + """
+const r = {c: fmtTemp(25, 'C'), f: fmtTemp(25, 'F'), f0: fmtTemp(-40, 'F', 0), none: fmtTemp(null, 'F'),
+           us: defaultTempUnit('en-US'), es_us: defaultTempUnit('es-US'), pr: defaultTempUnit('en-PR'),
+           au: defaultTempUnit('en-AU'), ca: defaultTempUnit('en-CA'), bare: defaultTempUnit('en'),
+           empty: defaultTempUnit(undefined)};
+setTempUnit('F'); r.current = temp(100); setTempUnit('X'); r.fallback = temp(100);
+print(JSON.stringify(r));
+""")
+    r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
+    assert (r["c"], r["f"], r["f0"], r["none"]) == ("25.0 °C", "77.0 °F", "-40 °F", "—")
+    assert (r["us"], r["es_us"], r["pr"]) == ("F", "F", "F")
+    assert (r["au"], r["ca"], r["bare"], r["empty"]) == ("C", "C", "C", "C")
+    assert (r["current"], r["fallback"]) == ("212.0 °F", "100.0 °C")
+
+
+def test_no_hard_coded_celsius_in_the_page():
+    """Every shown temperature goes through units.js, so the °F toggle covers it."""
+    for name in ("index.html", "app.js", "diagram.js"):
+        text = (STATIC / name).read_text()
+        assert " °C'" not in text and ' °C"' not in text, name

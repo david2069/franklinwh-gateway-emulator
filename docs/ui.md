@@ -43,6 +43,13 @@ gateway**; the actions column works on it.
 Lines move in the direction power flows; idle lines are grey. Below it: grid legs, smart
 circuits, appliances, the generator and the TOU schedule.
 
+## Temperature units
+
+The **°C / °F** button in the header switches every temperature on the page (ambient, PV cells,
+cabinet, surroundings, battery). It starts in °F for US-region browsers and °C elsewhere, and
+is remembered. Only the display changes: the emulator, its state, Modbus TCP and Direct Connect
+stay metric, as on the aGate.
+
 ## Grouping and compact cards
 
 ![Cards grouped by state, compact](assets/ui/grouped-compact.png)

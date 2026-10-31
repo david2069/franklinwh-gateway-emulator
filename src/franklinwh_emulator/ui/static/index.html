@@ -10,6 +10,7 @@
 <script src="/static/actions.js"></script>
 <script src="/static/tou.js"></script>
 <script src="/static/groups.js"></script>
+<script src="/static/units.js"></script>
 <script defer src="/static/alpinejs-3.14.1.min.js"></script>
 </head>
 <body x-data="running()" x-init="start()">
@@ -33,6 +34,9 @@
     <select id="group-by" :value="groupBy" @change="setView('groupBy', $event.target.value)">
       <template x-for="[v, l] in Object.entries(GROUP_BY)" :key="v"><option :value="v" x-text="l" :selected="v === groupBy"></option></template>
     </select>
+    <button type="button" @click="setView('tempUnit', tempUnit === 'C' ? 'F' : 'C')"
+            :title="'Show temperatures in ' + (tempUnit === 'C' ? '°F' : '°C') + ' (the emulator stays metric)'"
+            x-text="tempUnit === 'C' ? '°C' : '°F'" aria-label="Temperature unit"></button>
     <button type="button" @click="setView('compact', !compact)" :aria-pressed="compact.toString()"
             title="Compact cards: SoC, local time and tags only">Compact</button>
   </div>
@@ -101,7 +105,7 @@
           <span class="tag" x-show="g.episode_phase" x-text="'episode: ' + g.episode_phase"></span>
           <template x-for="n in g.apower_off" :key="'ap' + n"><span class="tag warn" x-text="'aPower ' + n + ' switched off'"></span></template>
           <span class="tag warn" x-show="g.battery_temperature && g.battery_temperature.derated"
-                x-text="g.battery_temperature && ('derated: ' + g.battery_temperature.derated + ' · ' + g.battery_temperature.battery_c + ' °C')"
+                x-text="g.battery_temperature && ('derated: ' + g.battery_temperature.derated + ' · ' + fmtTemp(g.battery_temperature.battery_c, tempUnit))"
                 title="Battery power limited by temperature"></span>
           <span class="tag warn" x-show="g.debug_mode" title="Direct Connect 1821 enable 1: the battery is stopped">Debug Mode</span>
         </div>
@@ -131,7 +135,7 @@
                x-text="result(a) && result(a).text" role="status"></p>
           </template>
         </div>
-        <div x-html="renderDiagram(current)"></div>
+        <div x-html="renderDiagram(current, tempUnit)"></div>
         <div class="grid2">
           <div>
             <h3>Grid</h3>

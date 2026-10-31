@@ -87,4 +87,3 @@ outside air, and a heated-room placement holds the cabinet near 20 °C.
 - **Time machine** ([#116](https://github.com/david2069/franklinwh-gateway-emulator/issues/116)): jump a site years ahead.
 - **Region-locked power ratings** ([#113](https://github.com/david2069/franklinwh-gateway-emulator/issues/113)): policy limits, separate from temperature.
 - **pvlib** ([#112](https://github.com/david2069/franklinwh-gateway-emulator/issues/112)): an optional PV model.
-- **°F alongside °C** ([#119](https://github.com/david2069/franklinwh-gateway-emulator/issues/119)).
