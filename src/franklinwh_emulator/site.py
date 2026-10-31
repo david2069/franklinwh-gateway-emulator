@@ -374,6 +374,8 @@ class Site:
         # aPowers switched off at their physical switch (set_apower). They add no power; the
         # one combined SoC and capacity stay as they were (per-aPower SoC isn't modelled).
         self.apower_off: set[int] = set()
+        # Debug Mode (DC 1821 enable): the battery stops while grid-connected (candidate, #101).
+        self.battery_held = False
 
         if cfg.ac_type not in AC_LAYOUTS:
             raise ValueError(f"ac_type must be 0, 1 or 2, not {cfg.ac_type!r}")
@@ -1084,7 +1086,7 @@ class Site:
             gen_w = 0.0                             # never paralleled with the grid
             floor = self.active_reserve()           # under VPP control too
             max_dis, max_chg = self._limits(floor, dt)
-            if faulted:
+            if faulted or self.battery_held:
                 max_dis = max_chg = 0.0
             replayed = dispatch = None
             if self.replay is not None:

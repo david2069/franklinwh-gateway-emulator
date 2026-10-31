@@ -188,10 +188,9 @@ class DcPayloads:
         flat = [round(kwh[c], 2) for c in ENERGY_CHANNELS]
         zeros = [0] * len(ENERGY_CHANNELS)
         return _ok(
-            # 8 = Debug Mode (cloud enum) only when injected (debug-mode action); not captured.
             # During an M704 force the name is empty; run_status still follows the battery (#91).
             mode=pid, name="" if self.site.remote.enabled else name, electricity_type=1,
-            run_status=8 if self.gw.debug_mode else s.run_status,
+            run_status=s.run_status,
             p_uti=round(s.grid_w, 1), p_sun=round(s.solar_w, 1), p_gen=round(s.generator_w, 1),
             p_fhp=round(s.battery_w, 1), p_load=round(s.load_w, 1),
             soc=round(s.soc, 1), t_amb=round(s.ambient_c, 1),
@@ -469,14 +468,21 @@ class DcPayloads:
     # -- unconfirmed cmdTypes (franklinwh-direct-connect-api#2) -----------------------------------
     # Read replies as captured on the reference aGate (2026-10-07). 1821/1823/1825 are the app's
     # debugMode / powerOn / chargeDevice (cloud cmdType 333): maintenance commands, so dangerous.
-    # Their writes are NOT emulated: they get the unsupported reply. 1207 writes are stored
-    # (see unknown_1207).
+    # 1821 is Debug Mode: read and written (see unconfirmed). 1823/1825 writes are NOT emulated:
+    # they get the unsupported reply. 1207 writes are stored (see unknown_1207).
     _UNCONFIRMED = {1207: {"enable": 111, "mode": 222}, 1209: {"enable": 1},
                     1821: {"enable": 0}, 1823: {"powerOn": 0, "powerOff": 0}, 1825: {"power": 0}}
 
     def unconfirmed(self, cmd: int, req: dict) -> dict:
         if cmd == 1207:
             return self.unknown_1207(req)
+        if cmd == 1821:                              # Debug Mode (fwh-tools GROUND_TRUTH §3)
+            if req.get("opt", 0) == 1:
+                if "enable" not in req:
+                    return _refused(-2)
+                self.gw.set_debug_mode(bool(int(req["enable"])))
+                return {**_ok(enable=int(self.gw.debug_mode)), "opt": 1}
+            return _ok(enable=int(self.gw.debug_mode))
         if req.get("opt", 0) != 0:
             return _refused(4)
         return _ok(**self._UNCONFIRMED[cmd])

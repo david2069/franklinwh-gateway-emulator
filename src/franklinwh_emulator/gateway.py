@@ -181,7 +181,7 @@ class Gateway:
         self.reboot_s = 20.0
         self.rebooting = False                   # True while reboot() has the listeners down
         self.episode_phase: str | None = None   # "down" | "offgrid" during episode()
-        self.debug_mode = False                  # injected: DC 1301 run_status 8 (Debug Mode)
+        self.debug_mode = False                  # Debug Mode (DC 1821 enable); see set_debug_mode
 
     @property
     def address(self) -> tuple[str, int]:
@@ -207,6 +207,15 @@ class Gateway:
         """Start on the caller's running event loop."""
         self._event_loop = asyncio.get_running_loop()
         return await self._start_all()
+
+    def set_debug_mode(self, on: bool) -> None:
+        """Debug Mode, as Direct Connect 1821 ``enable``: on the reference aGate the battery
+        stopped (house to the grid, 1301 run_status 2 -> 0) and resumed when it was turned
+        off (2026-10-23; one site, a candidate)."""
+        self.debug_mode = bool(on)
+        with self.site.lock:
+            self.site.step()
+            self.site.battery_held = self.debug_mode
 
     def set_modbus_enabled(self, on: bool) -> None:
         """What a 1205 sunsMdEn write does: stop or start :502 after a short delay."""

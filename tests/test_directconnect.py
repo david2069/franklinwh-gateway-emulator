@@ -250,7 +250,7 @@ def test_unconfirmed_cmdtypes_read_as_captured_and_refuse_writes(gw):
     p = DcPayloads(gw)
     assert p.handlers[1207]({"opt": 0}) == {"opt": 0, "result": 0, "reason": 0, "enable": 111, "mode": 222}
     assert p.handlers[1823]({"opt": 0, "id": 2})["powerOff"] == 0          # id ignored on read
-    for cmd in (1209, 1821, 1823, 1825):
+    for cmd in (1209, 1823, 1825):                                        # 1821 is Debug Mode (#101)
         assert p.handlers[cmd]({"opt": 1, "powerOff": 1})["reason"] == 4
 
 
@@ -318,17 +318,22 @@ def test_unknown_setup_is_refused():
         GatewayConfig.from_dict({"id": "x", "setup": "commissioned"})
 
 
-def test_debug_mode_injection_changes_only_1301_run_status(gw, dc):
-    """#70: run_status 8 (Debug Mode, cloud enum) while injected; the rest is untouched."""
+def test_debug_mode_is_1821_and_stops_the_battery(gw, dc):
+    """#101: Debug Mode is DC 1821 enable. On the reference aGate (2026-10-23) the battery
+    stopped, the house went to the grid and 1301 run_status went 2 -> 0; off resumed it."""
     from franklinwh_emulator.control import apply, gateway_state
-    before = dc.power_flow()["run_status"]
-    assert before != 8
+    gw.site.solar_override_w, gw.site.load_override_w = 0, 2000
+    assert dc.call(1821)["enable"] == 0 and abs(dc.power_flow()["p_fhp"]) > 100
     apply(gw, "debug-mode", {"on": True})
-    assert dc.power_flow()["run_status"] == 8
-    s = gateway_state(gw)
-    assert s["debug_mode"] is True and s["run_status"] != 8          # Modbus/model unchanged
-    apply(gw, "debug-mode", {"on": False})
-    assert dc.power_flow()["run_status"] != 8 and gateway_state(gw)["debug_mode"] is False
+    pf = dc.power_flow()
+    assert dc.call(1821)["enable"] == 1 and gateway_state(gw)["debug_mode"] is True
+    assert pf["p_fhp"] == 0 and pf["run_status"] == 0 and pf["p_uti"] > 1500     # house on the grid
+    r = dc.call(1821, {"opt": 1, "enable": 0})                                    # a 1821 write turns it off
+    assert (r["result"], r["enable"]) == (0, 0) and gateway_state(gw)["debug_mode"] is False
+    assert abs(dc.power_flow()["p_fhp"]) > 100
+    assert dc.call(1821, {"opt": 1, "enable": 1})["enable"] == 1 and dc.power_flow()["p_fhp"] == 0
+    assert dc.call(1821, {"opt": 1})["reason"] == -2                              # no enable: refused
+
 
 
 # The vpp action writes WSetPct (watts converted on the 5 kW rating), so every case is WSetPct.
