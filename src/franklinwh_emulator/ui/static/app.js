@@ -25,6 +25,7 @@ function running() {
     layout: 'right',  // where the actions go: 'right' (beside, on wide screens) or 'below'
     groupBy: 'none',  // cards grouped by location (groups.js): none | country | state | city | postcode | site
     compact: false,   // one-line cards
+    tempUnit: 'C',    // temperatures shown in °C or °F (units.js); the emulator stays metric
     collapsed: {},    // group label -> true when collapsed
     forms: {},        // action -> {field: raw string}
     results: {},      // "<gateway>/<action>" -> {ok, text}
@@ -43,8 +44,11 @@ function running() {
         const gb = localStorage.getItem('emulator.groupBy');
         if (gb && GROUP_BY[gb]) this.groupBy = gb;
         this.compact = localStorage.getItem('emulator.compact') === '1';
+        this.tempUnit = localStorage.getItem('emulator.tempUnit') || defaultTempUnit(navigator.language);   // US → °F
         this.collapsed = JSON.parse(localStorage.getItem('emulator.collapsed') || '{}') || {};
       } catch (e) { /* private mode */ }
+      if (!TEMP_UNITS[this.tempUnit]) this.tempUnit = defaultTempUnit(navigator.language);
+      setTempUnit(this.tempUnit);
       this._get('/version').then(v => { this.version = v; }).catch(() => {});
       this._versionTimer = setInterval(() => this.checkVersion(), VERSION_CHECK_MS);
       await this.poll();
@@ -284,6 +288,7 @@ function running() {
     },
     setView(key, value) {
       this[key] = value;
+      if (key === 'tempUnit') setTempUnit(value);
       try { localStorage.setItem('emulator.' + key, key === 'compact' ? (value ? '1' : '0') : value); } catch (e) { /* private mode */ }
     },
     toggleGroup(label) {
@@ -337,7 +342,7 @@ function running() {
         out.push('solar forced ' + this.kw(o.solar_w) + (capped ? ', capped at ' + this.kw(g.solar_w) + ' by the sun' : ''));
       }
       if (o.load_w != null) out.push('load forced ' + this.kw(o.load_w));
-      if (o.ambient_c != null) out.push('ambient forced ' + o.ambient_c + ' °C');
+      if (o.ambient_c != null) out.push('ambient forced ' + temp(o.ambient_c));
       return out;
     },
     detailLine(g) {

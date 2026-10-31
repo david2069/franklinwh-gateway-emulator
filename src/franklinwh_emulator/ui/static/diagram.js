@@ -123,7 +123,7 @@ function renderDiagram(g) {
       [g.run_status_name + ' · ' + kwText(g.battery_w), 'c-' + statusKey(g)],
       'SoC ' + Math.round(g.soc) + '% · ' + (g.grid_connected ? 'reserve ' + Math.round(g.active_reserve)
                                                              : 'off-grid floor ' + Math.round(g.offgrid_floor_soc)) + '%',
-      'inverter ' + g.inverter_state_name.toLowerCase() + ' · cabinet ' + g.cabinet_c.toFixed(1) + ' °C',
+      'inverter ' + g.inverter_state_name.toLowerCase() + ' · cabinet ' + temp(g.cabinet_c),
     ], 'c-' + ({ 1: 'backup', 2: 'self', 3: 'tou' })[g.native_mode]));
 
   // Bottom row: generator and smart circuits.
@@ -143,24 +143,24 @@ function renderDiagram(g) {
 
   const w = g.weather;
   const sun = g.sun;
-  // PV cell temperature and its effect on output (#109), e.g. "PV cells 58 °C (−5 %)".
+  // PV cell temperature and its effect on output (#109), e.g. "PV cells 58 °C (−5 %)" (or °F).
   const pvTempText = t => {
     if (!t || t.cell_c == null) return null;
     const pct = Math.round((t.factor - 1) * 100);
-    return 'PV cells ' + Math.round(t.cell_c) + ' °C (' + (pct > 0 ? '+' : pct < 0 ? '−' : '±') + Math.abs(pct) + ' %)';
+    return 'PV cells ' + temp(t.cell_c, 0) + ' (' + (pct > 0 ? '+' : pct < 0 ? '−' : '±') + Math.abs(pct) + ' %)';
   };
   const icon = sun ? (sun.up ? SUN_ICON : MOON_ICON) : '';
   const head = [
     sun ? (sun.up ? 'Day' : 'Night') + ' · sun ' + sun.elevation_deg + '°' : 'No location, so no sun position',
     w ? skyLabel(w.sky || w.model) : 'bell curve (no weather model)',
     w && w.poa_w_m2 != null ? w.poa_w_m2 + ' W/m² on the array' : null,
-    'ambient ' + g.ambient_c.toFixed(1) + ' °C' + (forced('ambient_c') ? ' (forced)' : ''),
+    'ambient ' + temp(g.ambient_c) + (forced('ambient_c') ? ' (forced)' : ''),
     pvTempText(g.pv_temperature),
     forced('solar_w') ? (g.cap_forced_solar
       ? 'solar forced to ' + kwText(ov.solar_w) + (g.solar_w < ov.solar_w - 1 ? ', capped at ' + kwText(g.solar_w) + ' by the sun' : '')
       : 'solar forced to ' + kwText(ov.solar_w) + ', not capped by the sun') : null,
-    'cabinet ' + g.cabinet_c.toFixed(1) + ' °C (' + (g.install
-      ? g.install.label + ', surroundings ' + g.install.surroundings_c.toFixed(1) + ' °C'
+    'cabinet ' + temp(g.cabinet_c) + ' (' + (g.install
+      ? g.install.label + ', surroundings ' + temp(g.install.surroundings_c)
       : 'modelled') + ')'].filter(Boolean).join(' · ');
   const label = `Energy flow for ${g.id}: grid ${kwText(g.grid_w)}, home ${kwText(g.load_w)}, ` +
     `solar ${kwText(g.solar_w)}, battery ${Math.round(g.soc)}% ${kwText(g.battery_w)}`;
