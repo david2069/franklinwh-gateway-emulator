@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-From here on, one line per change; the detail is in each PR and its `tests/results/` file.
+## 0.2.0 (2026-10-31)
+
+The first tagged release since 0.1.0. One line per change from here on; the detail is in each
+PR and its `tests/results/` file.
 
 ### Added
 - Page: TOU schedule timeline (dispatch and tariff over 24 h) and an editor for its blocks and prices ([#61](https://github.com/david2069/franklinwh-gateway-emulator/pull/61)).
