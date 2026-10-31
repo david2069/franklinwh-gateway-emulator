@@ -43,8 +43,8 @@ def test_conftest_for_clients_example(record_property):
         gen.close()
 
 
-def test_readme_in_process_snippet(monkeypatch):
-    text = (ROOT / "README.md").read_text()
+def test_getting_started_in_process_snippet(monkeypatch):
+    text = (ROOT / "docs" / "getting-started.md").read_text()      # moved from the README (#85)
     code = re.search(r"In-process.*?```python\n(.*?)```", text, re.S).group(1)
     # Same code, but the fleet's fixed ports become ephemeral so the test never collides.
 

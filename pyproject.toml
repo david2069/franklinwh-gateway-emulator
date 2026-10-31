@@ -20,6 +20,7 @@ keywords = ["franklinwh", "agate", "modbus", "sunspec", "emulator", "simulator"]
 
 [project.optional-dependencies]
 dc = ["franklinwh-direct-connect-api>=0.3.0"]
+docs = ["mkdocs-material"]
 dev = [
     "franklinwh-direct-connect-api>=0.3.0",
     "pytest>=7.0",
