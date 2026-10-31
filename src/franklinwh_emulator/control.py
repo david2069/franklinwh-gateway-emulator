@@ -494,9 +494,9 @@ class ControlApi:
             raise RuntimeError(f"{action} blocks: call it from a worker thread, not the event loop")
         if gw.dc_address is None:
             raise ApiError(400, f"{action}: {gw.config.id} has no Direct Connect listener")
-        from franklinwh_local.client import LocalClient
+        from franklinwh_direct_connect_api.client import DirectConnectClient
         try:
-            with LocalClient(*gw.dc_address, timeout=5, retries=0) as c:
+            with DirectConnectClient(*gw.dc_address, timeout=5, retries=0) as c:
                 c.login()
                 if action == "dc-modbus":
                     c.set_der_comms(sunspec_modbus=bool(body["on"]))

@@ -113,7 +113,7 @@ def test_mode_labels_and_the_other_numbering():
     field = ACTIONS["mode"]["fields"]["mode"]
     assert field["labels"] == {str(k): v for k, v in MODE_NAMES.items()}
     assert field["labels"]["1"] == "Emergency Backup"            # 15507 = 1
-    pytest.importorskip("franklinwh_local")
+    pytest.importorskip("franklinwh_direct_connect_api")
     from franklinwh_emulator.dc_payloads import PROGRAMMES
     assert DC_MODE_NUMBERS == {name: sched for _, (_, name, sched) in PROGRAMMES.items()}
     assert DC_MODE_NUMBERS["Time-of-Use"] == 1                    # scheduling_type = 1

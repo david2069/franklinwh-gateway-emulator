@@ -158,7 +158,7 @@ generator: {installed: true, rated_w: 7000, genStartElec: 20, genCloseElec: 80,
   - 1302: `p_gen`, `kwh_gen`, `genStat`, `main_sw[1]`;
   - 1304: the `p_gen` series;
   - 1902: `genStat`, `genpowerGen`, and the block itself, readable and writable with a full
-    frame; `franklinwh_local.set_generator*` verifies;
+    frame; `franklinwh_direct_connect_api.set_generator*` verifies;
   - 1710: `genRelayOpen`;
   - 1412: `genpowerGen`.
   

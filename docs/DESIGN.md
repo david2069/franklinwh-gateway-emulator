@@ -58,7 +58,7 @@ sunspec.py      SunSpecImage: the 'SunS' chain built from pysunspec2 model defin
 device.py       AGateDevice: register space bound to the Site; write semantics per profile
 profiles.py     Profile: quirk switches (faithful aGate vs spec SunSpec DER)
 server.py       ModbusServer: asyncio Modbus TCP + fault injection
-directconnect.py DirectConnectServer: TCP/9000 framing via franklinwh_local.protocol
+directconnect.py DirectConnectServer: TCP/9000 framing via franklinwh_direct_connect_api.protocol
 dc_payloads.py  DcPayloads: one builder per cmdType, rendered from the Site
 gateway.py      Gateway / Fleet: in-process API, threads, sunsMdEn toggle
 control.py      ControlApi: HTTP JSON control plane (loopback); `apply()` is the shared action vocabulary
@@ -125,7 +125,7 @@ gateway.
 
 ### Direct Connect frontend
 
-Uses `franklinwh_local.protocol` for framing (an optional dependency, `[dc]`) and the DC
+Uses `franklinwh_direct_connect_api.protocol` for framing (an optional dependency, `[dc]`) and the DC
 library's `SyntheticSite` only for static identities. Every live value is rendered from the
 emulator's `Site`, so a DC read and a Modbus read at the same instant agree. The site gained
 daily totals and quarter-hour history for `1301`/`1303`. Error semantics copy the real device:

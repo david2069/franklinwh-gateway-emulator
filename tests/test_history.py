@@ -4,7 +4,7 @@ import datetime as dt
 
 import pytest
 
-pytest.importorskip("franklinwh_local")
+pytest.importorskip("franklinwh_direct_connect_api")
 from franklinwh_emulator.clock import ManualClock  # noqa: E402
 from franklinwh_emulator.control import gateway_state  # noqa: E402
 from franklinwh_emulator.dc_payloads import DcPayloads  # noqa: E402

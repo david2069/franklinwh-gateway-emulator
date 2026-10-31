@@ -40,7 +40,7 @@ STATE_OFF, STATE_RUNNING, STATE_COOLDOWN, STATE_FAULT = 0, 1, 2, 3
 STATE_NAMES = {0: "Standby / OFF", 1: "Running / ON", 2: "Cooldown", 3: "Fault"}
 MANUAL, AUTO = 2, 1
 
-# 1901 fields in the order the reference aGate sends them (writable per franklinwh_local).
+# 1901 fields in the order the reference aGate sends them (writable per franklinwh_direct_connect_api).
 BLOCK_DEFAULTS: dict = {
     "genEn": 0, "gridVoltCheck": 3, "mode": 2, "genModel": "", "genRatedPower": 0,
     "genOptiPPoint": 70, "startDelTime": 1800, "genStartElec": 20, "genCloseElec": 80,

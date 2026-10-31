@@ -1,7 +1,7 @@
 # Direct Connect frontend (TCP/9000)
 
 The aGate's local broker protocol ("sendMqtt" cmdType frames), served from the **same `Site`**
-as Modbus. Framing (cipher, len/crc) comes from `franklinwh_local.protocol`, so the emulator and
+as Modbus. Framing (cipher, len/crc) comes from `franklinwh_direct_connect_api.protocol`, so the emulator and
 the client library cannot disagree about the wire format. It is a standard dependency: **every
 aGate profile runs a Direct Connect listener** (a free port unless one is given). On a factory
 aGate (`setup: factory`, the default) Modbus TCP is off until a `1205` `sunsMdEn` write turns it
@@ -9,7 +9,7 @@ on; `setup: in-service` starts with it on (#40).
 
 ```bash
 franklinwh-emulator serve --port 5020 --dc-port 9000      # factory: Modbus TCP off
-franklinwh-local --host 127.0.0.1 --port 9000 power_flow
+franklinwh-direct-connect --host 127.0.0.1 --port 9000 power_flow
 ```
 
 ```python
@@ -53,7 +53,7 @@ both emulators.
 | 1405 → 1406 | the 9-field SoC block (`BBBackupSoc` 20). Full-block writes are acknowledged and discarded (cloud-owned); partial writes get `reason:-2`. | — |
 | 1409 → 1410 smart circuits | `SwXName/Mode/ProLoad/SocLowSet/...` from the site's circuits. A write (`opt:1`) switches them, so their bound load really goes; schedules are acknowledged and discarded. | site circuits |
 | 1411 → 1412 circuit meter | `Sw1Volt` (V×10), `SW1Curr/ExpPower/ExpEnergy` (circuit 1), zeroed `Sw2Volt/SW2*`, `CarSW*` (circuit 2), `power/curr/volt/genpowerGen`, `freq` (Hz×10 integer), with the device's mixed `Sw`/`SW` casing | site circuits |
-| 1901 → 1902 generator | The 1901 block (real key set and defaults from the reference aGate: `genEn` 0, `genStartElec` 20, `genCloseElec` 80, `startDelTime` 1800, `charge1` 11:00–23:59, exercise off) plus live `genStat` (0 off, 1 running, 2 cooldown, 3 fault) and `genpowerGen` (W). The trailing `power/curr/volt/freq` are gateway-level, as in 1412. A full-block write (`opt:1`) applies; partial frames get `reason:-2` (assumed, as for 1205/1405). `franklinwh_local.set_generator*` read-back verifies. | site generator |
+| 1901 → 1902 generator | The 1901 block (real key set and defaults from the reference aGate: `genEn` 0, `genStartElec` 20, `genCloseElec` 80, `startDelTime` 1800, `charge1` 11:00–23:59, exercise off) plus live `genStat` (0 off, 1 running, 2 cooldown, 3 fault) and `genpowerGen` (W). The trailing `power/curr/volt/freq` are gateway-level, as in 1412. A full-block write (`opt:1`) applies; partial frames get `reason:-2` (assumed, as for 1205/1405). `franklinwh_direct_connect_api.set_generator*` read-back verifies. | site generator |
 | 1829 → 1830 deviceAlarms | `{num}`: the active-alarm count (the reference reads 0). The app's name, from the enum voidstarr/franklinwh_local recovered. The list shape when `num` > 0 is unknown. | site alarms |
 | 1207, 1209, 1821, 1823, 1825 (unconfirmed) | Reads return the reference aGate's values: 1207 `enable 111, mode 222`, 1209 `enable 1`, 1821 `enable 0`, 1823 `powerOn 0, powerOff 0`, 1825 `power 0`. 1821–1825 are the app's **`debugMode` / `powerOn` / `chargeDevice`** (cloud cmdType 333), one-shot fields that ignore `id` on read: **treat writes as dangerous**. 1821 is Debug Mode: it reads `enable` 1 while on, and an `opt:1` write turns it on or off; while on, the battery stops (grid-connected), as on the reference aGate. Writes to 1209/1823/1825 are not emulated (`reason:4`); 1207 writes are stored with no effect. | — |
 | 1903 → 1904 solar_pv | `solarPower` (deciwatts), `solarPowerGen` (kWh×10 today), `PV1RatedPower` (×100 W), `remoteSolarEn`, `solarRelayStat`, **`grid_feed_max` −1 unless the export limit is enforced** (then kW, unit unverified), `threePhPvEnb` | site |

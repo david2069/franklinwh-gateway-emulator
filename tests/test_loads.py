@@ -137,15 +137,15 @@ def test_yaml_on_key_normalised():
 
 
 def test_direct_connect_circuits_and_meter():
-    pytest.importorskip("franklinwh_local")
-    from franklinwh_local.client import LocalClient
+    pytest.importorskip("franklinwh_direct_connect_api")
+    from franklinwh_direct_connect_api.client import DirectConnectClient
     from franklinwh_emulator.gateway import Gateway, GatewayConfig
     clock = ManualClock(MIDNIGHT + 11 * 3600)
     gw = Gateway(GatewayConfig(setup="in-service", seed=7, dc_port=0, site=SiteConfig(
         location=SYD, loads=[{"name": "hw", "type": "schedule", "w": 3600,
                               "on": ["10:00-14:00"], "circuit": 1}])), clock=clock)
     with gw:
-        c = LocalClient(*gw.dc_address, timeout=2, retries=0)
+        c = DirectConnectClient(*gw.dc_address, timeout=2, retries=0)
         c.transport.connect()
         c.login()
         assert c.smart_circuits()["Sw1Mode"] == 1

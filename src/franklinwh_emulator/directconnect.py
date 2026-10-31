@@ -1,6 +1,6 @@
 """Direct Connect (TCP/9000, "sendMqtt" frames) frontend for an emulated aGate.
 
-Speaks the aGate's local broker protocol using franklinwh_local's own framing (cipher,
+Speaks the aGate's local broker protocol using franklinwh_direct_connect_api's own framing (cipher,
 len/crc) so the emulator and the client library can never disagree about the wire
 format. Every reply is rendered from the same :class:`~franklinwh_emulator.site.Site`
 the Modbus frontend uses, so both ports describe one consistent device: a CSIP control
@@ -22,8 +22,8 @@ import time
 from typing import TYPE_CHECKING, Any, Callable
 
 try:
-    from franklinwh_local import catalog as dc_catalog
-    from franklinwh_local import protocol as dc_protocol
+    from franklinwh_direct_connect_api import catalog as dc_catalog
+    from franklinwh_direct_connect_api import protocol as dc_protocol
 except ImportError as e:  # pragma: no cover - exercised only without the extra
     raise ImportError("the Direct Connect frontend needs franklinwh-direct-connect-api "
                       "(pip install franklinwh-gateway-emulator[dc])") from e

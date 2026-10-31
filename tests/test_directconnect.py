@@ -1,4 +1,4 @@
-"""Direct Connect frontend: the real franklinwh_local client against the emulator, and
+"""Direct Connect frontend: the real franklinwh_direct_connect_api client against the emulator, and
 cross-protocol consistency with the Modbus port (one Site behind both)."""
 
 import socket
@@ -7,9 +7,9 @@ import time
 
 import pytest
 
-pytest.importorskip("franklinwh_local")
-from franklinwh_local import protocol  # noqa: E402
-from franklinwh_local.client import LocalClient  # noqa: E402
+pytest.importorskip("franklinwh_direct_connect_api")
+from franklinwh_direct_connect_api import protocol  # noqa: E402
+from franklinwh_direct_connect_api.client import DirectConnectClient  # noqa: E402
 
 from conftest import RawClient, make_gateway  # noqa: E402
 
@@ -26,7 +26,7 @@ def gw(clock):
 
 @pytest.fixture
 def dc(gw):
-    c = LocalClient(*gw.dc_address, timeout=2, retries=0)
+    c = DirectConnectClient(*gw.dc_address, timeout=2, retries=0)
     c.transport.connect()
     c.login()
     yield c
@@ -136,7 +136,7 @@ def test_solar_pv_and_export_limit(clock):
                      site={"grid_code": "ausgrid", "pv_inputs": {"proximal": 1.0},
                            "cap_forced_solar": False})
     with g:
-        c = LocalClient(*g.dc_address, timeout=2, retries=0)
+        c = DirectConnectClient(*g.dc_address, timeout=2, retries=0)
         c.transport.connect()
         c.login()
         g.site.solar_override_w = 4200
@@ -164,7 +164,7 @@ def test_ibg_run_status_relays(dc, gw):
 
 
 def test_wrong_opt_gets_no_reply_and_unknown_is_refused(gw):
-    t = LocalClient(*gw.dc_address, timeout=0.5, retries=0)
+    t = DirectConnectClient(*gw.dc_address, timeout=0.5, retries=0)
     t.transport.connect()
     t.login()
     with pytest.raises(TimeoutError):
@@ -184,7 +184,7 @@ def test_reboot_drops_both_ports_then_returns(clock):
     g = make_gateway(clock, seed=7, dc_port=0)
     g.reboot_s = 0.3
     with g:
-        c = LocalClient(*g.dc_address, timeout=1, retries=0)
+        c = DirectConnectClient(*g.dc_address, timeout=1, retries=0)
         c.transport.connect()
         c.login()
         assert c.reboot().get("dropped")              # 1721: the aGate drops the socket
@@ -282,7 +282,7 @@ def test_factory_agate_has_dc_and_no_modbus_until_1205(clock):
         assert g.modbus_enabled is False
         assert g.server._server is None                             # :502 not listening
         g.modbus_apply_delay_s = 0.2
-        c = LocalClient(*g.dc_address, timeout=2, retries=0)
+        c = DirectConnectClient(*g.dc_address, timeout=2, retries=0)
         c.transport.connect()
         c.login()
         c.set_der_comms(sunspec_modbus=True)                        # the real 1205 write
@@ -357,3 +357,13 @@ def test_force_reports_programme_9_and_empty_name(gw, dc, body, direction, via):
     apply(gw, "release", {})
     assert dc.ibg_run_status()["ibgRunStatus"] == before_rs["ibgRunStatus"]
     assert dc.power_flow()["name"] == before_pf["name"] and gateway_state(gw)["force"] is None
+
+
+def test_no_deprecated_library_name():
+    """#133: the client library removes the `franklinwh_local` alias in 0.6.0."""
+    import re
+    from pathlib import Path
+    src = Path(__file__).resolve().parents[1] / "src"
+    old = re.compile(r"^\s*(from|import)\s+franklinwh_local\b", re.M)
+    hits = [str(p) for p in src.rglob("*.py") if old.search(p.read_text())]
+    assert hits == []
