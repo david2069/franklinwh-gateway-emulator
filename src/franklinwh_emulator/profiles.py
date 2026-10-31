@@ -124,8 +124,9 @@ DC_FIRMWARE: dict[str, dict] = {
                        "BMS_VER": "V11R50B03D00", "BL_VER": "V11R06B00D00", "TH_VER": "V11R02B01D00"},
         "extra": {},
     },
-    # The full 1102 payload in fwh-direct-connect-bridge's firmware sweep (read
-    # ~2026-10-20T20:1xZ, after the update), relayed 2026-10-31 (#78).
+    # Shape, IBG_VER, protocolVer and result 0: franklinwh-direct-connect-api's live login on
+    # 2026-10-31 (owner-approved, #94). The other version values: a payload recorded by a DC
+    # API client (the DC bridge's sweep, 2026-10-20, same firmware), not re-read live (#78).
     "V12R02B60D00_260924": {
         "protocolVer": "V1.12.02", "AWS_VER": "V12R00B15D00_260918", "APP_VER": "V12R00B16D00_260825",
         "SL_VER": "V12R02B12D00", "METER_VER": "V12R00B11D00", "SyHdVersion": 102,
