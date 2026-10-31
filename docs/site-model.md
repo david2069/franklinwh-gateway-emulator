@@ -141,9 +141,8 @@ generator: {installed: true, rated_w: 7000, genStartElec: 20, genCloseElec: 80,
 ```
 
 - **Automatic start is SoC-based only, as on the device:**
-  - it starts while islanded, once the outage has lasted `startDelTime` and SoC is at or below
-    `genStartElec`, inside an enabled operating window (`charge1..3`), or at any time if none
-    is enabled;
+  - it starts while islanded once SoC is at or below `genStartElec`, inside an enabled
+    operating window (`charge1..3`), or at any time if none is enabled;
   - it stops at `genCloseElec` after `min_run_s`.
 - **Manual mode** (`manuSw` 2, or `ctl <gw> generator start|stop`) and the **exercise run**
   (`oilmanoEn`, every `manoFre` days at `manoStartTime` for `manoTime` minutes).
@@ -152,6 +151,9 @@ generator: {installed: true, rated_w: 7000, genStartElec: 20, genCloseElec: 80,
 - **Start sequence:** cranking, then warm-up (relay open), then running, then cooldown. Loaded,
   it carries the house and charges the battery so it runs at `genOptiPPoint` (70 %) of rated;
   above rated the battery covers the rest.
+- **`startDelTime`** is the app's *Alarm delay after starting fails* (1800 s; FranklinWH PCS
+  Technical Brief, North America): a start that hasn't produced a running generator within it
+  raises the fail-to-start fault. It does not delay the start.
 - **Faults:** `ctl <gw> generator fault fail-start|trip`, plus running out of `fuel_l`
   (Willans-line burn). Clear them with `generator clear` and `generator refuel <L>`.
 - **Where it shows:**
@@ -164,7 +166,7 @@ generator: {installed: true, rated_w: 7000, genStartElec: 20, genCloseElec: 80,
   
   On Modbus only the power balance changes. Recordings add `generator_w` and `gen_state`, and
   the energy-balance check includes the generator. See the `offgrid-generator-ags` scenario.
-- **Interpretations, not observed on hardware:** what `startDelTime` measures, `manoDate`,
+- **Interpretations, not observed on hardware:** `manoDate`,
   `genRelayOpen` with a generator fitted, and refusing partial 1901 writes. The reference site
   has no generator.
 

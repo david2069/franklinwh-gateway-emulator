@@ -129,7 +129,7 @@ format.
 | `ev-solar-divert` | EV charging only from PV surplus under broken cloud, between 1.4 and 7 kW; no export while it charges. |
 | `sydney-real-day` | 15 Jan 2026 Sydney from bundled Open-Meteo data on the 6.6 kWp reference array. |
 | `cloud-edge-export-limit` | Broken cumulus swinging PV by kW within seconds under a CSIP 1.5 kW limit plus VPP. Transient breaches on cloud edges are allowed, but the limit must be regained within the 15 s soft-limit envelope; then a storm. |
-| `offgrid-generator-ags` | A night black-out on a low battery with a 7 kW generator on AGS: the battery bridges the 30 min start delay, then the generator carries the house and charges at 70 % of rated until 30 %, stops after its minimum run, restarts on low SoC, and hands back to the returning grid. |
+| `offgrid-generator-ags` | A night black-out on a low battery with a 7 kW generator on AGS: at the 20 % start threshold it cranks at once, then carries the house and charges at 70 % of rated until 30 %, stops after its minimum run, restarts on low SoC, and hands back to the returning grid. |
 | `au-response-timing` | AS/NZS 4777.2 timing end to end: the 1 s dead time and 10 s settle on an over-frequency excursion, the 0.1 Hz release hysteresis, then a black-out, the 60 s enter-service delay and the 360 s output ramp. |
 
 Each is also a pytest case (`tests/test_scenario.py`), so the library doubles as a regression

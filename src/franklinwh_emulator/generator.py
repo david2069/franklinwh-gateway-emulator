@@ -18,10 +18,11 @@ Semantics: decoding from franklinwh-local-bridge ``generator.py``, the rest inte
 * ``charge1..3`` are the generator's **operating windows** (FranklinWH: "up to 3
   non-overlapping operating periods"). Auto starts only inside an enabled window; with no
   window enabled, any time.
-* **AGS is SoC-based only** (no PV-loss trigger on the device): while islanded, once the
-  outage has lasted ``startDelTime`` and SoC ≤ ``genStartElec``, it starts; it stops at
-  SoC ≥ ``genCloseElec`` after the minimum run. *Interpretation:* ``startDelTime`` as the
-  outage age before an auto start is allowed is not confirmed.
+* **AGS is SoC-based only** (no PV-loss trigger on the device): while islanded, once SoC ≤
+  ``genStartElec``, it starts; it stops at SoC ≥ ``genCloseElec`` after the minimum run.
+* ``startDelTime`` is the app's *Alarm delay after starting fails* (FranklinWH PCS Technical
+  Brief, Generator Setting screen, North America; #179): a start that hasn't produced a running
+  generator within it raises the fail-to-start fault. It does not delay the start.
 * The aGate never parallels a generator with the grid. On-grid (an exercise run, or a
   manual start) it runs **unloaded** with its relay open; if the grid returns while it
   carries the house, it hands back and cools down.
@@ -76,7 +77,8 @@ class Generator:
         self.hw = GeneratorHardware(**{k: cfg.pop(k) for k in list(cfg) if k in hw_keys})
         aliases = {"rated_w": "genRatedPower", "model": "genModel", "enabled": "genEn",
                    "start_below_soc": "genStartElec", "stop_above_soc": "genCloseElec",
-                   "start_delay_s": "startDelTime", "optimal_pct": "genOptiPPoint",
+                   "start_fail_alarm_s": "startDelTime", "start_delay_s": "startDelTime",
+                   "optimal_pct": "genOptiPPoint",
                    "mode": "manuSw"}
         block = dict(BLOCK_DEFAULTS)
         if self.hw.installed:                    # sensible defaults for a fitted unit
@@ -190,10 +192,8 @@ class Generator:
             if soc >= float(b.get("genCloseElec", 80)) and loaded_for >= self.hw.min_run_s:
                 return False, "soc-reached", t0
             return True, "auto", t0
-        delay = float(b.get("startDelTime") or 0)
-        if (islanded_for >= delay and soc <= float(b.get("genStartElec", 20))
-                and self.in_window(minute)):
-            return True, "auto", max(t0, ts - islanded_for + delay)
+        if soc <= float(b.get("genStartElec", 20)) and self.in_window(minute):
+            return True, "auto", max(t0, ts - islanded_for)
         return False, "idle", t0
 
     def update(self, ts: float, dt: float, local_dt, islanded: bool, islanded_for: float,
@@ -222,7 +222,9 @@ class Generator:
             ph, since = self._phase, (self._phase_since if self._phase_since is not None else ts)
             if ph == "crank":
                 if self.forced_fault == "fail-start":
-                    if ts - since >= 3 * self.hw.crank_s:   # three cranking attempts
+                    # Alarm after startDelTime of failing to start (#179); 0 → three cranks.
+                    alarm = float(self.block.get("startDelTime") or 0) or 3 * self.hw.crank_s
+                    if ts - since >= alarm:
                         self._set_fault("fail-to-start")
                         return
                     break

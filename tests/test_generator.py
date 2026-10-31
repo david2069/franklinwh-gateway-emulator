@@ -41,14 +41,12 @@ def test_never_runs_on_grid_in_auto():
     assert snap.gen_state == 0 and snap.generator_w == 0
 
 
-def test_ags_starts_after_delay_below_threshold_and_charges_to_optimal_point():
+def test_ags_starts_below_threshold_and_charges_to_optimal_point():
     s, clock = site(initial_soc=15)                   # below genStartElec 20
     s.set_grid(available=False)
-    snap = after(s, clock, 30)
-    assert not snap.grid_connected and snap.gen_state == 0     # inside startDelTime (60 s)
-    snap = after(s, clock, 35)
-    assert snap.gen_state == 1 and not snap.gen_relay_closed   # cranking / warming up
-    snap = after(s, clock, 30)
+    snap = after(s, clock, 3)                         # no wait: startDelTime is an alarm delay (#179)
+    assert not snap.grid_connected and snap.gen_state == 1 and not snap.gen_relay_closed
+    snap = after(s, clock, 20)                        # cranked 5 s + warmed up 10 s
     assert snap.gen_relay_closed
     # 70 % of 6 kW = 4.2 kW: 1.5 kW of house + 2.7 kW into the battery.
     assert snap.generator_w == pytest.approx(4200, abs=1)
@@ -199,3 +197,15 @@ def test_rated_w_and_explicit_settings_win_over_the_fitted_defaults():
     apply(gw, "generator", {"rated_w": 5000, "set": {"manuSw": 2}, "installed": True})
     b = gw.site.generator.block
     assert b["genRatedPower"] == 5000 and b["manuSw"] == 2 and b["genEn"] == 1
+
+
+def test_start_del_time_is_the_fail_to_start_alarm_delay():
+    """App: 'Alarm delay after starting fails' 1800 s (PCS Technical Brief p. 12; #179)."""
+    s, clock = site(initial_soc=10, gen={"startDelTime": 600})
+    s.generator.forced_fault = "fail-start"
+    s.set_grid(available=False)
+    snap = after(s, clock, 590)
+    assert snap.gen_state == 1 and s.generator.fault is None        # still trying, no alarm yet
+    snap = after(s, clock, 20)
+    assert snap.gen_state == 3 and s.generator.fault == "fail-to-start"
+    assert Generator({"installed": True, "start_fail_alarm_s": 900}).block["startDelTime"] == 900

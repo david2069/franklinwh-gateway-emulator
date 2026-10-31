@@ -1,10 +1,11 @@
 name: offgrid-generator-ags
 description: >
-  A night-time black-out on a low battery with a 7 kW generator on AGS (start below 20 %,
-  stop at 30 %, start delay 30 min as on the reference aGate's 1901). The battery carries the
-  house through the start delay; the generator then cranks, warms up, carries the house and
-  charges the battery at its 70 % optimal point, and stops at 30 % after its minimum run. The
-  grid returns while it runs again: it hands back and cools down. Nothing starts on-grid.
+  A night-time black-out on a low battery with a 7 kW generator on AGS (start at or below 20 %,
+  stop at 30 %). On-grid the battery stops at its 20 % reserve; when the grid goes it is at the
+  start threshold, so the generator cranks at once (startDelTime is the app's "Alarm delay after
+  starting fails", not a start delay: #179), warms up, carries the house and charges the
+  battery at its 70 % optimal point, and stops at 30 % after its minimum run. The grid returns
+  while it runs again: it hands back and cools down. Nothing starts on-grid.
 start: "2026-07-10T01:00:00"
 duration: 4h
 record_every: 10s
@@ -21,10 +22,11 @@ steps:
   - {at: 0,    do: load, with: {w: 1200}}
   - {at: 10m,  expect: {gen_state: 0, generator_w: 0}}           # on-grid: never starts
   - {at: 15m,  do: grid, with: {available: false}}
-  - {at: 20m,  expect: {grid_connected: false, gen_state: 0}}    # SoC above 20 %
-  - {at: 47m,  expect: {gen_state: 1, generator_w: ">4000"}}      # outage > 30 min, SoC < 20 %
-  - {at: 47m,  expect: {battery_w: "<-3000"}}                     # charging at the 70 % point
-  - {at: 2h,   expect: {gen_state: 0, generator_w: 0}}            # stopped at 30 %, cooled down
+  - {at: 20m,  expect: {grid_connected: false, gen_state: 1}}    # at the 20 % reserve: starts at once
+  - {at: 25m,  expect: {gen_state: 1, generator_w: ">4000"}}      # cranked, warmed up, loaded
+  - {at: 25m,  expect: {battery_w: "<-3000"}}                     # charging at the 70 % point
+  - {at: 50m,  expect: {gen_state: 0, generator_w: 0}}            # stopped at 30 %, cooled down
+  - {at: 2h,   expect: {gen_state: 1}}                            # back at 20 %: starts again
   - {at: 2h50m, do: soc, with: {value: 15}}
   - {at: 3h5m, expect: {gen_state: 1, generator_w: ">4000"}}
   - {at: 3h10m, do: grid, with: {restore: true}}
