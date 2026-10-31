@@ -123,7 +123,22 @@
   <section class="detail" x-show="current" aria-live="polite">
     <template x-if="current">
       <div>
-        <h2 x-text="current.id"></h2>
+        <div class="picker">
+          <h2><label for="pick-gw" class="sr-only">Gateway</label>
+            <select id="pick-gw" class="pick-gw" @change="select($event.target.value)">
+              <template x-for="g in pickList()" :key="g.id"><option :value="g.id" :selected="g.id === active" x-text="pickLabel(g)"></option></template>
+            </select></h2>
+          <template x-for="[f, label] in PICK_FILTERS" :key="f">
+            <span class="pick-filter" x-show="pickOptions(f).length > 1 || pickFilters[f]">
+              <label :for="'pick-' + f" x-text="label"></label>
+              <select :id="'pick-' + f" @change="setPickFilter(f, $event.target.value)">
+                <option value="" :selected="!pickFilters[f]">any</option>
+                <template x-for="v in pickOptions(f)" :key="v"><option :value="v" x-text="v" :selected="v === pickFilters[f]"></option></template>
+              </select>
+            </span>
+          </template>
+          <span class="sub pick-count" x-text="pickCount()"></span>
+        </div>
         <div class="sub" x-text="detailLine(current)"></div>
         <div class="comms" x-show="current.profile !== 'spec'">
           <span class="comms-state" :class="{ off: !current.modbus_listening, warn: current.rebooting }" x-text="modbusText(current)"></span>

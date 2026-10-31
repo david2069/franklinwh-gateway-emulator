@@ -54,9 +54,14 @@ stay metric, as on the aGate.
 
 ![Cards grouped by state, compact](assets/ui/grouped-compact.png)
 
-**Group by** (header) groups cards by country, state/province, suburb/city, postcode or site
-ID, from each gateway's `location`; click a group to collapse it. **Compact** shrinks each card
+**Group by** (header) groups cards by country, state/province, suburb/city, postcode, site ID or
+timezone, from each gateway's `location`; click a group to collapse it. **Compact** shrinks each card
 to SoC, local time and tags. Both are remembered by the browser.
+
+**Picking a gateway.** The detail card's title is a drop-down of the gateways. Beside it, optional
+filters for country, state/province, postcode and timezone narrow the list ("1 of 7 gateways"); each
+offers only values the fleet has, given the others. Picking selects the gateway everywhere, as
+clicking its card does. The filters are remembered by the browser.
 
 ## Actions
 

@@ -393,3 +393,36 @@ def test_docs_links_point_at_real_pages_and_sections():
         if anchor:
             heads = [slug(h) for h in _re.findall(r"^#+ (.+)$", md.read_text(), _re.M)]
             assert anchor in heads, (t, heads)
+
+
+# -- the detail card's gateway picker, and grouping by timezone (#142) ---------------------------
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_picker_filters(tmp_path):
+    import subprocess
+    gws = [
+        {"id": "syd", "location": {"country": "AU", "state": "NSW", "postcode": "2000", "timezone": "Australia/Sydney"}},
+        {"id": "mel", "location": {"country": "AU", "state": "VIC", "postcode": "3000", "timezone": "Australia/Melbourne"}},
+        {"id": "phx", "location": {"country": "US", "state": "AZ", "timezone": "America/Phoenix"}},
+        {"id": "fixed", "location": {}, "local_time": "2026-10-31T21:33:00+13:00"},
+    ]
+    harness = tmp_path / "picker.js"
+    harness.write_text((STATIC / "groups.js").read_text() + f"""
+const G = {json.dumps(gws)};
+const ids = l => l.map(g => g.id);
+print(JSON.stringify({{
+  all: ids(pickGateways(G, {{}})), au: ids(pickGateways(G, {{country: 'AU'}})),
+  vic: ids(pickGateways(G, {{country: 'AU', state: 'VIC'}})), none: ids(pickGateways(G, {{country: 'US', state: 'NSW'}})),
+  countries: pickValues(G, {{}}, 'country'), au_states: pickValues(G, {{country: 'AU'}}, 'state'),
+  us_states: pickValues(G, {{country: 'US', state: 'NSW'}}, 'state'),
+  zones: pickValues(G, {{}}, 'timezone'), by_zone: ids(pickGateways(G, {{timezone: 'UTC+13:00'}})),
+  postcodes: pickValues(G, {{state: 'NSW'}}, 'postcode'),
+  group_tz: groupGateways(G, 'timezone').map(x => [x.label, x.items.map(g => g.id)]),
+}}));
+""")
+    r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
+    assert r["all"] == ["syd", "mel", "phx", "fixed"] and r["au"] == ["syd", "mel"] and r["vic"] == ["mel"]
+    assert r["none"] == [] and r["countries"] == ["AU", "US"] and r["au_states"] == ["NSW", "VIC"]
+    assert r["us_states"] == ["AZ"]                      # a filter's own value doesn't narrow its options
+    assert r["zones"] == ["America/Phoenix", "Australia/Melbourne", "Australia/Sydney", "UTC+13:00"]
+    assert r["by_zone"] == ["fixed"] and r["postcodes"] == ["2000"]
+    assert r["group_tz"][0] == ["America/Phoenix", ["phx"]] and ["UTC+13:00", ["fixed"]] in r["group_tz"]
