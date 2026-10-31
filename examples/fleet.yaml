@@ -29,6 +29,7 @@ gateways:
     location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000",
                country: AU, state: NSW, city: Sydney, site_id: demo-sydney}
     weather: {model: synthetic, kwp: 6.6, tilt: 20, sky: broken}
+    install: {outdoor: {sun: afternoon, cover: roof}}   # cabinet temperature (#110)
     loads: sydney-family     # appliances on smart circuits 1-3 (hot water, EV, aircon)
     history_days: 7          # a week of Direct Connect history and totals, run at start-up
     modbus: {port: 5020}
@@ -49,6 +50,7 @@ gateways:
     ac_type: 2
     location: {latitude: -37.81, longitude: 144.96, timezone: Australia/Melbourne,
                country: AU, state: VIC, city: Melbourne}
+    install: {indoor: unheated}   # a garage: lags the outside air
     load_split: {L1: 3, L2: 1, L3: 1}
     pv_inputs: {proximal: 0.6, remote1: 0.4}
     modbus: {port: 5022}

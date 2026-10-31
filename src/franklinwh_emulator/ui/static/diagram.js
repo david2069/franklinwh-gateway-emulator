@@ -159,7 +159,9 @@ function renderDiagram(g) {
     forced('solar_w') ? (g.cap_forced_solar
       ? 'solar forced to ' + kwText(ov.solar_w) + (g.solar_w < ov.solar_w - 1 ? ', capped at ' + kwText(g.solar_w) + ' by the sun' : '')
       : 'solar forced to ' + kwText(ov.solar_w) + ', not capped by the sun') : null,
-    'cabinet ' + g.cabinet_c.toFixed(1) + ' °C (modelled)'].filter(Boolean).join(' · ');
+    'cabinet ' + g.cabinet_c.toFixed(1) + ' °C (' + (g.install
+      ? g.install.label + ', surroundings ' + g.install.surroundings_c.toFixed(1) + ' °C'
+      : 'modelled') + ')'].filter(Boolean).join(' · ');
   const label = `Energy flow for ${g.id}: grid ${kwText(g.grid_w)}, home ${kwText(g.load_w)}, ` +
     `solar ${kwText(g.solar_w)}, battery ${Math.round(g.soc)}% ${kwText(g.battery_w)}`;
   return `<p class="diagram-head">${icon}<span>${esc(head)}</span></p>

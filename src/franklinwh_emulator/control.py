@@ -94,6 +94,9 @@ def gateway_state(gw: "Gateway") -> dict:
                       "ambient_c": site.ambient_override_c},
         "cap_forced_solar": site.config.cap_forced_solar,
         "pv_temperature": _pv_temperature(site, snap.ts),
+        # Placement and the temperature around the cabinet (#110); None = the original estimate.
+        "install": None if site.install is None else {
+            "label": site.install.label, "surroundings_c": round(site.surroundings_c(snap.ts), 1)},
         "base_aliases": list(gw.profile.base_aliases),
         "write_rejects": list(gw.device.write_rejects),
         "write_bases": None if gw.profile.write_bases is None else list(gw.profile.write_bases),
