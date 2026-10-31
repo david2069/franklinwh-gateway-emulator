@@ -48,7 +48,8 @@ DOCS: dict[str, str] = {
     "gen_split": "share of aGate generation per leg; default even",
     "grid_code": "as4777-au-a, ieee1547-cat2, ieee1547-cat3, ausgrid; default from ac_type",
     "grid_overrides": "grid-code values to change, e.g. {es_delay_s: 5}",
-    "location": "{latitude, longitude, timezone (IANA, DST-aware), postcode}",
+    "location": "{latitude, longitude, timezone (IANA, DST-aware), postcode, name, country (ISO alpha-2), "
+                "state, city, site_id}; country/state/city/site_id only group gateways in the UI",
     "tz_offset_hours": "fixed UTC offset, no DST; location.timezone wins",
     "native_mode": "Modbus 15507 numbering: 1 Emergency Backup, 2 Self-Consumption, 3 TOU "
                    "(Direct Connect and the cloud number them differently)",

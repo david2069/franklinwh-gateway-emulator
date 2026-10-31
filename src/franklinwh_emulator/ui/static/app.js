@@ -23,6 +23,9 @@ function running() {
     stale: '',          // why this page is out of date (the emulator restarted or changed)
     staleNewCode: false,
     layout: 'right',  // where the actions go: 'right' (beside, on wide screens) or 'below'
+    groupBy: 'none',  // cards grouped by location (groups.js): none | country | state | city | postcode | site
+    compact: false,   // one-line cards
+    collapsed: {},    // group label -> true when collapsed
     forms: {},        // action -> {field: raw string}
     results: {},      // "<gateway>/<action>" -> {ok, text}
     touDrafts: {},    // gateway -> the TOU editor's draft (tou.js), while it is open
@@ -37,6 +40,10 @@ function running() {
       try {
         this.active = localStorage.getItem('emulator.active');
         this.layout = localStorage.getItem('emulator.layout') || 'right';
+        const gb = localStorage.getItem('emulator.groupBy');
+        if (gb && GROUP_BY[gb]) this.groupBy = gb;
+        this.compact = localStorage.getItem('emulator.compact') === '1';
+        this.collapsed = JSON.parse(localStorage.getItem('emulator.collapsed') || '{}') || {};
       } catch (e) { /* private mode */ }
       this._get('/version').then(v => { this.version = v; }).catch(() => {});
       this._versionTimer = setInterval(() => this.checkVersion(), VERSION_CHECK_MS);
@@ -274,6 +281,14 @@ function running() {
     versionText() {
       if (!this.version) return '';
       return 'v' + this.version.version + (this.version.commit ? ' · ' + this.version.commit : '');
+    },
+    setView(key, value) {
+      this[key] = value;
+      try { localStorage.setItem('emulator.' + key, key === 'compact' ? (value ? '1' : '0') : value); } catch (e) { /* private mode */ }
+    },
+    toggleGroup(label) {
+      this.collapsed = { ...this.collapsed, [label]: !this.collapsed[label] };
+      try { localStorage.setItem('emulator.collapsed', JSON.stringify(this.collapsed)); } catch (e) { /* private mode */ }
     },
     toggleLayout() {
       this.layout = this.layout === 'right' ? 'below' : 'right';

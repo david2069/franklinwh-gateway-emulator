@@ -40,7 +40,7 @@ import random
 import threading
 import time
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Any
 from datetime import datetime, timedelta, tzinfo
 from datetime import timezone as dt_timezone
@@ -131,10 +131,21 @@ class Location:
     timezone: str | None = None
     postcode: str = ""
     name: str = ""
+    # For grouping in the UI only (#86); the model doesn't use them.
+    country: str = ""                   # ISO 3166-1 alpha-2, e.g. AU, US
+    state: str = ""                     # state or province, e.g. NSW
+    city: str = ""                      # suburb or city
+    site_id: str = ""
 
     @classmethod
     def from_dict(cls, d: dict | None) -> "Location":
-        loc = cls(**(d or {}))
+        d = dict(d or {})
+        unknown = sorted(set(d) - {f.name for f in fields(cls)})
+        if unknown:
+            raise ValueError(f"location: unknown keys {unknown}; known {[f.name for f in fields(cls)]}")
+        loc = cls(**d)
+        if loc.country and not (len(loc.country) == 2 and loc.country.isalpha() and loc.country.isupper()):
+            raise ValueError(f"location.country {loc.country!r}: an ISO 3166-1 alpha-2 code, e.g. AU, US")
         if loc.timezone is not None:
             try:
                 ZoneInfo(loc.timezone)
