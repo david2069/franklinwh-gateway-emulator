@@ -71,7 +71,7 @@ DOCS: dict[str, str] = {
     "cap_forced_solar": "forced solar (pv solar_w) can't exceed the solar model's value now, 0 at "
                         "night (default true); false = use it as given (lab tests)",
     "utility": "the grid operator's rules: {operator, export: allowed|limited|prohibited, export_limit_w, "
-               "export_per_phase_w, import_limit_w, battery_export, export_rule_source}; enforced (PCS "
+               "export_per_phase_w, import_limit_w, grid_charge, grid_charge_max_w, battery_export, export_rule_source}; enforced (PCS "
                "settings). Also accepted as dnsp (AU) or lines_company (NZ)",
     "dnsp": "AU name for utility (the same block)",
     "lines_company": "NZ name for utility (the same block)",

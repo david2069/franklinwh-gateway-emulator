@@ -1,0 +1,12 @@
+#123 PCS grid charge settings — 2026-11-01
+
+Basis: FranklinWH PCS Technical Brief (2024-04-07) 'Grid Import Limitations', app Optional screen: Grid charge (toggle), Max charge power (kW).
+
+pytest tests/test_utility_limits.py:
+10 passed in 0.15s
+
+break check (src reverted, test kept):
+1 failed, 9 passed in 0.18s
+
+full suite:
+609 passed in 32.65s

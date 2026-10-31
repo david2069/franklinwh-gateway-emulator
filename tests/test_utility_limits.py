@@ -118,3 +118,19 @@ def test_north_american_models_default_to_no_battery_export():
     assert gateway_state(us_on)["battery_export"] is True and snap.grid_w < -3500
     au_off, snap = forced(utility={"battery_export": False})
     assert snap.grid_w > -50
+
+
+def test_grid_charge_off_and_max_charge_power():
+    """App Grid charge / Max charge power (PCS Technical Brief, Grid Import Limitations; #123)."""
+    def charging(**u):
+        g = gw(initial_soc=40, utility={"export": "allowed", **u})
+        g.site.update_remote(enabled=True, mode=1, watts=5000)       # charge 5 kW on command
+        return run(g, 1500, 500)                                     # 1 kW solar surplus
+    snap = charging()
+    assert snap.battery_w == pytest.approx(-5000, abs=50)           # 1 kW solar + 4 kW grid
+    snap = charging(grid_charge=False)
+    assert snap.battery_w == pytest.approx(-1000, abs=50) and snap.grid_w < 50   # solar only
+    snap = charging(grid_charge_max_w=2000)
+    assert snap.battery_w == pytest.approx(-3000, abs=50) and snap.grid_w == pytest.approx(2000, abs=50)
+    with pytest.raises(ValueError, match="must be ≥ 0"):
+        Utility.from_dict({"grid_charge_max_w": -1})

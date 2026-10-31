@@ -1373,6 +1373,13 @@ class Site:
         if not self.battery_export() and batt > 0 and grid < 0:
             batt -= min(batt, -grid)                     # the battery serves the home only
             grid = load - solar - batt
+        u = self.utility_rules
+        if u is not None and batt < 0 and grid > 0:      # charging partly from the grid
+            from_grid = min(-batt, grid)
+            allowed = 0.0 if not u.grid_charge else (
+                from_grid if u.grid_charge_max_w is None else min(from_grid, float(u.grid_charge_max_w)))
+            batt += from_grid - allowed                  # Grid charge / Max charge power (PCS)
+            grid = load - solar - batt
         self.import_clipped_w = 0.0
         cap = self.import_cap_w()
         if cap is not None and grid > cap:
