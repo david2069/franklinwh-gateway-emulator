@@ -43,7 +43,7 @@ def test_page_and_its_files(ui):
     page = body.decode()
     refs = re.findall(r'(?:src|href)="/static/([^"]+)"', page)
     assert set(refs) == {"style.css", "app.js", "diagram.js", "actions.js", "tou.js",
-                         "alpinejs-3.14.1.min.js"}
+                         "groups.js", "alpinejs-3.14.1.min.js"}
     for name in refs:
         status, ctype, _ = get(f"{base}/static/{name}")
         assert status == 200
@@ -79,7 +79,7 @@ def test_page_reads_only_fields_the_state_has(ui):
     """Every g.<field> / current.<field> the page uses exists in the control API's state."""
     fleet, _ = ui
     state = gateway_state(fleet["site"])
-    text = "".join((STATIC / n).read_text() for n in ("index.html", "app.js", "diagram.js", "actions.js", "tou.js"))
+    text = "".join((STATIC / n).read_text() for n in ("index.html", "app.js", "diagram.js", "actions.js", "tou.js", "groups.js"))
     used = set(re.findall(r"\b(?:g|current)\.([a-z_]+)", text))
     assert used and used <= set(state), sorted(used - set(state))
     leg_fields = set(re.findall(r"\bleg\.([a-z_]+)", text))
@@ -305,3 +305,43 @@ def test_active_gateway_select_marks_the_option():
     select = re.search(r'<select id="active-gw"[^>]*>(.*?)</select>', page, re.S)
     assert select and ":value" not in select.group(0).split(">", 1)[0]
     assert ':selected="g.id === active"' in select.group(1)
+
+
+# -- grouped cards (#86) ---------------------------------------------------------------------
+def test_location_fields_validated_and_in_state(ui):
+    from franklinwh_emulator.validate import validate_fleet
+    bad = validate_fleet({"gateways": [{"id": "a", "location": {"country": "aus"}},
+                                       {"id": "b", "location": {"suburb": "x"}}]})
+    assert "ISO 3166-1 alpha-2" in bad[0]["error"] and "unknown keys ['suburb']" in bad[1]["error"]
+    fleet, _ = ui
+    loc = gateway_state(fleet["site"])["location"]
+    assert set(loc) >= {"country", "state", "city", "site_id", "postcode", "timezone"}
+
+
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_groups_by_location(tmp_path):
+    import subprocess
+    gws = [
+        {"id": "a", "location": {"country": "AU", "state": "NSW", "city": "Sydney", "postcode": "2000",
+                                 "site_id": "s1", "timezone": "Australia/Sydney"},
+         "local_time": "2026-10-31T11:45:28+11:00"},
+        {"id": "b", "location": {"country": "AU", "state": "VIC", "city": "Melbourne"}},
+        {"id": "c", "location": {"country": "US", "state": "NSW", "city": "Sydney"}},   # same names, other country
+        {"id": "d", "location": {}, "local_time": "2026-10-31T00:45:28+00:00"},
+    ]
+    harness = tmp_path / "groups.js"
+    harness.write_text((STATIC / "groups.js").read_text() + f"""
+const G = {json.dumps(gws)};
+const view = by => groupGateways(G, by).map(x => [x.label, x.missing, x.items.map(g => g.id)]);
+print(JSON.stringify({{none: view('none'), country: view('country'), state: view('state'), city: view('city'),
+                      site: view('site'), bogus: view('bogus'), t0: localTimeText(G[0]), t3: localTimeText(G[3]),
+                      t1: localTimeText(G[1])}}));
+""")
+    r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
+    assert r["none"] == [["", False, ["a", "b", "c", "d"]]] and r["bogus"] == r["none"]
+    assert r["country"] == [["AU", False, ["a", "b"]], ["US", False, ["c"]], ["no country", True, ["d"]]]
+    assert r["state"] == [["AU · NSW", False, ["a"]], ["AU · VIC", False, ["b"]], ["US · NSW", False, ["c"]],
+                          ["no state / province", True, ["d"]]]
+    assert r["city"][0] == ["AU · NSW · Sydney", False, ["a"]]
+    assert r["site"] == [["s1", False, ["a"]], ["no site id", True, ["b", "c", "d"]]]
+    assert (r["t0"], r["t3"], r["t1"]) == ("11:45 · Australia/Sydney", "00:45 · UTC+00:00", "")

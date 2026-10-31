@@ -262,3 +262,23 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
 .comms button:disabled { opacity: .6; cursor: progress; }
 .comms button:focus-visible { outline: 2px solid var(--ok); outline-offset: 1px; }
 .comms .result { flex-basis: 100%; }
+
+/* Cards grouped by location, compact cards, local time (#86) */
+.view-opts { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
+.view-opts select, .view-opts button { font: 13px var(--sans); color: var(--text-2); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; min-height: 36px; cursor: pointer; }
+.view-opts button[aria-pressed="true"] { border-color: var(--ok); color: var(--ok); }
+.view-opts select:focus-visible, .view-opts button:focus-visible, .group-head:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
+.gw-group + .gw-group { margin-top: 14px; }
+.group-head { display: flex; align-items: baseline; gap: 8px; width: 100%; margin: 0 0 8px; padding: 6px 2px; min-height: 36px;
+  font: 600 14px var(--sans); color: var(--text); background: none; border: 0; border-bottom: 1px solid var(--line);
+  cursor: pointer; text-align: left; }
+.group-head.missing { color: var(--muted); font-style: italic; }
+.group-head .count { margin-left: auto; font-weight: 400; font-size: 12px; color: var(--muted); }
+.card .tz { font: 12px var(--mono); color: var(--text-2); }
+.cards.compact { grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 8px; }
+.cards.compact .card { padding: 8px 12px; }
+.cards.compact .card .fw, .cards.compact .card .addr, .cards.compact .flows { display: none; }
+.cards.compact .card .soc { font-size: 16px; }
+.cards.compact .card .soc small { display: inline; margin-left: 6px; }
+.cards.compact .tags { margin-top: 6px; }

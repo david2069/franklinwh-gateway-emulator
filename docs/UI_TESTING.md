@@ -33,6 +33,11 @@ package isn't installed in it: `pip install -e .` once).
 - `site` has appliances (`loads: sydney-family`): hot water on SW1, EV on SW2, aircon on SW3.
 - Each shows SoC, solar, home, battery and grid power, changing every second, and the addresses
   to point a bridge at.
+- Each card shows the gateway's local time and timezone (`UTC+…` without a location).
+- **Group by** (header): state/province groups the cards as `AU · NSW`, `AU · SA`, `AU · VIC`,
+  `US · AZ`, and "no state / province" for gateways without one. Click a group's heading to
+  collapse it. **Compact** shrinks each card to SoC, time and tags. Both are remembered on reload.
+  The fields are `location: {country, state, city, postcode, site_id}` in the fleet file.
 - Click a card: it gets a green border, and the panel below switches to it (the **active
   gateway**). The choice is remembered when the page reloads.
 

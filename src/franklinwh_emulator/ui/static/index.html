@@ -9,6 +9,7 @@
 <script src="/static/diagram.js"></script>
 <script src="/static/actions.js"></script>
 <script src="/static/tou.js"></script>
+<script src="/static/groups.js"></script>
 <script defer src="/static/alpinejs-3.14.1.min.js"></script>
 </head>
 <body x-data="running()" x-init="start()">
@@ -27,6 +28,14 @@
     </select>
     <button type="button" class="secondary" @click="restoreSession()" :disabled="!restoreName">Restore</button>
   </form>
+  <div class="view-opts">
+    <label for="group-by">Group by</label>
+    <select id="group-by" :value="groupBy" @change="setView('groupBy', $event.target.value)">
+      <template x-for="[v, l] in Object.entries(GROUP_BY)" :key="v"><option :value="v" x-text="l" :selected="v === groupBy"></option></template>
+    </select>
+    <button type="button" @click="setView('compact', !compact)" :aria-pressed="compact.toString()"
+            title="Compact cards: SoC, local time and tags only">Compact</button>
+  </div>
   <button type="button" class="layout-toggle" @click="toggleLayout()" :aria-pressed="(layout === 'right').toString()"
           x-text="layout === 'right' ? 'Actions: right' : 'Actions: below'"
           title="Show the actions beside the gateways, or below them"></button>
@@ -47,14 +56,24 @@
   </div>
   <div class="col-main">
 
-  <section class="cards" aria-label="Gateways">
-    <template x-for="g in gateways" :key="g.id">
+  <section class="gw-groups" aria-label="Gateways">
+   <template x-for="grp in groupGateways(gateways, groupBy)" :key="grp.label">
+   <div class="gw-group">
+    <button type="button" class="group-head" x-show="groupBy !== 'none'" @click="toggleGroup(grp.label)"
+            :aria-expanded="(!collapsed[grp.label]).toString()" :class="{ missing: grp.missing }">
+      <span class="chev" x-text="collapsed[grp.label] ? '▸' : '▾'" aria-hidden="true"></span>
+      <span x-text="grp.label"></span>
+      <span class="count" x-text="grp.items.length + (grp.items.length === 1 ? ' gateway' : ' gateways')"></span>
+    </button>
+   <div class="cards" :class="{ compact: compact }" x-show="groupBy === 'none' || !collapsed[grp.label]">
+    <template x-for="g in grp.items" :key="g.id">
       <button type="button" class="card" :aria-pressed="(g.id === active).toString()" @click="select(g.id)">
         <div class="top">
           <span class="id" x-text="g.id"></span>
           <span class="soc"><span x-text="pct(g.soc)" :aria-label="'state of charge ' + pct(g.soc)"></span>
             <small x-text="reserveText(g)"></small></span>
         </div>
+        <div class="tz" x-text="localTimeText(g)"></div>
         <div class="fw" x-text="'Firmware ' + g.firmware"></div>
         <div class="addr">
           <div x-text="g.modbus_enabled ? 'Modbus TCP ' + addr(g.address) : 'Modbus TCP off'"
@@ -84,6 +103,9 @@
         </div>
       </button>
     </template>
+   </div>
+   </div>
+   </template>
   </section>
 
   <section class="detail" x-show="current" aria-live="polite">

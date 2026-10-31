@@ -26,7 +26,8 @@ gateways:
     seed: 7
     apower_units: 2
     grid_code: ausgrid
-    location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}
+    location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000",
+               country: AU, state: NSW, city: Sydney, site_id: demo-sydney}
     weather: {model: synthetic, kwp: 6.6, tilt: 20, sky: broken}
     loads: sydney-family     # appliances on smart circuits 1-3 (hot water, EV, aircon)
     history_days: 7          # a week of Direct Connect history and totals, run at start-up
@@ -37,7 +38,8 @@ gateways:
   - id: us-split
     seed: 42
     ac_type: 1
-    location: {latitude: 33.45, longitude: -112.07, timezone: America/Phoenix}
+    location: {latitude: 33.45, longitude: -112.07, timezone: America/Phoenix,
+               country: US, state: AZ, city: Phoenix}
     modbus: {port: 5021}
     directconnect: {port: 9021}
 
@@ -45,7 +47,8 @@ gateways:
   - id: au-3phase
     seed: 11
     ac_type: 2
-    location: {latitude: -37.81, longitude: 144.96, timezone: Australia/Melbourne}
+    location: {latitude: -37.81, longitude: 144.96, timezone: Australia/Melbourne,
+               country: AU, state: VIC, city: Melbourne}
     load_split: {L1: 3, L2: 1, L3: 1}
     pv_inputs: {proximal: 0.6, remote1: 0.4}
     modbus: {port: 5022}
@@ -55,7 +58,8 @@ gateways:
   - id: au-2phase
     seed: 12
     ac_type: 2
-    location: {latitude: -34.93, longitude: 138.60, timezone: Australia/Adelaide}
+    location: {latitude: -34.93, longitude: 138.60, timezone: Australia/Adelaide,
+               country: AU, state: SA, city: Adelaide}
     phases: [L1, L2]
     modbus: {port: 5023}
     directconnect: {port: 9023}
@@ -73,7 +77,8 @@ gateways:
   - id: fresh
     seed: 21
     setup: factory
-    location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney}
+    location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney,
+               country: AU, state: NSW, city: Sydney}
     modbus: {port: 5026}
     directconnect: {port: 9026}
 
