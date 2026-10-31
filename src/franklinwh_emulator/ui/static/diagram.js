@@ -7,7 +7,7 @@
  */
 const NOT_MODELLED = [
   'per-aPower SoC and power (one combined battery)', 'two PV inputs on the aGate',
-  'aPower S DC hybrid', 'V2L', 'non-backup panel', 'service rating', 'EV battery SoC',
+  'aPower S DC hybrid', 'V2L', 'non-backup panel', 'EV battery SoC',
   'hot-water temperature', 'tariff prices', 'remote (cloud) VPP mode',
   'network connection (Ethernet, WiFi, 4G)',
 ];
@@ -59,6 +59,17 @@ function statusKey(g) {
        : n.includes('standby') ? 'standby' : '';
 }
 
+// The service meter: the main breaker's amps and rating (#156); red when tripped.
+function meterText(g) {
+  const legs = g.legs.length + '-phase';
+  const s = g.service;
+  if (!s) return { value: '', sub: legs, lines: ['no rating set'], cls: '' };
+  const lines = [(s.rating_w / 1000).toFixed(1) + ' kW'];
+  if (s.open) lines.push(['tripped', 'c-red']);
+  else if (s.trip_progress > 0) lines.push(['tripping ' + Math.round(s.trip_progress * 100) + ' %', 'c-orange']);
+  return { value: Math.round(s.main_breaker_a) + ' A', sub: legs, lines, cls: s.open ? 'bad' : '' };
+}
+
 function renderDiagram(g) {
   if (!g) return '';
   const out = [];
@@ -75,7 +86,8 @@ function renderDiagram(g) {
     g.grid_connected ? (g.grid_w > IDLE_W ? 'importing' : g.grid_w < -IDLE_W ? 'exporting' : 'connected')
                      : 'down' + (g.trip_reason ? ' · ' + g.trip_reason : ''),
     g.grid_connected ? '' : 'bad'));
-  out.push(node(290, 300, 80, 86, 'Meter', '', legs + '-phase'));
+  const m = meterText(g);
+  out.push(node(290, 300, 96, 118, 'Meter', m.value, m.sub, m.cls, m.lines));
 
   // aGate → main panel → home.
   links.push(link([[500, 240], [500, 160]], g.load_w, +1));
