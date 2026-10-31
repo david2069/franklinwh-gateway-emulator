@@ -21,7 +21,8 @@
    it is written, never commit raw device or API output, and use the policy's fixed fake
    example values. `.agents/policies/pii_policy.md`.
 6. **Hardware:** read-only by default; each write needs the owner's explicit go-ahead and a
-   restore plan; one Modbus client; never write 1821/1823/1825.
+   restore plan; one Modbus client; never write 1823/1825; 1821 (Debug Mode) only with the owner
+   present (owner, 2026-10-31).
    `.agents/policies/hardware_test_protocol.md`.
 7. **The owner's schedules belong to the owner.** Diagnose read-only; never create, edit,
    disable or trigger them.
