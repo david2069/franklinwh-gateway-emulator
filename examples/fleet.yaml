@@ -32,6 +32,7 @@ gateways:
     install: {outdoor: {sun: afternoon, cover: roof}}   # cabinet temperature (#110)
     loads: sydney-family     # appliances on smart circuits 1-3 (hot water, EV, aircon)
     history_days: 7          # a week of Direct Connect history and totals, run at start-up
+    service: {main_breaker_a: 63}   # service rating: 63 A x 230 V = 14.5 kW; import above it trips (#123)
     modbus: {port: 5020}
     directconnect: {port: 9020}
 
@@ -41,6 +42,7 @@ gateways:
     ac_type: 1
     location: {latitude: 33.45, longitude: -112.07, timezone: America/Phoenix,
                country: US, state: AZ, city: Phoenix}
+    service: {main_breaker_a: 200}
     modbus: {port: 5021}
     directconnect: {port: 9021}
 
@@ -53,6 +55,7 @@ gateways:
     install: {indoor: unheated}   # a garage: lags the outside air
     load_split: {L1: 3, L2: 1, L3: 1}
     pv_inputs: {proximal: 0.6, remote1: 0.4}
+    service: {main_breaker_a: 63}   # per phase: 43.5 kW over three
     modbus: {port: 5022}
     directconnect: {port: 9022}
 
@@ -63,6 +66,7 @@ gateways:
     location: {latitude: -34.93, longitude: 138.60, timezone: Australia/Adelaide,
                country: AU, state: SA, city: Adelaide}
     phases: [L1, L2]
+    service: {main_breaker_a: 63}
     modbus: {port: 5023}
     directconnect: {port: 9023}
 
@@ -71,6 +75,7 @@ gateways:
     seed: 99
     quirks:
       tou_reserve_mirrors_self: false
+    service: {main_breaker_a: 63}
     modbus: {port: 5024}
     directconnect: {port: 9024}
 
@@ -81,6 +86,7 @@ gateways:
     setup: factory
     location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney,
                country: AU, state: NSW, city: Sydney}
+    service: {main_breaker_a: 63}
     modbus: {port: 5026}
     directconnect: {port: 9026}
 
@@ -91,4 +97,5 @@ gateways:
     profile: spec
     ac_type: 1
     grid_code: ieee1547-cat3
+    service: {main_breaker_a: 200}
     modbus: {port: 5025}

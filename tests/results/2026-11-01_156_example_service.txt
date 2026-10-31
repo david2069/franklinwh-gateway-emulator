@@ -1,0 +1,23 @@
+#156 follow-up: service ratings on the example gateways — 2026-11-01
+
+One simulated week per gateway (60 s steps), Self-Consumption and Emergency Backup:
+site         backup=False rating  14.5 kW  max import   9.3 kW  peak trip 0.00 tripped=False
+site         backup=True  rating  14.5 kW  max import  14.5 kW  peak trip 0.00 tripped=False
+us-split     backup=False rating  48.0 kW  max import   0.0 kW  peak trip 0.00 tripped=False
+us-split     backup=True  rating  48.0 kW  max import   5.5 kW  peak trip 0.00 tripped=False
+au-3phase    backup=False rating  43.5 kW  max import   0.7 kW  peak trip 0.00 tripped=False
+au-3phase    backup=True  rating  43.5 kW  max import   5.7 kW  peak trip 0.00 tripped=False
+au-2phase    backup=False rating  29.0 kW  max import   0.8 kW  peak trip 0.00 tripped=False
+au-2phase    backup=True  rating  29.0 kW  max import   5.7 kW  peak trip 0.00 tripped=False
+tou-reserve  backup=False rating  14.5 kW  max import   0.6 kW  peak trip 0.00 tripped=False
+tou-reserve  backup=True  rating  14.5 kW  max import   5.5 kW  peak trip 0.00 tripped=False
+fresh        backup=False rating  14.5 kW  max import   0.8 kW  peak trip 0.00 tripped=False
+fresh        backup=True  rating  14.5 kW  max import   5.7 kW  peak trip 0.00 tripped=False
+spec         backup=False rating  48.0 kW  max import   0.7 kW  peak trip 0.00 tripped=False
+spec         backup=True  rating  48.0 kW  max import   5.6 kW  peak trip 0.00 tripped=False
+
+break check (examples reverted, test kept):
+1 failed, 28 deselected in 0.03s
+
+full suite:
+582 passed in 31.87s
