@@ -16,13 +16,45 @@ Built for [franklinwh-modbus](https://github.com/david2069/franklinwh-modbus) an
 unmodified `FranklinWHController` connects, scans, reads and dispatches against it
 (see `tests/test_franklinwh_modbus.py`).
 
-> Unofficial software, not affiliated with FranklinWH. It emulates documented and observed
-> behaviour of firmware `V10R01B04D00`. Where the docs disagree, the choices are listed below.
+> **Unofficial, and an emulation: it can never be 100% accurate.** See the
+> [Disclaimer](#disclaimer). It emulates documented and observed behaviour of the reference
+> aGate's firmware. Where the docs disagree, the choices are listed below.
 
 **Docs:** [Design and rationale](docs/DESIGN.md) · [Scenarios](docs/SCENARIOS.md) ·
 [Direct Connect frontend](docs/DIRECT_CONNECT.md) · [Weather and loads](docs/WEATHER_AND_LOADS.md) · [Calibration against the real aGate](docs/CALIBRATION.md) · [Findings about the real devices and
 libraries](docs/FINDINGS.md) · [Bridge integration plan](docs/BRIDGE_INTEGRATION.md) ·
 [Backlog](BACKLOG.md) · [Changelog](CHANGELOG.md)
+
+## Disclaimer
+
+> **UNOFFICIAL SOFTWARE — NOT AFFILIATED WITH OR ENDORSED BY FRANKLINWH.**
+>
+> This is an **emulator**, not an aGate. It imitates FranklinWH's undocumented **Direct Connect**
+> local API (reverse-engineered by third parties) and its **SunSpec Modbus TCP** API (with
+> undocumented FranklinWH extensions), from incomplete documentation and observations of a few
+> real devices. It **can never be 100% accurate**: it may behave differently from a real aGate,
+> now or in the future, and may have bugs, errors or omissions a real aGate doesn't have.
+> Software that works here may still fail, or do harm, on real hardware. **Verify on real
+> hardware before relying on any result.**
+>
+> Provided **AS-IS**, without warranty of any kind. Use is entirely at your own risk; by using it
+> you accept these limitations unreservedly. The authors accept no liability for any consequence,
+> including anything done to real hardware by software developed or tested with it.
+>
+> **Do NOT contact FranklinWH support** about this emulator. Raise issues at
+> <https://github.com/david2069/franklinwh-gateway-emulator/issues>.
+>
+> **MIT License**, with the additional notices in [LICENSE](LICENSE).
+
+### Compliance & anti-circumvention
+
+> The emulator doesn't connect to a real aGate, but what you build with it may. Keep your gateway
+> and battery settings, controls and operation compliant with the configuration set through the
+> official FranklinWH mobile app and the installer/support portal. FranklinWH-managed settings
+> may exist to protect the battery and gateway, apply software updates, enforce your local grid
+> profile and import/export limits, and enforce incentive, subsidy or VPP/grid-programme
+> restrictions. Bypassing or overriding any of them, deliberately or inadvertently, is entirely
+> at your own risk, and is neither condoned nor encouraged by the authors.
 
 ## Quick start
 
