@@ -111,7 +111,10 @@ DEFAULT_PROFILE = "agate-v10r01b04d00"
 
 # Direct Connect 1102 login fields per aGate (IBG) firmware, as measured on the reference
 # aGate (one site, one aPower). ``per_apower`` keys are lists with one entry per aPower:
-# the list shape is measured, one entry per unit is inferred (no multi-aPower reply seen).
+# the list shape is measured on one aPower. Three separate inferences, each untested with more
+# than one aPower (#78): shape (N entries for N aPowers), ordering (entry i is the aPower with
+# id i+1) and naming (ids are 1..N, as in the 1106 devMap). franklinwh-direct-connect-api's
+# synthetic site assumes the same; that is one source (both synthesis), not corroboration.
 # ``extra`` holds keys recorded only on that firmware. 1834 uses ibg_iot = AWS_VER and
 # ibg_local = APP_VER, as in the 2026-10-07 capture.
 DC_FIRMWARE: dict[str, dict] = {

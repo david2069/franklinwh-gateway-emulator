@@ -168,6 +168,8 @@ class DcPayloads:
         dev = self._dev_id(req)
         keys = ("fhp_sn", "ibg_sn", "ibg_ver", "ibg_iot", "ibg_local", "pe_sn", "pe_ver",
                 "bms_sn", "bms_ver")
+        # No id: result 1, reason -1, empty fields (DC API catalogue, the 1705 / DEVICE_SELECTOR
+        # notes). An id beyond the aPowers is answered the same way: inferred, never sent (#78).
         if dev is None or dev > self.units:
             return _refused(-1, **{k: "" for k in keys})
         sn = self.fhp_sn(dev)
