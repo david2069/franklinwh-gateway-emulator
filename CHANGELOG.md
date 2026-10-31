@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Events per gateway: what it did on its own (mode, reserve and battery status, full or at reserve, grid lost and back, alarms, derating, breaker, FORCE, export over the limit, listeners, reboots, clients connecting, leaving or refused), in its local time; a panel on the detail card, `GET /gateways/<id>/events`, `events:` level and file ([#140](https://github.com/david2069/franklinwh-gateway-emulator/issues/140)).
 - Monitor: each gateway's Modbus TCP and Direct Connect clients (address, time connected, requests) and refusals in the last hour, plus the process's CPU, memory, threads, tasks and event-loop lag; a page panel and `GET /monitor` ([#141](https://github.com/david2069/franklinwh-gateway-emulator/issues/141)).
 - Page: a Docs link in the header and "?" links from each actions group, the TOU schedule and other panels to their docs sections; a test checks every target exists.
 - Grid operator rules (`utility:`, also `dnsp:` or `lines_company:`): export allowed, limited or prohibited, an import limit, no battery export; enforced as PCS settings. A main breaker (`service:`) holds import below its rating and trips on overload until reset. Actions `utility`, `service`; card tags ([#123](https://github.com/david2069/franklinwh-gateway-emulator/issues/123)).

@@ -28,5 +28,10 @@ clients, TCP connections, refusals and requests per second; and the process: CPU
 since the previous read, memory now and at peak, threads, asyncio tasks, event-loop lag and
 uptime. Memory now comes from psutil when installed, else `/proc` or `ps`.
 
+**Events.** `GET /gateways/<id>/events` is what that gateway did on its own (the action log,
+`GET /log`, is what was asked): `{level, dropped, events: [{seq, rev, at, site_time, kind, text,
+count, last_at, last_site_time}]}`, oldest first. `?since=<rev>` returns only entries added or
+folded into since that revision; `?limit=` caps the count (default 200; the log keeps 1000).
+
 **Sign conventions on the wire:** `701.W` positive = grid import; `714.DCW` positive =
 battery discharging.

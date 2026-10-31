@@ -9,6 +9,7 @@
     POST /session/restore               {"name": "evening-test"}: replay its actions
     GET  /gateways                      list gateways
     GET  /gateways/<id>                 live state
+    GET  /gateways/<id>/events          what the gateway did (?since=<rev>&limit=<n>), oldest first
     POST /gateways/<id>/<action>        an action from schema.ACTIONS; returns the new state
 
 Unknown actions get 404; unknown body keys and missing required ones get 400.
@@ -421,6 +422,18 @@ class ControlApi:
         self._rates[(gw_id, name)] = (now, requests)
         return round((requests - n0) / (now - t0), 2) if now > t0 else 0.0
 
+    @staticmethod
+    def events(gw: "Gateway", path: str) -> dict:
+        from urllib.parse import parse_qs, urlsplit
+        q = parse_qs(urlsplit(path).query)
+        try:
+            since = int(q.get("since", ["0"])[0])
+            limit = int(q.get("limit", ["200"])[0])
+        except ValueError:
+            raise ApiError(400, "events: since and limit are integers") from None
+        ev = gw.events
+        return {"level": ev.level, "dropped": ev.dropped, "events": ev.recent(limit, since)}
+
     def monitor(self) -> dict:
         rows, conns, refused, rate = [], 0, 0, 0.0
         for gid, gw in self.gateways.items():
@@ -581,6 +594,8 @@ class ControlApi:
                 raise ApiError(404, f"no gateway {parts[1]!r}")
             if len(parts) == 2 and method == "GET":
                 return gateway_state(gw)
+            if parts[2:] == ["events"] and method == "GET":
+                return self.events(gw, path)
             if len(parts) == 3 and method == "POST":
                 self.apply_logged(gw, parts[2], body)
                 return gateway_state(gw)

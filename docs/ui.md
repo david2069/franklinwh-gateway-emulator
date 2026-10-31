@@ -68,6 +68,13 @@ emulator's answer stays in the form. **Activity** lists every action from any so
 recent refusals, and the process's CPU, memory, threads and loop lag (`GET /monitor`, read
 only while the panel is open).
 
+**Events** (bottom of a gateway's detail card) lists what that gateway did on its own, newest
+first, in its local time: mode, reserve and battery-status changes, reaching the reserve or full,
+grid lost and back, alarms, temperature derating, the main breaker, FORCE, export over the
+limit, listeners closing and opening, reboots, and clients connecting, leaving or being refused.
+Repeats from one host within a minute fold into one line (×n). `events:` in the fleet entry sets
+the level (off, normal, verbose) and an optional JSON-lines file (`GET /gateways/<id>/events`).
+
 ## TOU schedule
 
 ![The TOU schedule editor](assets/ui/tou-editor.png)

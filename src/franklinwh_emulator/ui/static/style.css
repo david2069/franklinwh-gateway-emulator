@@ -303,3 +303,11 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
 .mon-table th:first-child { white-space: nowrap; word-break: normal; }
 .mon-table tr.cur th, .mon-table tr.cur td { background: var(--panel-2, rgba(127,127,127,.08)); }
 .linkish { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; text-decoration: underline; min-height: 24px; }
+
+/* Events (#140) */
+.events { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 8px; }
+.events summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.events summary .sub { font-weight: 400; color: var(--muted); font-size: 12px; }
+.events .log { list-style: none; margin: 0; padding: 0 0 8px; font: 12px var(--mono); color: var(--text-2); max-height: 320px; overflow-y: auto; }
+.events .log li { padding: 2px 0; word-break: break-word; }
+.events .log li.ev-alarm, .events .log li.ev-breaker { color: var(--bad); }
