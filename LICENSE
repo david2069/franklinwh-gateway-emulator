@@ -28,28 +28,48 @@ ADDITIONAL NOTICES
 These notices accompany the MIT License above. They allocate risk and state
 facts about what this Software is; they do NOT add restrictions to the MIT
 grant, which continues to permit commercial use, modification and
-redistribution.
+redistribution. By using, copying, modifying or distributing the Software you
+accept them.
 
 1. UNOFFICIAL — NO AFFILIATION
 
    This is UNOFFICIAL software, NOT affiliated with, endorsed by, or supported
-   by FranklinWH. It interfaces with the aGate over the standard SunSpec Modbus
-   TCP API, including undocumented FranklinWH extension registers (the 15500+
-   range) that are outside SunSpec conformance. Either may change, break, or
-   become unavailable without notice.
+   by FranklinWH. It emulates a FranklinWH aGate: its Direct Connect local API
+   (undocumented, private, reverse-engineered by third parties) and its SunSpec
+   Modbus TCP API, including undocumented FranklinWH extension registers that
+   are outside SunSpec conformance.
 
    FranklinWH, aGate and aPower are trademarks of their respective owners, used
-   here only to describe what this Software communicates with.
+   here only to describe what this Software emulates.
 
    Do NOT contact FranklinWH support about this Software. Raise issues, defects
    or feature requests at:
-   https://github.com/david2069/franklinwh-modbus-bridge/issues
+   https://github.com/david2069/franklinwh-gateway-emulator/issues
 
-2. COMPLIANCE & ANTI-CIRCUMVENTION
+2. EMULATION ACCURACY — NO GUARANTEE
 
-   This Software issues WRITE commands to grid-connected battery hardware. It
-   can change operating mode, reserve state of charge, and charge/discharge
-   power, and can schedule those changes unattended.
+   This Software is an emulation built from incomplete documentation, reverse
+   engineering and observations of a small number of real devices. It is NOT a
+   FranklinWH aGate and can never be 100% accurate.
+
+     - It may behave differently from a real aGate, in values, timing, errors,
+       faults, limits or protocol details, NOW or IN THE FUTURE. FranklinWH can
+       change its firmware, APIs and behaviour at any time; this Software may
+       not follow.
+     - It may have bugs, errors or omissions that a real aGate does not have,
+       and may lack behaviour a real aGate has.
+     - Software that works against this emulator may still fail, misbehave or
+       cause harm against a real aGate. Passing here proves nothing about real
+       hardware: verify on real hardware, under your own supervision, before
+       relying on any result.
+
+   By using this Software you accept these limitations unreservedly.
+
+3. REAL HARDWARE & COMPLIANCE
+
+   This Software does not connect to a real aGate. Software you build or test
+   with it may send WRITE commands to grid-connected battery hardware; doing so
+   is entirely your responsibility.
 
    You are responsible for keeping your gateway and battery settings, controls
    and operation compliant with the configuration set through the official
@@ -64,20 +84,24 @@ redistribution.
      - enforce restrictions tied to contractual incentives, subsidies, or
        VPP/grid programmes.
 
-   If you use this Software to bypass or override any such control, restriction
-   or compliance measure — deliberately or inadvertently — you do so entirely at
-   your own risk. This is neither condoned nor encouraged by the authors.
+   If you use this Software, or anything built or tested with it, to bypass or
+   override any such control, restriction or compliance measure — deliberately
+   or inadvertently — you do so entirely at your own risk. This is neither
+   condoned nor encouraged by the authors.
 
-3. CONFORMANCE REFERENCES
+4. INTENT & RISK
 
-   FranklinWH's SunSpec Modbus conformance is published by the SunSpec Alliance
-   as document SM-000028:
-     - Modbus PICS (Protocol Implementation Conformance Statement):
-       https://sunspec.org/wp-content/uploads/2009/03/UPDATED_FranklinWH_Modbus_PICS_SM-000028.xlsx
-     - IEEE 1547 certificate:
-       https://sunspec.org/wp-content/uploads/2009/03/UPDATED_FranklinWH_Modbus_1547_Certificate_SM-000028.pdf
+   This Software is provided for testing, informational and educational
+   purposes, AS-IS, with no warranty of fitness for any purpose. Any use —
+   personal or commercial — is permitted under the MIT License above and is
+   entirely at your own risk. The authors accept no liability for any
+   consequence of using it, including anything done to real hardware by
+   software that was developed or tested with it.
 
-   The PICS is the authority for which models and points a firmware is certified
-   for. The 15500+ extension registers are NOT SunSpec and fall outside it;
-   their behaviour is documented in docs/vendor-issues.md from observation, not
-   from a specification.
+5. NOTICE
+
+   As the MIT License above requires, the copyright notice and this permission
+   notice (including these Additional Notices) shall be included in all copies
+   or substantial portions of the Software. Retaining it in copies, forks,
+   derivatives and AI-assisted works keeps the unofficial, accuracy, compliance
+   and support context travelling with the code.
