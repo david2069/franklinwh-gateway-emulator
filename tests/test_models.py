@@ -69,3 +69,39 @@ def test_state_describes_the_model(clock):
 def test_spec_profile_has_no_franklinwh_model(clock):
     from franklinwh_emulator.control import gateway_state
     assert gateway_state(make_gateway(clock, profile="spec"))["model"] is None
+
+
+def _offgrid_full(clock, **site):
+    gw = make_gateway(clock, site={"initial_soc": 99.9, "cap_forced_solar": False, **site})
+    s = gw.site
+    s.solar_override_w, s.load_override_w = 6000, 2000
+    s.set_grid(available=False)
+    for _ in range(10):                      # charge to full off-grid
+        clock.advance(60)
+        snap = s.step()
+    return gw, s, snap
+
+
+def test_na_full_battery_cuts_pv_at_62_2_hz_until_97(clock):
+    """PV Curtailment White Paper (NA): full battery → 62.2 Hz → PV fully curtailed; PV resumes
+    once SoC < 97 % (#178)."""
+    gw, s, snap = _offgrid_full(clock, ac_type=1)
+    assert s.pv_cutoff and snap.solar_w == 0 and snap.hz == 62.2
+    assert snap.battery_w == pytest.approx(2000, abs=1)              # the house runs on the battery
+    gw.device.refresh(snap)
+    assert gw.device.image.get(701, "Hz") == 62200                   # 701.Hz shows the formed frequency
+    assert gw.dc.payloads.ibg_run_status({})["gridFreq"] == 62.2     # and Direct Connect 1707
+    while s.soc >= 97.0:
+        clock.advance(60)
+        snap = s.step()
+    clock.advance(60)
+    snap = s.step()
+    assert not s.pv_cutoff and snap.solar_w > 1900 and snap.hz == 60.0
+    s.set_grid(available=True)                                       # grid back: no cut-off
+    clock.advance(60)
+    assert not s.pv_cutoff
+
+
+def test_au_full_battery_only_clips_pv_to_the_house(clock):
+    gw, s, snap = _offgrid_full(clock)
+    assert not s.pv_cutoff and snap.solar_w == pytest.approx(2000, abs=50) and snap.hz == 50.0
