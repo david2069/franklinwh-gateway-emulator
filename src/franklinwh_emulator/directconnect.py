@@ -123,6 +123,10 @@ class DirectConnectServer:
             body = handler(data)
         if body is None or body is DROP:
             return body
+        # Every reply echoes its request's opt: 1409/1723 writes (opt 1), 1727 (opt 3), 1725
+        # (opt 1) and every opt-0 read, in an app capture of the reference aGate (#135).
+        if isinstance(body, dict) and "opt" in body and "opt" in data:
+            body["opt"] = data["opt"]
         resp_cmd = dc_catalog.response_for(frame.cmd_type)
         return dc_protocol.encode_frame(resp_cmd, self.equip_no, body, snno=frame.snno,
                                         time_stamp=int(time.time()))
