@@ -1,0 +1,70 @@
+site_name: FranklinWH Gateway Emulator
+site_description: Unofficial emulator of the FranklinWH aGate (Direct Connect and Modbus TCP) for testing without hardware
+site_url: https://david2069.github.io/franklinwh-gateway-emulator
+repo_url: https://github.com/david2069/franklinwh-gateway-emulator
+repo_name: david2069/franklinwh-gateway-emulator
+
+# Same theme as the other FranklinWH docs, so the sites read as one family.
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.snippets:           # README's disclaimer and the CHANGELOG, kept in one place
+      base_path: ["."]
+      check_paths: true
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Web UI: ui.md
+  - Guide:
+      - What is emulated: emulated.md
+      - Grid, codes and phases: grid.md
+      - The site model: site-model.md
+      - Control API and ctl: control-api.md
+      - Scenarios: SCENARIOS.md
+      - Replaying recorded data: replay.md
+  - Reference:
+      - Direct Connect: DIRECT_CONNECT.md
+      - Design: DESIGN.md
+      - Weather and loads: WEATHER_AND_LOADS.md
+      - Calibration: CALIBRATION.md
+      - Findings: FINDINGS.md
+      - Bridge integration: BRIDGE_INTEGRATION.md
+      - UI plan: UI_PLAN.md
+      - Testing the UI: UI_TESTING.md
+  - Changelog: changelog.md
+  - Disclaimer: disclaimer.md

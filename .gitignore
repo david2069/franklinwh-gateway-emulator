@@ -8,3 +8,4 @@ dist/
 # Owner-private notes: local only, never committed (site data, captures, unpublished findings)
 private/
 emulator-workspace/
+site/

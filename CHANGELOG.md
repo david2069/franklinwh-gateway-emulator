@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- Docs site (MkDocs Material) with a Web UI guide and screenshots; the README is now a short intro, disclaimer, quick start and docs map ([#85](https://github.com/david2069/franklinwh-gateway-emulator/issues/85)).
+
 ## 0.2.0 (2026-10-31)
 
 The first tagged release since 0.1.0. One line per change from here on; the detail is in each
