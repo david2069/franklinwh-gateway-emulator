@@ -40,6 +40,7 @@
     <button type="button" @click="setView('compact', !compact)" :aria-pressed="compact.toString()"
             title="Compact cards: SoC, local time and tags only">Compact</button>
   </div>
+  <a class="docs-link" :href="docsUrl('')" target="_blank" rel="noopener" title="The emulator's documentation (opens a new tab)">Docs</a>
   <button type="button" class="layout-toggle" @click="toggleLayout()" :aria-pressed="(layout === 'right').toString()"
           x-text="layout === 'right' ? 'Actions: right' : 'Actions: below'"
           title="Show the actions beside the gateways, or below them"></button>
@@ -178,7 +179,7 @@
         </div>
         <div class="tou" x-show="schema">
           <div class="tou-head">
-            <h3>TOU schedule</h3>
+            <h3>TOU schedule <a class="help" :href="docsUrl('site-model/#tou-schedule')" target="_blank" rel="noopener" aria-label="TOU schedule docs">?</a></h3>
             <span class="tou-note" x-text="touNote(current)"></span>
             <button type="button" class="secondary" x-show="!touEditing()" @click="touEdit()">Edit</button>
           </div>
@@ -296,7 +297,8 @@
     </details>
     <template x-for="group in groupNames()" :key="group">
       <details class="group">
-        <summary x-text="group"></summary>
+        <summary><span x-text="group"></span> <a class="help" :href="docsUrl(groupDocs(group))" target="_blank" rel="noopener"
+             :aria-label="group + ' docs'" @click.stop>?</a></summary>
         <div class="forms">
           <template x-for="name in actionsIn(group)" :key="name">
             <form class="action" @submit.prevent="submit(name)">
