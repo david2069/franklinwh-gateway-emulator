@@ -7,7 +7,7 @@ Each box carries its own fill, so the diagram reads on light and dark pages alik
 
 from pathlib import Path
 
-W, H = 1060, 760
+W, H = 1060, 800
 OUT = Path(__file__).resolve().parents[1] / "docs" / "assets" / "model-flow.svg"
 
 # id: (x, y, w, h, title, subtitle, kind, planned issue or None)
@@ -17,8 +17,8 @@ BOXES = {
     "place": (20, 300, 190, 52, "Placement", "indoor / outdoor, sun, cover", "in", None),
     "ctrl": (20, 410, 190, 52, "Controls", "Modbus · Direct Connect · UI", "in", None),
     "code": (20, 500, 190, 52, "Grid code", "trips, ride-through, responses", "in", None),
-    "util": (20, 590, 190, 52, "Utility (DNSP) limits", "export kW (have); import kW", "in", "#123"),
-    "svc": (20, 680, 190, 52, "Service main breaker", "amps", "in", "#123"),
+    "util": (20, 585, 190, 84, "Utility limits", "DNSP (AU) · lines company (NZ); export limit (have); import limit, no export, no battery export", "in", "#123"),
+    "svc": (20, 700, 190, 52, "Service main breaker", "amps", "in", "#123"),
     "sun": (275, 40, 190, 52, "Sun position", "height, east/west, local time", "mid", None),
     "irr": (275, 130, 190, 52, "Sunlight on panels", "cloud, haze", "mid", None),
     "air": (275, 210, 190, 52, "Outside air temperature", "", "mid", None),
@@ -27,7 +27,7 @@ BOXES = {
     "home": (535, 210, 200, 52, "Home load", "appliances, aircon, heater/fan", "eff", None),
     "lim": (535, 300, 200, 52, "Battery limits", "SoC, reserve, temperature", "eff", None),
     "tgt": (535, 410, 200, 52, "Battery target", "mode, TOU, FORCE", "eff", None),
-    "glim": (535, 590, 200, 64, "Grid limits", "export: tracked or enforced; import and breaker trip: planned #123", "eff", None),
+    "glim": (535, 590, 200, 84, "Grid limits", "export: tracked or enforced; import, export bans and breaker trip: planned #123", "eff", None),
     "bal": (810, 250, 230, 64, "Site balance", "solar + battery + grid = home", "bal", None),
     "out": (810, 430, 230, 72, "Outputs", "battery, SoC, grid, energy, alarms → Modbus · Direct Connect · UI", "out", None),
 }
@@ -115,9 +115,9 @@ def main():
             o.append(f'<text x="{x + w / 2}" y="{ty + 16 + i * 14}" text-anchor="middle" font-size="11.5" '
                      f'fill="{colour}">{esc(line)}</text>')
     # Legend
-    o.append(f'<rect x="810" y="700" width="34" height="18" rx="4" fill="#f4f4f4" stroke="{GREY}" '
+    o.append(f'<rect x="810" y="740" width="34" height="18" rx="4" fill="#f4f4f4" stroke="{GREY}" '
              'stroke-dasharray="6 4"/>')
-    o.append(f'<text x="852" y="713" font-size="11.5" fill="{GREY}">dashed = planned (issue shown)</text>')
+    o.append(f'<text x="852" y="753" font-size="11.5" fill="{GREY}">dashed = planned (issue shown)</text>')
     o.append("</svg>")
     OUT.write_text("\n".join(o) + "\n")
     print(f"wrote {OUT}")
