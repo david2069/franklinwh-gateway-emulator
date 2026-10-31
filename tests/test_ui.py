@@ -447,3 +447,34 @@ print(JSON.stringify({none: meterText(g(null)),
     assert r["going"]["lines"] == ["13.9 kW", ["tripping 42 %", "c-orange"]]
     assert r["open"]["lines"][1] == ["tripped", "c-red"] and r["open"]["cls"] == "bad"
     assert not r["listed"]
+
+
+# -- card border when faulted or offline (#168) ---------------------------------------------------
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_card_health(tmp_path):
+    import subprocess
+    clean = {"faults": {"latency_s": 0, "offline": False, "range_fault": None},
+             "dc_faults": {"offline": False, "exception": None}, "alarm_names": [], "service": {"open": False}}
+    cases = {
+        "ok": clean,
+        "alarm": {**clean, "alarm_names": ["OVER_TEMP"]},
+        "breaker": {**clean, "service": {"open": True}},
+        "latency": {**clean, "faults": {**clean["faults"], "latency_s": 2}},
+        "dc_exc": {**clean, "dc_faults": {"offline": False, "exception": 4}},
+        "reboot": {**clean, "rebooting": True, "alarm_names": ["OVER_TEMP"]},
+        "episode": {**clean, "episode_phase": "down"},
+        "offgrid": {**clean, "episode_phase": "offgrid"},
+        "mb_off": {**clean, "faults": {**clean["faults"], "offline": True}},
+        "bare": {},
+    }
+    harness = tmp_path / "health.js"
+    harness.write_text((STATIC / "groups.js").read_text() +
+                       f"\nconst C = {json.dumps(cases)};\nconst r = {{}};\n"
+                       "for (const k in C) r[k] = cardHealth(C[k]);\nprint(JSON.stringify(r));\n")
+    r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
+    assert r["ok"] == {"state": "", "why": ""} and r["bare"] == r["ok"] and r["offgrid"] == r["ok"]
+    assert r["alarm"] == {"state": "fault", "why": "alarm OVER_TEMP"}
+    assert r["breaker"]["why"] == "main breaker tripped" and r["latency"]["why"] == "Modbus TCP fault latency_s"
+    assert r["dc_exc"] == {"state": "fault", "why": "Direct Connect fault exception"}
+    assert r["reboot"] == {"state": "offline", "why": "rebooting · alarm OVER_TEMP"}
+    assert r["episode"]["state"] == "offline" and r["mb_off"]["why"] == "Modbus TCP offline"

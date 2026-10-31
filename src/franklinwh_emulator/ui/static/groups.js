@@ -1,5 +1,6 @@
 /* Gateway cards grouped by location (#86): country, state, city, postcode, site ID or timezone;
- * and the detail card's gateway picker, filtered by the same fields (#142).
+ * and the detail card's gateway picker, filtered by the same fields (#142); and the card
+ * border's colour when a gateway is faulted or offline (#168).
  *
  * Pure functions (no DOM), so they can be tested without a browser. Each group's label
  * includes the levels above it (state → "AU · NSW") so equal names in different places
@@ -75,4 +76,25 @@ function pickValues(gateways, filters, field) {
   const others = { ...filters, [field]: '' };
   const vals = new Set(pickGateways(gateways, others).map(g => pickField(g, field)).filter(Boolean));
   return [...vals].sort((a, b) => a.localeCompare(b));
+}
+
+// -- card health (#168) ----------------------------------------------------------------------
+// 'fault' (red): an alarm, a tripped main breaker, or an injected fault on either listener.
+// 'offline' (orange): rebooting, an episode with the listeners down, or a listener set offline.
+// Offline wins: a gateway that is down says so first. ``why`` is the card's tooltip.
+function injected(f) {
+  return Object.keys(f || {}).filter(k => f[k] && k !== 'offline');
+}
+function cardHealth(g) {
+  const off = [], bad = [];
+  if (g.rebooting) off.push('rebooting');
+  if (g.episode_phase === 'down') off.push('episode: listeners down');
+  if (g.faults && g.faults.offline) off.push('Modbus TCP offline');
+  if (g.dc_faults && g.dc_faults.offline) off.push('Direct Connect offline');
+  (g.alarm_names || []).forEach(a => bad.push('alarm ' + a));
+  if (g.service && g.service.open) bad.push('main breaker tripped');
+  injected(g.faults).forEach(k => bad.push('Modbus TCP fault ' + k));
+  injected(g.dc_faults).forEach(k => bad.push('Direct Connect fault ' + k));
+  const state = off.length ? 'offline' : bad.length ? 'fault' : '';
+  return { state, why: off.concat(bad).join(' · ') };
 }

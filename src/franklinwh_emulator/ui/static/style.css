@@ -64,6 +64,10 @@ main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 .card:hover { border-color: var(--muted); }
 .card:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
 .card[aria-pressed="true"] { border-color: var(--ok); box-shadow: 0 0 0 1px var(--ok); }
+/* Faulted or offline (#168): the border says so; the selected card keeps its green ring outside. */
+.card.h-fault, .card.h-fault:hover { border: 2px solid var(--bad); padding: 13px; }
+.card.h-offline, .card.h-offline:hover { border: 2px dashed var(--warn); padding: 13px; }
+.card.h-fault[aria-pressed="true"], .card.h-offline[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--ok); }
 .card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .card .id { font-weight: 600; font-size: 16px; }
 .card .soc { font: 600 20px var(--mono); color: var(--ok); }
