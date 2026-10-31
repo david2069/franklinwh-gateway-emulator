@@ -294,7 +294,8 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
             else:
                 pct = float(body["pct_hw"])
             site.update_remote(enabled=True, mode=0, pct_hw=pct,
-                               revert_effective=gw.profile.reversion_effective)
+                               revert_effective=gw.profile.reversion_effective,
+                               revert_inverted=gw.profile.reversion_inverted)
         elif action == "release":
             site.update_remote(enabled=False, pct_hw=0.0, watts=0)
         elif action == "mode":

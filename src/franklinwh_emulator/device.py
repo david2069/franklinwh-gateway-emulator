@@ -209,6 +209,9 @@ class AGateDevice:
         img.set(704, "WSet", r.watts if p.wset_positive_charge else -r.watts)
         pct = r.pct_hw if p.wsetpct_positive_discharge else -r.pct_hw
         img.set(704, "WSetPct", int(round(pct * 10)))
+        img.set(704, "WSetRvrt", r.revert_watts if p.wset_positive_charge else -r.revert_watts)
+        rpct = r.revert_pct_hw if p.wsetpct_positive_discharge else -r.revert_pct_hw
+        img.set(704, "WSetPctRvrt", int(round(rpct * 10)))
         img.set(704, "WSetEnaRvrt", int(r.revert_enabled))
         img.set(704, "WSetRvrtTms", r.revert_s)
         img.set(704, "WSetRvrtRem", r.remaining(s.ts))
@@ -372,6 +375,12 @@ class AGateDevice:
             elif mid == 704 and name == "WSetPct":
                 pct = (raw or 0) / 10.0
                 remote["pct_hw"] = pct if p.wsetpct_positive_discharge else -pct
+            elif mid == 704 and name == "WSetRvrt":
+                w = int(raw or 0)
+                remote["revert_watts"] = w if p.wset_positive_charge else -w
+            elif mid == 704 and name == "WSetPctRvrt":
+                pct = (raw or 0) / 10.0
+                remote["revert_pct_hw"] = pct if p.wsetpct_positive_discharge else -pct
             elif mid == 704 and name == "WSetEnaRvrt":
                 remote["revert_enabled"] = bool(raw)
             elif mid == 704 and name == "WSetRvrtTms":
@@ -395,6 +404,7 @@ class AGateDevice:
             outcomes.append(f"{mid}.{name}={raw}:{outcome}")
         if remote:
             remote["revert_effective"] = p.reversion_effective
+            remote["revert_inverted"] = p.reversion_inverted
             site.update_remote(**remote)
         self.write_log.append((address, list(values), ", ".join(outcomes) or "no points"))
         return None
