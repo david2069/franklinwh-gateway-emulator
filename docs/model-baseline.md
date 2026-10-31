@@ -25,8 +25,8 @@ Dashed boxes are planned. The diagram is drawn by `tools/gen_model_flow.py`: edi
 
 | Part | Emulated | Source |
 |---|---|---|
-| aGate | "aGate X" (Model 1 `Md`), one per site; firmware per profile (V10R01B04D00 / V12R02B60D00 Modbus `Vr`; Direct Connect IBG V12R02B30D06 / V12R02B60D00) | measured (reference aGate) |
-| aPower | 1–N, combined into one battery: **13.6 kWh and 5 kW per aPower** (aPower X) | documented (warranty, compatibility statement) and measured (713.WHRtg) |
+| aGate | "aGate X" (Model 1 `Md`), one per site, of a model (`model.agate`, default by region: [Sources and regions](sources-and-regions.md)); firmware per profile (V10R01B04D00 / V12R02B60D00 Modbus `Vr`; Direct Connect IBG V12R02B30D06 / V12R02B60D00) | measured (reference aGate) |
+| aPower | 1–N of one model (`model.apower`), combined into one battery: kWh, kW and charge kW per unit from the model (aPower X: **13.6 kWh, 5 kW**; aPower 2: 15 kWh, 10 kW, charging at 8 kW) | documented (datasheets, PV Curtailment White Paper) and measured (713.WHRtg, aPower X) |
 | PV inputs | proximal (aGate) + remote1/remote2 (aPbox), each with a relay | measured (register layout) |
 | Generator | on the generator input, AGS by SoC during outages | documented fields (DC 1901), behaviour partly interpreted |
 | Smart circuits | SW1–SW3 | measured (names, layout) |
@@ -60,8 +60,9 @@ stays offline for more than 90 days.
 | aGate X 1.3/1.3.1 | yes | yes | yes | 15 max, up to 8 aPower S |
 | MAC 1 | no | yes | yes | 4 max, 120/240 V |
 
-Not emulated yet: aPower 2, aPower S, MAC 1, aHub, per-aPower SoC, and model-specific capacity
-(backlog HARDWARE-TOPOLOGIES).
+Model capacity, power and charge power are emulated for every catalogued aPower (#180). Not
+emulated yet: aPower S's DC PV inputs (MPPT), the aPower 2 / aPower X peak-charge window, mixed
+aPower models on one aGate, MAC 1, aHub, and per-aPower SoC (backlog HARDWARE-TOPOLOGIES).
 
 ## The influences
 

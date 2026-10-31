@@ -150,6 +150,8 @@ class DcPayloads:
         n, pa, extra = self.units, fw["per_apower"], fw["extra"]
         sns = [self.fhp_sn(i + 1) for i in range(n)]
         hw = {k: v * n for k, v in extra.items() if isinstance(v, list)}     # one per aPower
+        if "PE_HW_VER" in hw:              # on firmware that has it: the aPower model's code (#180)
+            hw["PE_HW_VER"] = [self.site.model.apower.code] * n
         return _ok(IBG_SN=self.gw.serial,
                    **({"deviceType": extra["deviceType"]} if "deviceType" in extra else {}),
                    protocolVer=fw["protocolVer"], IBG_VER=ibg, AWS_VER=fw["AWS_VER"],
@@ -158,7 +160,7 @@ class DcPayloads:
                    FPGA_VER=[pa["FPGA_VER"]] * n, DCDC_VER=[pa["DCDC_VER"]] * n,
                    INV_VER=[pa["INV_VER"]] * n, BMS_SN=[sn + "B1" for sn in sns],
                    BMS_VER=[pa["BMS_VER"]] * n, BL_VER=[pa["BL_VER"]] * n, TH_VER=[pa["TH_VER"]] * n,
-                   SyHdVersion=fw["SyHdVersion"], METER_VER=fw["METER_VER"],
+                   SyHdVersion=self.site.model.agate.code, METER_VER=fw["METER_VER"],
                    **({"threePhasePvPower": extra["threePhasePvPower"]}
                       if "threePhasePvPower" in extra else {}),
                    **hw)

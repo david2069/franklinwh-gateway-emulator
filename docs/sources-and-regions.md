@@ -118,6 +118,8 @@ them, not a hardware change (franklinwh-direct-connect-api, two 1102 reads of on
 `PE_HW_VER` can't be the model key on older firmware. The meaning of every code is unknown from
 Direct Connect itself.
 
-**Today every emulated gateway reports the reference AU codes** (`SyHdVersion` 102, `PE_HW_VER`
-[2]), including the US ones. Until #180 gives each gateway a model, nothing built from the North
-American documents is switched on.
+Each emulated gateway has an aGate and an aPower model (`model:`,
+[Configuration](configuration.md)). It is keyed by these codes and defaults by region: AU/NZ
+102 + 2, North America 103 + 0. Direct Connect 1102 serves the codes, and the aPower model sets
+capacity, power and charge power. Behaviour taken from the North American documents is not
+switched on yet: it will apply to North American models only (#180 phase 2).

@@ -88,6 +88,7 @@ DOCS: dict[str, str] = {
     "export_limit_enforced": "enforce the grid code's export limit (default: tracked only)",
     "battery": "loss model: agate-measured, ideal, legacy, or {preset, ...}",
     "generator": "{installed, rated_w, ...} plus 1901 fields; null = none fitted",
+    "model": "hardware models (#180): {agate, apower}, each a code, SKU or name, e.g. {agate: 102, apower: 2}; the aPower model sets kWh, kW and charge kW per unit, Direct Connect 1102 serves the codes; default by region: AU/NZ 102 + 2, North America 103 + 0 (docs/sources-and-regions.md)",
     "grid_import_wh": "lifetime grid import counter at start, Wh; default 0 (factory) or the reference aGate's (in-service)",
     "grid_export_wh": "lifetime grid export counter at start, Wh; default 0 (factory) or the reference aGate's (in-service)",
     "pv_wh": "lifetime PV counter at start, Wh; default 0 (factory) or the reference aGate's (in-service)",
