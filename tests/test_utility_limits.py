@@ -100,3 +100,21 @@ def test_actions_set_and_clear_rules():
     assert gateway_state(g)["utility_rules"] is None
     with pytest.raises(ApiError, match="export must be one of"):
         apply(g, "utility", {"export": "lots"})
+
+
+def test_north_american_models_default_to_no_battery_export():
+    """PCS Technical Brief: ESS Import-Only Mode is factory preset on NA models; AU/NZ unchanged;
+    a PCS setting overrides either way (#180 phase 2)."""
+    def forced(**kw):
+        g = gw(**kw)
+        g.site.update_remote(enabled=True, mode=1, watts=-5000)      # discharge 5 kW on command
+        return g, run(g, 0, 1000)
+    us, snap = forced(ac_type=1)                                      # 60 Hz → North America
+    assert us.site.model.region == "NA" and gateway_state(us)["battery_export"] is False
+    assert snap.grid_w > -50 and snap.battery_w < 1100                # the home only
+    au, snap = forced()
+    assert gateway_state(au)["battery_export"] is True and snap.grid_w < -3500
+    us_on, snap = forced(ac_type=1, utility={"battery_export": True})
+    assert gateway_state(us_on)["battery_export"] is True and snap.grid_w < -3500
+    au_off, snap = forced(utility={"battery_export": False})
+    assert snap.grid_w > -50

@@ -224,7 +224,9 @@ service: {main_breaker_a: 63}
 - **Export:** `allowed`, `limited` (`export_limit_w`, or `export_per_phase_w` on multi-leg
   sites) or `prohibited` (solar is curtailed, the battery never exports).
   `battery_export: false` lets solar export but keeps the battery to the home load (often a
-  scheme rule). These are the site's PCS settings, so they are enforced. Without a `utility`
+  scheme rule). Unset, the model's factory setting applies: North American models ship in ESS
+  Import-Only Mode (no battery export; FranklinWH PCS Technical Brief), AU/NZ models export
+  ([Sources and regions](sources-and-regions.md)). These are the site's PCS settings, so they are enforced. Without a `utility`
   block, the grid code's declared limit is only tracked, as on the reference aGate.
 - **Import:** above `import_limit_w` (or the main breaker's rating), the site stops grid
   charging first, then discharges the battery as far as it can.

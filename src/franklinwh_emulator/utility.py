@@ -10,7 +10,8 @@ The grid operator is called the **utility** (US/CA), the **DNSP** (AU) or the **
 ``export``: ``allowed`` (no limit), ``limited`` (``export_limit_w``; ``export_per_phase_w`` on
 multi-leg sites), ``prohibited`` (zero export: solar is curtailed, the battery never exports).
 ``battery_export: false`` lets solar export but caps battery discharge at what the home uses
-(often a scheme rule). These are the aGate's PCS settings, so they are enforced. Without a
+(often a scheme rule). Unset, the model's factory setting applies: North American models ship in
+ESS Import-Only Mode (no battery export; FranklinWH PCS Technical Brief), AU/NZ models export. These are the aGate's PCS settings, so they are enforced. Without a
 ``utility`` block the grid code's declared export limit is tracked as before.
 
 The main breaker trips on grid import above its rating, after an inverse-time delay (plausible,
@@ -40,7 +41,7 @@ class Utility:
     export_limit_w: float | None = None
     export_per_phase_w: float | None = None
     import_limit_w: float | None = None
-    battery_export: bool = True
+    battery_export: bool | None = None      # None: the model's factory setting (Site.battery_export)
     export_rule_source: str | None = None
 
     @classmethod

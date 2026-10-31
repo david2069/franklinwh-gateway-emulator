@@ -1337,6 +1337,15 @@ class Site:
             gen_state=self.generator.state, gen_relay_closed=self.generator.relay_closed,
         )
 
+    def battery_export(self) -> bool:
+        """May the battery export? The PCS setting if given, else the model's factory setting:
+        North American models ship in ESS Import-Only Mode, "factory preset" (FranklinWH PCS
+        Technical Brief, 2024-04-07); AU/NZ models export (no such document; unchanged)."""
+        u = self.utility_rules
+        if u is not None and u.battery_export is not None:
+            return bool(u.battery_export)
+        return self.model.region != models.NA
+
     def import_cap_w(self) -> float | None:
         """Grid import the site holds itself to: the operator's limit and the main breaker."""
         caps = []
@@ -1351,8 +1360,7 @@ class Site:
                           max_dis: float, hi: float) -> tuple[float, float]:
         """No battery export, then the import cap: stop grid charging first, then discharge
         (within the battery's limits) to hold it. Returns (battery W, grid W)."""
-        u = self.utility_rules
-        if u is not None and not u.battery_export and batt > 0 and grid < 0:
+        if not self.battery_export() and batt > 0 and grid < 0:
             batt -= min(batt, -grid)                     # the battery serves the home only
             grid = load - solar - batt
         self.import_clipped_w = 0.0
