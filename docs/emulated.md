@@ -44,7 +44,8 @@ generates from `AGATE_FULL_SCAN_2026-05-14.txt`.
 **Site model** (`site.py`): solar bell and load profile ported from the Direct Connect emulator's
 `SyntheticSite`. The battery is **integrated**: SoC moves with power, power is limited by SoC,
 reserves and 5 kW per aPower, and grid balances exactly. Lifetime counters only grow. Native
-modes are 1 Backup, 2 Self-Consumption, and 3 TOU (discharges 17–21 h); no other
+modes are 1 Backup (charges to 100 % from solar and grid at the rating, never discharges;
+inferred), 2 Self-Consumption, and 3 TOU (discharges 17–21 h); no other
 value has been read from 15507 (franklinwh-modbus#75). Discharge
 stops at the active mode's reserve, under VPP control too. The clock can be real, scaled
 (`time_scale`) or manual (tests).
