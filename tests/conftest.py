@@ -26,7 +26,8 @@ def make_gateway(clock=None, **kw) -> Gateway:
 
 @pytest.fixture
 def gateway(clock):
-    gw = make_gateway(clock, id="t", seed=7, site={"initial_soc": 60})
+    # Written against the reference scan's V10 profile; the default is V12 since #126.
+    gw = make_gateway(clock, id="t", seed=7, profile="agate-v10r01b04d00", site={"initial_soc": 60})
     gw.start()
     yield gw
     gw.stop()

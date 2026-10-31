@@ -49,7 +49,14 @@ value has been read from 15507 (franklinwh-modbus#75). Discharge
 stops at the active mode's reserve, under VPP control too. The clock can be real, scaled
 (`time_scale`) or manual (tests).
 
-**Quirk profile `agate-v10r01b04d00`** (default). Every flag can be overridden via `quirks:`.
+**Profiles.** The default is **`agate-v12r02b60d00-candidate`**, the firmware the reference aGate
+runs since 2026-10-20 ("candidate": measured on one site). It serves the 40000 mirror,
+answers mirror writes with the base-0 address, holds the TOU reserve in 15509 and the active
+mode's reserve in 16001, and refuses charge setpoints and WSetPct above +100 % with exception 3.
+`agate-v10r01b04d00` is the earlier firmware (the May and October scans), described below.
+Every flag can be overridden via `quirks:`.
+
+**Quirk profile `agate-v10r01b04d00`**.
 
 - One Modbus client at a time. An extra client is closed, or with `busy_behaviour: hang` it is
   left open and never answered.

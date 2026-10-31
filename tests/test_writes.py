@@ -130,10 +130,10 @@ def test_span_unlock_option_is_gone(clock):
 
 
 def test_tou_reserve_mirror_quirk_on_reads(clock):
-    gw = make_gateway(clock, site={"self_reserve": 20, "tou_reserve": 40})
+    gw = make_gateway(clock, profile="agate-v10r01b04d00", site={"self_reserve": 20, "tou_reserve": 40})
     with gw:
         c = RawClient(*gw.address)
-        assert c.read(15509, 1) == [20]                # mirrors 15508
+        assert c.read(15509, 1) == [20]                # mirrors 15508 (V10)
         c.close()
 
 
@@ -181,7 +181,7 @@ def test_v12_candidate_reserves_follow_mode(clock):
             assert c.read(15507, 3) == [mode, 8, 15]
             assert c.read(16001, 1) == [want], mode
         c.close()
-    gw = make_gateway(clock, site={"self_reserve": 8, "tou_reserve": 15})   # V10 default
+    gw = make_gateway(clock, profile="agate-v10r01b04d00", site={"self_reserve": 8, "tou_reserve": 15})
     with gw:
         c = RawClient(*gw.address)
         gw.site.set_native_mode(3)
@@ -204,7 +204,7 @@ def test_v12_wsetpct_range_and_charge_refusal(clock):
         assert c.write(WSET, [0xFFFF, 0x10000 - 500]) == ("exc", 3)   # WSet -500 W (charge)
         assert c.write(WSET, [0, 5000]) == "ok"                       # +5000 W discharge
         c.close()
-    gw = make_gateway(clock)                                       # V10: no limit, charge allowed
+    gw = make_gateway(clock, profile="agate-v10r01b04d00")         # V10: no limit, charge allowed
     with gw:
         c = RawClient(*gw.address)
         assert c.write(WSETPCT, 1000) == "ok"

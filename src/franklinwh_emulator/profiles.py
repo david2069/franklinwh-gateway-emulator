@@ -107,7 +107,7 @@ PROFILES: dict[str, Profile] = {
         dc_pload_dup_bug=False,
     ),
 }
-DEFAULT_PROFILE = "agate-v10r01b04d00"
+DEFAULT_PROFILE = "agate-v12r02b60d00-candidate"
 
 # Direct Connect 1102 login fields per aGate (IBG) firmware, as measured on the reference
 # aGate (one site, one aPower). ``per_apower`` keys are lists with one entry per aPower:

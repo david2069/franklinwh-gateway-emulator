@@ -113,3 +113,12 @@ def test_configuration_page_lists_every_key_and_its_example_is_valid():
     assert not missing, f"add to docs/configuration.md: {missing}"
     example = re.search(r"```yaml\n(.*?)```", page, re.S).group(1)
     assert validate_fleet(fix_bool_keys(yaml.safe_load(example))) == []
+
+
+def test_default_profile_is_v12():
+    """#126: the default follows the reference aGate since 2026-10-20."""
+    from franklinwh_emulator.gateway import Gateway, GatewayConfig
+    gw = Gateway(GatewayConfig(seed=7))
+    assert gw.profile.name == "agate-v12r02b60d00-candidate"
+    assert gw.device.image.get(1, "Vr") == "V12R02B60D00"
+    assert config_schema()["profile"]["default"] == "agate-v12r02b60d00-candidate"
