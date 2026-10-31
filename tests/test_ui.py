@@ -426,3 +426,24 @@ print(JSON.stringify({{
     assert r["zones"] == ["America/Phoenix", "Australia/Melbourne", "Australia/Sydney", "UTC+13:00"]
     assert r["by_zone"] == ["fixed"] and r["postcodes"] == ["2000"]
     assert r["group_tz"][0] == ["America/Phoenix", ["phx"]] and ["UTC+13:00", ["fixed"]] in r["group_tz"]
+
+
+# -- the service rating on the diagram (#156) -----------------------------------------------------
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_diagram_meter_shows_the_service_rating(tmp_path):
+    import subprocess
+    harness = tmp_path / "diagram.js"
+    harness.write_text((STATIC / "diagram.js").read_text() + """
+const g = s => ({legs: ['L1', 'L2'], service: s});
+print(JSON.stringify({none: meterText(g(null)),
+  ok: meterText(g({main_breaker_a: 200, rating_w: 48000, trip_progress: 0, open: false})),
+  going: meterText(g({main_breaker_a: 63, rating_w: 13860, trip_progress: 0.42, open: false})),
+  open: meterText(g({main_breaker_a: 63, rating_w: 13860, trip_progress: 1, open: true})),
+  listed: NOT_MODELLED.includes('service rating')}));
+""")
+    r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
+    assert r["none"] == {"value": "", "sub": "2-phase", "lines": ["no rating set"], "cls": ""}
+    assert r["ok"] == {"value": "200 A", "sub": "2-phase", "lines": ["48.0 kW"], "cls": ""}
+    assert r["going"]["lines"] == ["13.9 kW", ["tripping 42 %", "c-orange"]]
+    assert r["open"]["lines"][1] == ["tripped", "c-red"] and r["open"]["cls"] == "bad"
+    assert not r["listed"]

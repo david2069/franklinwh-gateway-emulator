@@ -12,6 +12,7 @@
 - Page: a °C / °F toggle; every shown temperature converts; °F by default for US-region browsers; the emulator stays metric ([#119](https://github.com/david2069/franklinwh-gateway-emulator/issues/119)).
 
 ### Fixed
+- Diagram: the Meter box shows the service rating (main breaker amps and kW), the trip progress and "tripped"; "no rating set" without `service` (#156).
 - Monitor: a client that has left is no longer shown as "none"; each listener shows the last client and how many since start, and the header counts all seen (#154).
 - Direct Connect 1303 has the same keys on every date: a date with no data now carries `sectionEngy` (zeros) instead of leaving it out ([#134](https://github.com/david2069/franklinwh-gateway-emulator/issues/134)).
 - Direct Connect replies echo the request's `opt`, as the reference aGate does: 1409 and 1723 writes answered `opt:0` ([#135](https://github.com/david2069/franklinwh-gateway-emulator/issues/135)).

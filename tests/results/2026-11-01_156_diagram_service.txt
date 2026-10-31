@@ -1,0 +1,14 @@
+#156 Diagram shows the service rating — 2026-11-01
+
+pytest tests/test_ui.py:
+30 passed in 0.18s
+
+break check (src reverted, test kept):
+1 failed, 29 deselected in 0.04s
+
+full suite:
+581 passed in 32.06s
+
+UI smoke (headless Chrome, scratch emulator from examples/fleet.yaml, spec given service {main_breaker_a: 200}):
+spec Meter: 200 A · 48.0 kW · 2-phase
+site Meter: no rating set · 1-phase
