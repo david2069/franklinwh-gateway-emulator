@@ -78,6 +78,9 @@ class AGateDevice:
         img.set(1, "SN", serial)
         img.set(1, "Vr", profile.firmware)
         img.set(1, "Md", profile.model_name)
+        # Says it's an emulator (#106): Opt is free text ("Option Name" on the real aGate).
+        from . import __version__
+        img.set(1, "Opt", f"Emulator {__version__}"[:16])
         img.set(701, "ACType", site.config.ac_type)
         if profile.m702_wmaxrtg is not None:
             img.set(702, "WMaxRtg", profile.m702_wmaxrtg)

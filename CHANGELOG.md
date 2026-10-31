@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Model 1 `Opt` reads `Emulator <version>` so clients can tell an emulated gateway from a real one; `Mn`, `Md`, `Vr` unchanged, serials still start with `MOCK` ([#106](https://github.com/david2069/franklinwh-gateway-emulator/issues/106)).
 - Docs site (MkDocs Material) with a Web UI guide and screenshots; the README is now a short intro, disclaimer, quick start and docs map ([#85](https://github.com/david2069/franklinwh-gateway-emulator/issues/85)).
 
 ## 0.2.0 (2026-10-31)
