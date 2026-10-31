@@ -238,6 +238,9 @@ service: {main_breaker_a: 63}
   block, the grid code's declared limit is only tracked, as on the reference aGate.
 - **Import:** above `import_limit_w` (or the main breaker's rating), the site stops grid
   charging first, then discharges the battery as far as it can.
+- **Grid charge:** `grid_charge: false` keeps the battery to solar (or generator) charging, and
+  `grid_charge_max_w` caps the share of charging taken from the grid. These are the app's
+  *Grid charge* and *Max charge power* (FranklinWH PCS Technical Brief).
 - **Main breaker:** import above its rating trips it after 120 / (r² − 1) s at r times the
   rating, and at once from 5× (plausible, not measured). The site islands (trip reason
   `main-breaker`) until reset: Grid and phases → **service**, `reset: true`.

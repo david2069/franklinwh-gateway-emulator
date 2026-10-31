@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- PCS grid-charge settings: `utility.grid_charge: false` keeps the battery to solar or generator charging, and `grid_charge_max_w` caps grid-sourced charging (the app's *Grid charge* and *Max charge power*, FranklinWH PCS Technical Brief) (#123).
 - Off-grid full-battery PV cut-off on North American models: at 100 % the aGate forms 62.2 Hz and AC PV stops until SoC is below 97 % (FranklinWH PV Curtailment White Paper); 701.Hz and 1707 `gridFreq` show it. AU/NZ models still only clip PV to the load (#178).
 - Hardware models: each gateway has an aGate and an aPower model (`model: {agate, apower}`), keyed by the codes FranklinWH reports (aGate `sysHdVersion` 100–104, aPower `peHwVersion` 0–7), with SKU and name as labels. Defaults by region: AU/NZ 102 + 2, North America 103 + 0. The aPower model sets kWh, kW and charge kW per unit (aPower 2 charges at 8 kW). Direct Connect 1102 serves the codes, cards show the model, and `validate` refuses mismatched regions or frequencies. Defaults keep today's 13.6 kWh / 5 kW (#180).
 - Docs: Sources and regions, which cites the FranklinWH PV Curtailment White Paper and PCS Technical Brief, scopes them to North America (US, Canada) apart from AU/NZ models, and lists the aGate/aPower model codes (#181).

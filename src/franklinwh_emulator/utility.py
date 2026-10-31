@@ -9,6 +9,9 @@ The grid operator is called the **utility** (US/CA), the **DNSP** (AU) or the **
 
 ``export``: ``allowed`` (no limit), ``limited`` (``export_limit_w``; ``export_per_phase_w`` on
 multi-leg sites), ``prohibited`` (zero export: solar is curtailed, the battery never exports).
+``grid_charge: false`` stops the battery charging from the grid (solar or generator only), and
+``grid_charge_max_w`` caps how much of its charging may come from the grid: the app's *Grid charge*
+and *Max charge power* (FranklinWH PCS Technical Brief, "Grid Import Limitations").
 ``battery_export: false`` lets solar export but caps battery discharge at what the home uses
 (often a scheme rule). Unset, the model's factory setting applies: North American models ship in
 ESS Import-Only Mode (no battery export; FranklinWH PCS Technical Brief), AU/NZ models export. These are the aGate's PCS settings, so they are enforced. Without a
@@ -42,6 +45,8 @@ class Utility:
     export_per_phase_w: float | None = None
     import_limit_w: float | None = None
     battery_export: bool | None = None      # None: the model's factory setting (Site.battery_export)
+    grid_charge: bool = True                 # app "Grid charge": may the battery charge from the grid
+    grid_charge_max_w: float | None = None   # app "Max charge power": grid-sourced charging cap
     export_rule_source: str | None = None
 
     @classmethod
@@ -61,7 +66,7 @@ class Utility:
             raise ValueError("utility.export limited needs export_limit_w (or export_per_phase_w)")
         if u.export_rule_source is not None and u.export_rule_source not in SOURCES:
             raise ValueError(f"utility.export_rule_source must be one of {list(SOURCES)}")
-        for k in ("export_limit_w", "export_per_phase_w", "import_limit_w"):
+        for k in ("export_limit_w", "export_per_phase_w", "import_limit_w", "grid_charge_max_w"):
             v = getattr(u, k)
             if v is not None and float(v) < 0:
                 raise ValueError(f"utility.{k} must be ≥ 0 (or null for none)")

@@ -176,6 +176,9 @@ ACTIONS: dict[str, dict[str, Any]] = {
                    "export_limit_w": _f("number", unit="W", nullable=True),
                    "export_per_phase_w": _f("number", unit="W", nullable=True),
                    "import_limit_w": _f("number", unit="W", nullable=True),
+                   "grid_charge": _f("boolean", "app Grid charge: false = charge from solar/generator only"),
+                   "grid_charge_max_w": _f("number", "app Max charge power: grid-sourced charging cap",
+                                           unit="W", nullable=True),
                    "battery_export": _f("boolean", "false = the battery serves the home only; unset = the model's "
                                                   "factory setting (North America: false)", nullable=True),
                    "export_rule_source": _f("string", enum=["dnsp", "utility", "lines-company", "scheme"]),
