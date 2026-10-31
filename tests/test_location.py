@@ -57,13 +57,13 @@ def test_dst_scenario_needs_a_real_timezone():
 
 
 def test_direct_connect_1202_reports_location():
-    pytest.importorskip("franklinwh_local")
-    from franklinwh_local.client import LocalClient
+    pytest.importorskip("franklinwh_direct_connect_api")
+    from franklinwh_direct_connect_api.client import DirectConnectClient
     from franklinwh_emulator.gateway import Gateway, GatewayConfig
     gw = Gateway(GatewayConfig(setup="in-service", seed=7, dc_port=0, site=SiteConfig(location=SYD)),
                  clock=ManualClock(JAN_NOON_UTC))
     with gw:
-        c = LocalClient(*gw.dc_address, timeout=2, retries=0)
+        c = DirectConnectClient(*gw.dc_address, timeout=2, retries=0)
         c.transport.connect()
         c.login()
         tl = c.time_location()

@@ -96,7 +96,7 @@ def test_fleet_rejects_duplicate_ids():
 
 
 def test_serial_matches_direct_connect_emulator():
-    # Same seed → same serial as franklinwh_local.synthetic.SyntheticSite(7).serial
+    # Same seed → same serial as franklinwh_direct_connect_api.synthetic.SyntheticSite(7).serial
     from franklinwh_emulator.gateway import mock_serial
     assert mock_serial(7) == "MOCK00073B1612DD272D"
 

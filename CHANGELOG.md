@@ -14,6 +14,7 @@
 - Emergency Backup now fills the battery to 100 % from the grid as well as solar, at the aPower rating; it charged from surplus solar only, so a site could sit at 71 % for hours ([#138](https://github.com/david2069/franklinwh-gateway-emulator/issues/138)).
 
 ### Changed
+- The Direct Connect front end imports the client library by its current name, `franklinwh_direct_connect_api`, and needs `franklinwh-direct-connect-api>=0.4.0`; the old `franklinwh_local` name is removed in 0.6.0, which would have stopped the emulator from starting ([#133](https://github.com/david2069/franklinwh-gateway-emulator/issues/133)).
 - **The default firmware profile is now `agate-v12r02b60d00-candidate`**, matching the reference aGate since its 2026-10-20 update: the 40000 mirror, 15509 = TOU reserve, 16001 = the active reserve, charge setpoints refused with exception 3, IBG V12R02B60D00 over Direct Connect. Set `profile: agate-v10r01b04d00` for the earlier behaviour ([#126](https://github.com/david2069/franklinwh-gateway-emulator/issues/126)).
 
 ### Added

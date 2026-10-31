@@ -2,8 +2,8 @@
 
 import pytest
 
-pytest.importorskip("franklinwh_local")
-from franklinwh_local import LocalClient  # noqa: E402
+pytest.importorskip("franklinwh_direct_connect_api")
+from franklinwh_direct_connect_api import DirectConnectClient  # noqa: E402
 
 from conftest import make_gateway  # noqa: E402
 from franklinwh_emulator.profiles import get_profile  # noqa: E402
@@ -19,7 +19,7 @@ LISTS = ["FHP_SN", "PE_SN", "FPGA_VER", "DCDC_VER", "INV_VER", "BMS_SN", "BMS_VE
 def login(profile, units=1, dev=1):
     g = make_gateway(None, seed=7, dc_port=0, profile=profile, site={"apower_units": units})
     with g:
-        c = LocalClient(*g.dc_address, timeout=2, retries=0)
+        c = DirectConnectClient(*g.dc_address, timeout=2, retries=0)
         c.transport.connect()
         m = c.login()
         d = c.device_firmware(dev)

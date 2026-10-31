@@ -122,7 +122,7 @@ cooking events only.
 - **Switching** removes the bound load. It can be done by:
   - the control action `circuit`;
   - `ctl circuit`;
-  - a Direct Connect `1409` full-block write (as `franklinwh_local.set_smart_circuit` sends it).
+  - a Direct Connect `1409` full-block write (as `franklinwh_direct_connect_api.set_smart_circuit` sends it).
 - **Reporting:** `1410` reports state, `1708` the relay bits (open while shed), and `1411` the
   power and energy on circuit 1 and the car switch (circuit 2).
 - **Off-grid:** when the battery cannot carry the house, every running circuit is shed before

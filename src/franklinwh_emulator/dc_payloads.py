@@ -19,7 +19,7 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, Any, Callable
 
-from franklinwh_local.synthetic import MODE_IDS, SyntheticSite
+from franklinwh_direct_connect_api.synthetic import MODE_IDS, SyntheticSite
 
 from .profiles import DC_FIRMWARE
 from .site import MODE_BACKUP, MODE_SELF, MODE_TOU
@@ -499,7 +499,7 @@ class DcPayloads:
     # -- generator (1901) ------------------------------------------------------------------------
     def generator(self, req: dict) -> dict:
         """1902: the generator block plus live state. A write (opt:1) must carry the full
-        block (as franklinwh_local.set_generator's read-modify-write does); partial frames are
+        block (as franklinwh_direct_connect_api.set_generator's read-modify-write does); partial frames are
         refused with reason -2, like the other full-block writes (unverified for 1901).
         The trailing power/curr/volt/freq are gateway-level values shared with 1412, not
         generator output; only genpowerGen is generator power."""

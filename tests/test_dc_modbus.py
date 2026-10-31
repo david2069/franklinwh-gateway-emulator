@@ -10,7 +10,7 @@ import urllib.request
 
 import pytest
 
-pytest.importorskip("franklinwh_local")
+pytest.importorskip("franklinwh_direct_connect_api")
 from franklinwh_emulator.control import ApiError, ControlApi, apply  # noqa: E402
 from franklinwh_emulator.gateway import Fleet  # noqa: E402
 

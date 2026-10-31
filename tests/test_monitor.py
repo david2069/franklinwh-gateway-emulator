@@ -66,9 +66,9 @@ def test_monitor_shows_the_client_and_the_refused_second(fleet):
 
 
 def test_monitor_counts_direct_connect_clients(fleet):
-    pytest.importorskip("franklinwh_local")
-    from franklinwh_local.client import LocalClient
-    c = LocalClient(*fleet["b"].dc_address, timeout=2, retries=0)
+    pytest.importorskip("franklinwh_direct_connect_api")
+    from franklinwh_direct_connect_api.client import DirectConnectClient
+    c = DirectConnectClient(*fleet["b"].dc_address, timeout=2, retries=0)
     c.transport.connect()
     c.login()
     try:

@@ -1,0 +1,7 @@
+#133 Direct Connect client library: current import name — 2026-10-31
+Library changelog read for 0.4.0 (rename; alias kept, warns) and 0.5.0 (emulator clock/timezone, held sessions, request lock): no impact on this repo beyond the rename.
+Local venv: franklinwh-direct-connect-api 0.3.0 -> 0.5.0 (CI already resolves 0.5.0).
+DC tests with -W error::DeprecationWarning: 55 passed
+Break check (old import restored in directconnect.py): test_no_deprecated_library_name FAILED
+Full suite:
+576 passed in 81.55s (0:01:21)
