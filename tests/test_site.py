@@ -44,6 +44,24 @@ def test_backup_mode_does_not_discharge():
     assert site.step().battery_w <= 0
 
 
+def test_backup_mode_charges_from_grid_at_rating():
+    """#138: Emergency Backup fills from the grid at night, at 5 kW per aPower."""
+    site, clock = site_at(2, initial_soc=71, native_mode=MODE_BACKUP)
+    site.solar_override_w, site.load_override_w = 0, 2000
+    clock.advance(1)
+    s = site.step()
+    assert s.battery_w == -5000 and s.grid_w == 7000
+
+
+def test_backup_mode_reaches_full_then_stops():
+    site, clock = site_at(2, initial_soc=71, native_mode=MODE_BACKUP)
+    site.solar_override_w, site.load_override_w = 0, 1000
+    for _ in range(24):
+        clock.advance(300)
+        s = site.step()
+    assert s.soc > 99.9 and s.battery_w == 0 and s.grid_w == 1000
+
+
 def test_tou_discharges_only_in_peak():
     site, clock = site_at(12, initial_soc=80, native_mode=MODE_TOU)
     site.solar_override_w, site.load_override_w = 0, 1000

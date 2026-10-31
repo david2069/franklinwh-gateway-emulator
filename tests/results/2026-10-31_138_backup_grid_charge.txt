@@ -1,0 +1,4 @@
+#138 Emergency Backup grid charge — 2026-10-31
+Break check (fix reverted): test_backup_mode_charges_from_grid_at_rating, test_backup_mode_reaches_full_then_stops FAILED
+With fix:
+562 passed in 55.76s

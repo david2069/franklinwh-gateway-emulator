@@ -7,6 +7,9 @@
 - Grid operator rules (`utility:`, also `dnsp:` or `lines_company:`): export allowed, limited or prohibited, an import limit, no battery export; enforced as PCS settings. A main breaker (`service:`) holds import below its rating and trips on overload until reset. Actions `utility`, `service`; card tags ([#123](https://github.com/david2069/franklinwh-gateway-emulator/issues/123)).
 - Page: a °C / °F toggle; every shown temperature converts; °F by default for US-region browsers; the emulator stays metric ([#119](https://github.com/david2069/franklinwh-gateway-emulator/issues/119)).
 
+### Fixed
+- Emergency Backup now fills the battery to 100 % from the grid as well as solar, at the aPower rating; it charged from surplus solar only, so a site could sit at 71 % for hours ([#138](https://github.com/david2069/franklinwh-gateway-emulator/issues/138)).
+
 ### Changed
 - **The default firmware profile is now `agate-v12r02b60d00-candidate`**, matching the reference aGate since its 2026-10-20 update: the 40000 mirror, 15509 = TOU reserve, 16001 = the active reserve, charge setpoints refused with exception 3, IBG V12R02B60D00 over Direct Connect. Set `profile: agate-v10r01b04d00` for the earlier behaviour ([#126](https://github.com/david2069/franklinwh-gateway-emulator/issues/126)).
 

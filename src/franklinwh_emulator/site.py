@@ -1004,8 +1004,8 @@ class Site:
     def _native_target(self, solar: float, load: float, hour: float) -> float:
         net = load - solar                             # >0 deficit, <0 surplus
         mode = self.native_mode
-        if mode == MODE_BACKUP:
-            return min(0.0, net)                       # soak surplus, never discharge
+        if mode == MODE_BACKUP:                        # fill to 100 % from solar and grid (#138)
+            return -float(self.rate_w)                 # at the rating; never discharge
         if mode == MODE_TOU:                           # the schedule's block decides (tou.py)
             block = tou.block_at(self.tou_schedule, hour * 60.0)
             return tou.target_w(block["dispatchId"], net, self.rate_w)
