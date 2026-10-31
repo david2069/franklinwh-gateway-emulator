@@ -1,0 +1,6 @@
+#132 Direct Connect 1407 tou_schedule — 2026-10-31
+Reply shape: franklinwh_direct_connect_api energy.decode_tou (<day>Lv/Time/Flag) and its test fixture (touStrategy 1); not read from an aGate.
+Test: the client library's tou_schedule() + decode_tou give 00:00-17:00 Off-Peak, 17:00-21:00 On-Peak, 21:00-24:00 Off-Peak; a one-block schedule fills gaps as off-peak; opt:1 -> reason 4.
+Break check (1407 handler unregistered): test_tou_schedule_1407 FAILED
+Full suite:
+577 passed in 80.95s (0:01:20)
