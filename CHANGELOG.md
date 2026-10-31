@@ -18,6 +18,7 @@ From here on, one line per change; the detail is in each PR and its `tests/resul
 - Direct Connect 1102 on the V12 candidate answers `result 1, reason -2` with the full manifest, as recorded on the reference aGate ([#81](https://github.com/david2069/franklinwh-gateway-emulator/pull/81)).
 
 ### Fixed
+- Direct Connect 1102 on the V12 candidate answers `result 0, reason 0` again: a live read on the same firmware, to the same request, contradicts the stored record #81 followed ([#94](https://github.com/david2069/franklinwh-gateway-emulator/issues/94)).
 - Page: after a reload, "Actions on" showed the first gateway instead of the active one ([#65](https://github.com/david2069/franklinwh-gateway-emulator/pull/65)).
 - Session restore read a bare `on:` key as `true`; it now maps it back, as fleet files do ([#67](https://github.com/david2069/franklinwh-gateway-emulator/pull/67)).
 - Direct Connect 1102 sent `SUNSPEC_FW`, a key no aGate is known to send; removed ([#75](https://github.com/david2069/franklinwh-gateway-emulator/pull/75)).

@@ -30,7 +30,7 @@ def login(profile, units=1, dev=1):
 def test_v12_b60_reply_matches_the_recorded_one():
     g, m, d = login("agate-v12r02b60d00-candidate")
     assert list(m) == V12_B60_KEYS
-    assert (m["result"], m["reason"]) == (1, -2)          # as recorded, with the full manifest (#80)
+    assert (m["result"], m["reason"]) == (0, 0)           # live read 2026-10-31, same firmware and request (#94)
     assert (m["IBG_VER"], m["protocolVer"], m["AWS_VER"], m["APP_VER"], m["SL_VER"], m["METER_VER"]) == (
         "V12R02B60D00_260924", "V1.12.02", "V12R00B15D00_260918", "V12R00B16D00_260825", "V12R02B12D00",
         "V12R00B11D00")
@@ -54,7 +54,7 @@ def test_default_profile_is_the_2026_10_07_capture():
     assert (m["FPGA_VER"], m["DCDC_VER"], m["INV_VER"], m["BMS_VER"], m["BL_VER"], m["TH_VER"]) == (
         ["V12R01B00D00"], ["V12R02B07D01"], ["V12R02B09D03"], ["V11R50B03D00"], ["V11R06B00D00"],
         ["V11R02B01D00"])
-    assert (m["result"], m["reason"]) == (0, 0)            # no record for this firmware
+    assert (m["result"], m["reason"]) == (0, 0)
     for k in ("deviceType", "threePhasePvPower", "PE_HW_VER"):     # first recorded on V12R02B60D00
         assert k not in m
     assert (d["ibg_ver"], d["ibg_iot"], d["ibg_local"]) == (
