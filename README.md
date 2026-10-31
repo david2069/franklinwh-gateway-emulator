@@ -73,6 +73,7 @@ from [`docs/`](docs/), so these links also work on GitHub:
 | | |
 |---|---|
 | [Getting started](docs/getting-started.md) | install, run one gateway or a fleet, use it from Python |
+| [Configuration](docs/configuration.md) | describe each site: aGate, aPowers, PV, grid, accessories, location; where it's saved |
 | [Web UI](docs/ui.md) | the optional web page, with screenshots |
 | [What is emulated](docs/emulated.md) | protocols, profiles and the choices where sources disagree |
 | [Grid, grid codes, export limits and phases](docs/grid.md) | outages, trips, CSIP-AUS, phases |

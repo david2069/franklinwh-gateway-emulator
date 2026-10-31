@@ -100,3 +100,16 @@ def test_schema_includes_gateway_config_and_is_json():
     s = json.loads(json.dumps(schema()))
     assert set(s) == {"actions", "groups", "gateway_config", "tou"}
     assert "apower_units" in s["gateway_config"]
+
+
+def test_configuration_page_lists_every_key_and_its_example_is_valid():
+    """docs/configuration.md documents every gateway key, and its example fleet validates."""
+    import re
+    from pathlib import Path
+    import yaml
+    from franklinwh_emulator.gateway import fix_bool_keys
+    page = (Path(__file__).parents[1] / "docs" / "configuration.md").read_text()
+    missing = [k for k in config_schema() if f"| `{k}` |" not in page]
+    assert not missing, f"add to docs/configuration.md: {missing}"
+    example = re.search(r"```yaml\n(.*?)```", page, re.S).group(1)
+    assert validate_fleet(fix_bool_keys(yaml.safe_load(example))) == []
