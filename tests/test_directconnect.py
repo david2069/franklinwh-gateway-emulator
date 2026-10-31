@@ -382,3 +382,13 @@ def test_tou_schedule_1407(dc, gw):
     r = dc.tou_schedule()
     assert (r["workdayTime"], r["workdayFlag"]) == (["00:00", "16:00", "20:00"], [0, 2, 0])
     assert dc.call(1407, {"opt": 1})["reason"] == 4     # writes are not emulated
+
+
+def test_replies_echo_the_request_opt(dc, gw):
+    """#135: an app capture of the reference aGate: every reply echoes its request's opt."""
+    on = {f"Sw{n}Mode": 1 for n in (1, 2, 3)}
+    assert dc.call(1409, {"opt": 1, **on})["opt"] == 1
+    assert dc.call(1723, {"opt": 1, "offgridSet": 0, "offgridSoc": 5})["opt"] == 1
+    assert dc.call(1821, {"opt": 1, "enable": 0})["opt"] == 1
+    assert dc.call(1409, {"opt": 0})["opt"] == 0 and dc.call(1301, {"opt": 0})["opt"] == 0
+    assert dc.call(1407, {"opt": 1})["opt"] == 1            # refusals too (reason 4)

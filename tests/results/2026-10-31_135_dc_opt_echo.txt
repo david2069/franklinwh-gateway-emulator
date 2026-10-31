@@ -1,0 +1,6 @@
+#135 Direct Connect replies echo the request opt — 2026-10-31
+Evidence: fwh-local, from an app capture of the reference aGate on TCP 9000 (one site, 335 frames): 1409 opt=1 -> 1410 opt=1; 1723 opt=1 -> 1724 opt=1; 1727 opt=3 -> 1728 opt=3; 1725 opt=1 -> 1726 opt=1; every opt=0 read -> opt=0; no reply differed from its request. No payload content used.
+Applied to every cmdType at the frame layer (directconnect._reply).
+Break check (echo removed): test_replies_echo_the_request_opt FAILED
+Full suite:
+578 passed in 43.78s

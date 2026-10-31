@@ -64,6 +64,10 @@ both emulators.
 | 1251 → 1252 | a minimal compliance block (`IEEE_2030_5_EVAL`, …) | — |
 | 1721 → 1722 device_control | read zeros. A full-block write with `reboot:1` **drops the socket, and both :502 and :9000 go down** for `reboot_s` (20 s), then come back. Site state persists. | `Gateway.reboot` |
 
+**`opt` in replies.** Every reply echoes its request's `opt`: `opt:1` writes get `opt:1`, the
+1727 mode set (`opt:3`) gets `opt:3`, reads get `opt:0`. Measured in an app capture of the
+reference aGate (1409, 1723, 1725, 1727 and the reads; one site); applied to every cmdType here.
+
 ## Error behaviour (as on the real aGate)
 
 - 1725 with `opt` ≠ 1, and 1727 with `opt` ≠ 3: **no reply** (the client times out).
