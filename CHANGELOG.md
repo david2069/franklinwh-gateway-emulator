@@ -15,6 +15,7 @@ From here on, one line per change; the detail is in each PR and its `tests/resul
 - Direct Connect 1102 login: the full reply per aGate firmware, as measured, with per-aPower lists; profile field `dc_firmware` ([#79](https://github.com/david2069/franklinwh-gateway-emulator/pull/79)).
 
 ### Changed
+- An M704 setpoint is labelled **FORCE · charge / discharge / standby**, not "VPP"; during it, Direct Connect 1707 reads programme 9 and 1301's name is empty, as measured on the reference aGate; state `force` ([#91](https://github.com/david2069/franklinwh-gateway-emulator/issues/91)).
 - Direct Connect 1102 on the V12 candidate answers `result 1, reason -2` with the full manifest, as recorded on the reference aGate ([#81](https://github.com/david2069/franklinwh-gateway-emulator/pull/81)).
 
 ### Fixed

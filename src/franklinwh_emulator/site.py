@@ -256,7 +256,8 @@ def _battery_model(spec: Any) -> dict:
 
 @dataclass
 class RemoteControl:
-    """M704 VPP state. ``pct_hw`` uses the hardware sign (positive = discharge)."""
+    """M704 remote control: a FORCE while ``enabled`` (a WSet/WSetPct setpoint from a Modbus
+    client). ``pct_hw`` uses the hardware sign (positive = discharge)."""
     enabled: bool = False
     mode: int = 0                 # WSetMod: 0 = percent (WSetPct), 1 = watts (WSet)
     watts: int = 0                # WSet, positive = charge
@@ -902,6 +903,15 @@ class Site:
         if self.native_mode == MODE_BACKUP:
             return 100.0
         return float(self.self_reserve)
+
+    def force_status(self) -> dict | None:
+        """The M704 force, if one is on: direction from the requested battery power."""
+        r = self.remote
+        if not r.enabled:
+            return None
+        t = self._remote_target()
+        direction = "discharge" if t > 0 else "charge" if t < 0 else "standby"
+        return {"direction": direction, "via": "WSet" if r.mode == 1 else "WSetPct", "target_w": round(t)}
 
     def _remote_target(self) -> float:
         """Requested battery power (internal sign) while M704 control is enabled."""

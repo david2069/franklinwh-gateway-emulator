@@ -224,3 +224,18 @@ def test_mirror_write_reply_address(clock, profile, echo_base0):
     assert fc6 == struct.pack(">BHH", 6, want, 1)
     assert fc16 == struct.pack(">BHH", 16, want, 1)
     assert base0 == struct.pack(">BHH", 6, wsetena, 1)
+
+
+def test_force_via_wset_over_modbus(clock):
+    """#91: a client's WSet (WSetMod 1) force is reported as FORCE via WSet with its direction."""
+    from franklinwh_emulator.control import gateway_state
+    gw = make_gateway(clock, seed=1)
+    img = gw.device.image
+    with gw:
+        c = RawClient(*gw.address)
+        assert c.write(img.ref(704, "WSetMod").address, 1) == "ok"
+        assert c.write(img.ref(704, "WSet").address, [0, 1500]) == "ok"       # int32, + = discharge
+        assert c.write(img.ref(704, "WSetEna").address, 1) == "ok"
+        f = gateway_state(gw)["force"]
+        c.close()
+    assert (f["direction"], f["via"]) == ("discharge", "WSet")

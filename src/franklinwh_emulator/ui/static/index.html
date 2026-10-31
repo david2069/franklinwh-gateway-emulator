@@ -93,7 +93,8 @@
           <span class="tag" :class="g.grid_connected ? 'ok' : 'bad'" x-text="gridState(g)"></span>
           <span class="tag" :class="modeClass(g)" x-text="g.native_mode_name"></span>
           <span class="tag" :class="statusClass(g)" x-text="g.run_status_name"></span>
-          <span class="tag warn" x-show="g.remote_control && g.remote_control.enabled">VPP</span>
+          <span class="tag warn" x-show="g.force" x-text="g.force && ('FORCE · ' + g.force.direction)"
+                title="A Modbus M704 setpoint is active. Direct Connect 1707 reads 9, which the FranklinWH app shows as VPP Mode."></span>
           <template x-for="a in g.alarm_names" :key="a"><span class="tag bad" x-text="a"></span></template>
           <template x-for="f in faultList(g)" :key="f"><span class="tag warn" x-text="'fault: ' + f"></span></template>
           <template x-for="o in overrideList(g)" :key="o"><span class="tag warn" x-text="o"></span></template>
