@@ -230,6 +230,9 @@ class SiteConfig:
     # {"outdoor": {"sun": morning|afternoon|all-day|shade, "cover": none|roof|enclosure}}.
     # None = the original cabinet estimate (ambient + 8 °C + 1 °C per kW).
     install: dict | None = None
+    # Battery temperature limits, heater/fan and automatic OVER_TEMP (#111): overrides of
+    # thermal.BATTERY_THERMAL; false = off. None = on when `install` is set.
+    battery_temperature: dict | bool | None = None
     # The grid code's export limit is the connection-agreement limit. Whether the aGate
     # itself enforces it is a separate question: on the reference Ausgrid site it does
     # not (local 1903 grid_feed_max = -1, cloud notControlExportSolar = true), so the
@@ -394,6 +397,17 @@ class Site:
         self.install = thermal.Install.from_dict(cfg.install)
         self._ambient_lag: dict[str, float] | None = None     # 1 h / 8 h smoothed outside air
         self.cabinet_state_c: float | None = None            # integrated cabinet temperature
+        bt = cfg.battery_temperature
+        if bt is False or (bt is None and self.install is None):
+            self.batt_temp = None
+        else:
+            given = dict(bt or {}) if bt is not True else {}
+            bad = set(given) - set(thermal.BATTERY_THERMAL)
+            if bad:
+                raise ValueError(f"battery_temperature: unknown keys {sorted(bad)}; "
+                                 f"known {sorted(thermal.BATTERY_THERMAL)}")
+            self.batt_temp = {**thermal.BATTERY_THERMAL, **{k: float(v) for k, v in given.items()}}
+        self.over_temp_auto = False                           # OVER_TEMP raised by the model
         if cfg.pv_temperature is False:
             self.pv_temp = None
         else:
@@ -999,7 +1013,35 @@ class Site:
                 max_dis = 0.0
             if self.soc >= 100.0:
                 max_chg = 0.0
-        return max_dis, max_chg
+        fd, fc = self.battery_temperature_factors()
+        return max_dis * fd, max_chg * fc
+
+    # -- battery temperature (#111) --------------------------------------------------------------
+    def battery_temp_c(self) -> float:
+        """The battery's temperature, taken as the cabinet's now."""
+        if self.cabinet_state_c is not None:
+            return self.cabinet_state_c
+        return self._cabinet_c(self._t, self.ambient_c(self._t), self._out_batt)
+
+    def battery_temperature_factors(self) -> tuple[float, float]:
+        """(discharge, charge) power factors from the battery temperature; (1, 1) when off."""
+        if self.batt_temp is None:
+            return 1.0, 1.0
+        return thermal.battery_factors(self.battery_temp_c(), self.batt_temp)
+
+    def _over_temp(self) -> None:
+        """Raise OVER_TEMP at over_temp_c and clear it at over_temp_clear_c, when the model raised
+        it; one set by hand is left alone."""
+        p = self.batt_temp
+        if p is None:
+            return
+        t = self.battery_temp_c()
+        if t >= p["over_temp_c"] and "OVER_TEMP" not in self.forced_alarms:
+            self.forced_alarms["OVER_TEMP"] = False
+            self.over_temp_auto = True
+        elif self.over_temp_auto and t <= p["over_temp_clear_c"]:
+            self.forced_alarms.pop("OVER_TEMP", None)
+            self.over_temp_auto = False
 
     # -- alarms ------------------------------------------------------------------
     def _alarm_bits(self, islanded: bool) -> int:
@@ -1037,14 +1079,18 @@ class Site:
                         ambient: float) -> tuple[dict[str, float], dict[str, Component | None]]:
         """Demand per component (W) and the component objects (None for the legacy curve).
         Switched-off smart circuits, and circuits below their islanded SoC cutoff, demand 0."""
-        if self.load_override_w is not None:
-            return {"override": max(0.0, self.load_override_w)}, {"override": None}
+        if self.load_override_w is not None:              # the house forced; heater/fan still draw
+            out, comps = {"override": max(0.0, self.load_override_w)}, {"override": None}
+            self._add_battery_aux(out, comps)
+            return out, comps
         if self.replay is not None:
             v = self.replay.load_w(ts)
             if v is not None:
                 return {"recorded": v}, {"recorded": None}
         if self.loads is None:
-            return {"house": self.load_w(ts)}, {"house": None}
+            out, comps = {"house": self.load_w(ts)}, {"house": None}
+            self._add_battery_aux(out, comps)
+            return out, comps
         ctx = Context(ts, self.local_datetime(ts), ambient, 0.0)
         out: dict[str, float] = {}
         comps: dict[str, Component | None] = {}
@@ -1066,7 +1112,17 @@ class Site:
             if c.type == "ev":
                 out[c.name] = c.demand(ctx, self.loads.seed) if allowed(c) else 0.0
                 comps[c.name] = c
+        self._add_battery_aux(out, comps)
         return out, comps
+
+    def _add_battery_aux(self, out: dict, comps: dict) -> None:
+        """The battery heater and fan draw like house loads (#111)."""
+        if self.batt_temp is None:
+            return
+        for name, w in thermal.aux_load_w(self.battery_temp_c(), self.batt_temp,
+                                          self.apower_units_on()).items():
+            out[name] = w
+            comps[name] = None
 
     # -- integration ---------------------------------------------------------------
     def _instant(self, ts: float, dt: float = 0.0) -> Snapshot:
@@ -1317,6 +1373,7 @@ class Site:
         snap = self._instant(ts, dt)
         if self.install is not None:
             self._advance_cabinet(ts, dt, snap)
+        self._over_temp()
         hours = dt / 3600
         bm = self.battery_model
         if snap.battery_w > 0:
