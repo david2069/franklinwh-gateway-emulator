@@ -51,6 +51,7 @@ nav:
   - Getting started: getting-started.md
   - Configuration: configuration.md
   - Model baseline: model-baseline.md
+  - Sources and regions: sources-and-regions.md
   - Web UI: ui.md
   - Guide:
       - What is emulated: emulated.md

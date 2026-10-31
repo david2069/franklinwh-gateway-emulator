@@ -34,6 +34,9 @@ Dashed boxes are planned. The diagram is drawn by `tools/gen_model_flow.py`: edi
 
 ### FranklinWH's products (for later models)
 
+Which FranklinWH documents apply to which region, and the model codes that tell North American
+from AU/NZ hardware apart: [Sources and regions](sources-and-regions.md).
+
 From FranklinWH's published warranties (AU & NZ, June 2026; US & CA, Oct 2026) and its
 Backwards Compatibility Statement (US V1.1, Oct 2026). **Documented.**
 

@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Docs: Sources and regions, which cites the FranklinWH PV Curtailment White Paper and PCS Technical Brief, scopes them to North America (US, Canada) apart from AU/NZ models, and lists the aGate/aPower model codes (#181).
 - Cards: the border turns red when the gateway is faulted (alarm, main breaker tripped, injected fault) and dashed orange when offline (rebooting, episode down, listener offline); the tooltip says why (#168).
 - Example fleet: every gateway has a service rating (63 A AU, 200 A US), shown on the diagram; a week in Self-Consumption and in Emergency Backup trips none (#156).
 - Direct Connect 1407 serves the gateway's TOU schedule (start times and tariff tiers, workday and weekend alike), so a client reading TOU over Direct Connect sees the schedule the page shows; it answered "not supported" ([#132](https://github.com/david2069/franklinwh-gateway-emulator/issues/132)).
