@@ -1,6 +1,31 @@
 # What is emulated
 
-## What is emulated
+Each emulated gateway is a **working FranklinWH site**: an **aGate** with **one or more aPowers**
+and its accessories, in front of a closed-loop model. Control commands move the battery, the grid
+balances, and Modbus TCP and Direct Connect always agree. Run one gateway or a fleet of them.
+You describe each site in a fleet file: see [Configuration](configuration.md).
+
+## What you get
+
+| Part | Emulated |
+|---|---|
+| **aGate** | Model "aGate X", serial, firmware profile (Modbus `Vr`, Direct Connect versions), factory or in-service setup, commissioning date, operating modes (Self-Consumption, TOU, Emergency Backup), reserves, off-grid floor, TOU schedule, alarms, reboot, Debug Mode |
+| **aPower** (1 or more) | One combined battery: 13.6 kWh and 5 kW per aPower, state of charge, charge/discharge losses, standby drain, temperature limits, each switchable off. Per-aPower serials and firmware in Direct Connect |
+| **Solar PV** | Up to three inputs: on the aGate (proximal) and two remote inputs through an **aPbox**, each with a relay; output from a weather model (bell curve, synthetic sky or real Open-Meteo data), PV temperature loss, or replayed recordings |
+| **Grid** | Single, split or three phase, per-leg voltage and frequency, a grid code (AS/NZS 4777 Australia A, Ausgrid, IEEE 1547 Cat II/III) with its trips, ride-through, reconnect delays and responses, export limits and CSIP-AUS |
+| **Generator** | On the aGate's generator port: automatic start by SoC during an outage (AGS), up to three operating windows, exercise runs, manual start, rating and warm-up/cool-down |
+| **Smart circuits** | SW1–SW3 with names, on/off and off-grid SoC cut-off, metering on circuits 1 and 2; house appliances (hot water, EV, aircon, …) can sit on them |
+| **House load** | A built-in curve, appliance presets or your own components, or recordings |
+| **Environment** | Location and timezone (with DST), sun position, weather, ambient temperature, installation placement and cabinet temperature |
+| **Metrics** | Power flows (solar, home, battery, grid, generator, per leg and per circuit), SoC, lifetime and daily energy, 15-minute history, temperatures, voltages, frequency, alarms and run status: over Modbus TCP (SunSpec models and FranklinWH extension registers) and Direct Connect, as the aGate serves them |
+| **Controls** | What a client can do to a real aGate: Modbus M704 setpoints (FORCE), Direct Connect writes (mode, off-grid, smart circuits, generator, Modbus enable, reboot, Debug Mode, …), plus the emulator's own control API and web UI for things a client can't do (cut the grid, set the weather, inject faults) |
+
+**Not modelled** (each gateway's diagram lists these too): per-aPower SoC and power (one
+combined battery), aPower S (DC hybrid), aHub, V2L, a non-backup panel, EV battery SoC, hot-water
+temperature, the FranklinWH Cloud API, network connectivity (Ethernet/Wi-Fi/4G). See the
+[backlog](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/BACKLOG.md).
+
+## Protocol detail
 
 **Register space (PDU addresses, any unit id):**
 

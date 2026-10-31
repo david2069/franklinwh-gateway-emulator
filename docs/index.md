@@ -16,6 +16,7 @@ battery and both ports always agree. It runs one gateway or a **fleet**, with an
 ## Start here
 
 - [Getting started](getting-started.md): install, run one gateway or a fleet, use it from Python.
+- [Configuration](configuration.md): describe each site (aGate, aPowers, PV, grid, accessories, location) in a fleet file.
 - [Web UI](ui.md): cards, the energy diagram, actions, TOU editor, sessions, grouping.
 - [What is emulated](emulated.md): protocols, firmware profiles, and the choices where sources disagree.
 

@@ -49,6 +49,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting started: getting-started.md
+  - Configuration: configuration.md
   - Web UI: ui.md
   - Guide:
       - What is emulated: emulated.md
