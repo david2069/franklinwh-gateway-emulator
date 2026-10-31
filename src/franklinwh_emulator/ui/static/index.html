@@ -107,6 +107,9 @@
           <span class="tag warn" x-show="g.battery_temperature && g.battery_temperature.derated"
                 x-text="g.battery_temperature && ('derated: ' + g.battery_temperature.derated + ' · ' + fmtTemp(g.battery_temperature.battery_c, tempUnit))"
                 title="Battery power limited by temperature"></span>
+          <span class="tag bad" x-show="g.service && g.service.open" title="Grid import exceeded the main breaker's rating. Grid and phases → service, reset: true">main breaker tripped</span>
+          <span class="tag warn" x-show="g.utility_rules && g.utility_rules.export === 'prohibited'">no export</span>
+          <span class="tag warn" x-show="g.utility_rules && g.utility_rules.battery_export === false">no battery export</span>
           <span class="tag warn" x-show="g.debug_mode" title="Direct Connect 1821 enable 1: the battery is stopped">Debug Mode</span>
         </div>
       </button>

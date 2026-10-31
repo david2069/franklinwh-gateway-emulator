@@ -208,3 +208,29 @@ as LFP batteries are limited. Defaults are plausible, not measured; each is set 
 
 The state's `battery_temperature` shows the factors, heater and fan; cards show
 "derated: cold/hot". Region-locked power ratings (#113) are separate: policy, not physics.
+
+## Grid operator rules and the main breaker
+
+The grid operator is the **utility** (US/CA), **DNSP** (AU) or **lines company** (NZ); the fleet
+file takes any of the three names for the same block:
+
+```yaml
+utility: {operator: ausgrid, import_limit_w: 8000}                          # Ausgrid: 10 kW export
+dnsp: {export: prohibited, export_rule_source: dnsp}                        # zero export
+lines_company: {export: allowed, battery_export: false, export_rule_source: scheme}
+service: {main_breaker_a: 63}
+```
+
+- **Export:** `allowed`, `limited` (`export_limit_w`, or `export_per_phase_w` on multi-leg
+  sites) or `prohibited` (solar is curtailed, the battery never exports).
+  `battery_export: false` lets solar export but keeps the battery to the home load (often a
+  scheme rule). These are the site's PCS settings, so they are enforced. Without a `utility`
+  block, the grid code's declared limit is only tracked, as on the reference aGate.
+- **Import:** above `import_limit_w` (or the main breaker's rating), the site stops grid
+  charging first, then discharges the battery as far as it can.
+- **Main breaker:** import above its rating trips it after 120 / (r² − 1) s at r times the
+  rating, and at once from 5× (plausible, not measured). The site islands (trip reason
+  `main-breaker`) until reset: Grid and phases → **service**, `reset: true`.
+- Change the rules live with the **utility** action. The state shows `utility_rules`,
+  `import_cap_w`, `import_clipped_w` and `service` (rating, trip progress, open); cards show "no
+  export", "no battery export" and "main breaker tripped".

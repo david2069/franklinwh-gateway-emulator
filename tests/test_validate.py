@@ -88,7 +88,7 @@ def test_scenario_structure_errors():
 def test_config_schema_covers_every_field_with_a_doc():
     cs = config_schema()
     expected = ({f.name for f in fields(GatewayConfig)} - {"site"}) | \
-               ({f.name for f in fields(SiteConfig)} - {"seed"}) | {"modbus", "directconnect"}
+               ({f.name for f in fields(SiteConfig)} - {"seed"}) | {"modbus", "directconnect", "dnsp", "lines_company"}
     assert set(cs) == expected == set(DOCS)
     assert all(v["doc"] for v in cs.values())
     assert cs["tz_offset_hours"] == {"type": "number", "nullable": True, "default": None,

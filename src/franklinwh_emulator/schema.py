@@ -166,6 +166,28 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "fields": _fault_fields(),
         "examples": [{"latency_s": 0.5}],
     },
+    "utility": {
+        "doc": "Set the grid operator's rules (utility / DNSP / lines company), as PCS settings: "
+               "export allowed, limited or prohibited, import limit, battery export. clear = none.",
+        "fields": {"operator": _f("string", "e.g. ausgrid (fills its defaults)"),
+                   "export": _f("string", enum=["allowed", "limited", "prohibited"]),
+                   "export_limit_w": _f("number", unit="W", nullable=True),
+                   "export_per_phase_w": _f("number", unit="W", nullable=True),
+                   "import_limit_w": _f("number", unit="W", nullable=True),
+                   "battery_export": _f("boolean", "false = the battery serves the home only"),
+                   "export_rule_source": _f("string", enum=["dnsp", "utility", "lines-company", "scheme"]),
+                   "clear": _f("boolean", "true = no rules (the grid code's limit is tracked only)")},
+        "examples": [{"export": "prohibited", "export_rule_source": "dnsp"},
+                     {"operator": "ausgrid", "import_limit_w": 8000},
+                     {"export": "allowed", "battery_export": False, "export_rule_source": "scheme"},
+                     {"clear": True}],
+    },
+    "service": {
+        "doc": "The main breaker: reset it after a trip.",
+        "fields": {"reset": _f("boolean", "true = close the main breaker again")},
+        "required": ["reset"],
+        "examples": [{"reset": True}],
+    },
     "export": {
         "doc": "Enforce the static export limit (default: declared, only tracked).",
         "fields": {"enforced": _f("boolean", "true = enforce the limit; false = only track breaches")},
@@ -326,7 +348,7 @@ ACTIONS: dict[str, dict[str, Any]] = {
 
 # How the UI and docs group the actions, in display order.
 GROUPS: dict[str, list[str]] = {
-    "Grid and phases": ["grid", "offgrid"],
+    "Grid and phases": ["grid", "offgrid", "utility", "service"],
     "Inputs": ["pv", "load", "ambient", "weather"],
     "Battery and modes": ["vpp", "release", "mode", "tou", "reserve", "soc", "apower"],
     "Loads": ["circuit", "appliance"],

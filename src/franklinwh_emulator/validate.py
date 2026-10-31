@@ -69,6 +69,13 @@ DOCS: dict[str, str] = {
     "tou_rates": "prices per tariff period, {waveType: {buy, sell}} in $/kWh (display only)",
     "cap_forced_solar": "forced solar (pv solar_w) can't exceed the solar model's value now, 0 at "
                         "night (default true); false = use it as given (lab tests)",
+    "utility": "the grid operator's rules: {operator, export: allowed|limited|prohibited, export_limit_w, "
+               "export_per_phase_w, import_limit_w, battery_export, export_rule_source}; enforced (PCS "
+               "settings). Also accepted as dnsp (AU) or lines_company (NZ)",
+    "dnsp": "AU name for utility (the same block)",
+    "lines_company": "NZ name for utility (the same block)",
+    "service": "the main breaker: {main_breaker_a}; import above it trips the site off the grid "
+               "(inverse-time) until reset; the site also holds grid import below it",
     "install": "where the aGate/aPower sits: {indoor: heated|unheated|uninsulated} or {outdoor: {sun: "
                "morning|afternoon|all-day|shade, cover: none|roof|enclosure}}, plus cabinet_lag_h, "
                "self_heat_c_per_kw, room_c; drives the cabinet temperature. Default: ambient + 8 °C",
@@ -111,6 +118,8 @@ def config_schema() -> dict[str, dict]:
     out: dict[str, dict] = {
         "modbus": {"type": "object", "doc": DOCS["modbus"]},
         "directconnect": {"type": "object", "doc": DOCS["directconnect"]},
+        "dnsp": {"type": "object", "doc": DOCS["dnsp"]},
+        "lines_company": {"type": "object", "doc": DOCS["lines_company"]},
     }
     for f in fields(GatewayConfig):
         if f.name != "site":

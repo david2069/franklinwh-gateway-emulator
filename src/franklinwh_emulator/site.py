@@ -54,6 +54,7 @@ from .replay import Replay, ReplayConfig
 from .loads import DEFAULT_CIRCUITS, Circuit, Component, Context, LoadModel
 from .weather import Weather, WeatherConfig, sun_position
 from . import thermal, tou
+from .utility import Service, Utility as UtilityRules, trip_seconds
 
 WH_PER_APOWER = 13_600          # 713.WHRtg on a single-aPower aGate
 W_PER_APOWER = 5_000            # continuous charge/discharge per aPower
@@ -233,6 +234,10 @@ class SiteConfig:
     # Battery temperature limits, heater/fan and automatic OVER_TEMP (#111): overrides of
     # thermal.BATTERY_THERMAL; false = off. None = on when `install` is set.
     battery_temperature: dict | bool | None = None
+    # The grid operator's rules and the main breaker (#123), see utility.py. The fleet file also
+    # accepts `dnsp:` (AU) or `lines_company:` (NZ) for `utility:`.
+    utility: dict | None = None
+    service: dict | None = None
     # The grid code's export limit is the connection-agreement limit. Whether the aGate
     # itself enforces it is a separate question: on the reference Ausgrid site it does
     # not (local 1903 grid_feed_max = -1, cloud notControlExportSolar = true), so the
@@ -408,6 +413,11 @@ class Site:
                                  f"known {sorted(thermal.BATTERY_THERMAL)}")
             self.batt_temp = {**thermal.BATTERY_THERMAL, **{k: float(v) for k, v in given.items()}}
         self.over_temp_auto = False                           # OVER_TEMP raised by the model
+        self.utility_rules = UtilityRules.from_dict(cfg.utility)
+        self.service = Service.from_dict(cfg.service)
+        self.breaker_progress = 0.0                          # 0..1 towards a main-breaker trip
+        self.main_breaker_open = False
+        self.import_clipped_w = 0.0                          # import held back by the limits now
         if cfg.pv_temperature is False:
             self.pv_temp = None
         else:
@@ -724,7 +734,7 @@ class Site:
                 "hz_lo": hz < threshold, "hz_hi": hz > threshold}[kind]
 
     def _in_es_window(self) -> bool:
-        if not self._all_up():
+        if not self._all_up() or self.main_breaker_open:
             return False
         g = self.grid
         lo, hi = self._v_extremes()
@@ -771,6 +781,9 @@ class Site:
                 self._open_relay("requested", None, ts)
             return
         if self.grid_relay_closed:
+            if self.main_breaker_open:
+                self._open_relay("main-breaker", None, ts)
+                return
             up = self.utility.available
             if not any(up.values()):
                 self._open_relay("outage", None, ts)
@@ -1232,6 +1245,7 @@ class Site:
             if lim is not None and grid > lim and batt < 0:
                 batt = min(0.0, batt + (grid - lim))      # stop charging from the grid
                 grid = load - solar - batt
+            batt, grid = self._connection_rules(load, solar, batt, grid, max_dis, hi)
             enforced_limit = self._enforced_export_limit(ctl)
             need = max(0.0, -grid - enforced_limit) if enforced_limit is not None else 0.0
             if dt > 0:
@@ -1311,11 +1325,74 @@ class Site:
             gen_state=self.generator.state, gen_relay_closed=self.generator.relay_closed,
         )
 
+    def import_cap_w(self) -> float | None:
+        """Grid import the site holds itself to: the operator's limit and the main breaker."""
+        caps = []
+        u = self.utility_rules
+        if u is not None and u.import_limit_w is not None:
+            caps.append(float(u.import_limit_w))
+        if self.service is not None:
+            caps.append(self.service.rating_w(self.grid.nominal_v_ln, len(self.phases)))
+        return min(caps) if caps else None
+
+    def _connection_rules(self, load: float, solar: float, batt: float, grid: float,
+                          max_dis: float, hi: float) -> tuple[float, float]:
+        """No battery export, then the import cap: stop grid charging first, then discharge
+        (within the battery's limits) to hold it. Returns (battery W, grid W)."""
+        u = self.utility_rules
+        if u is not None and not u.battery_export and batt > 0 and grid < 0:
+            batt -= min(batt, -grid)                     # the battery serves the home only
+            grid = load - solar - batt
+        self.import_clipped_w = 0.0
+        cap = self.import_cap_w()
+        if cap is not None and grid > cap:
+            excess = grid - cap
+            if batt < 0:
+                d = min(-batt, excess)
+                batt += d
+                excess -= d
+            room = min(max_dis, hi) - batt
+            if excess > 0 and room > 0:
+                batt += min(room, excess)
+            new_grid = load - solar - batt
+            self.import_clipped_w = grid - new_grid
+            grid = new_grid
+        return batt, grid
+
+    def _advance_breaker(self, dt: float, snap: "Snapshot") -> None:
+        """Integrate the main breaker's inverse-time trip on grid import."""
+        if self.service is None or self.main_breaker_open or dt <= 0:
+            return
+        rating = self.service.rating_w(self.grid.nominal_v_ln, len(self.phases))
+        t = trip_seconds(max(0.0, snap.grid_w) / rating) if rating > 0 else None
+        if t is None:
+            self.breaker_progress = max(0.0, self.breaker_progress - dt / 600.0)   # cools down
+            return
+        self.breaker_progress = 1.0 if t == 0 else min(1.0, self.breaker_progress + dt / t)
+        if self.breaker_progress >= 1.0:
+            self.main_breaker_open = True
+
+    def reset_main_breaker(self) -> None:
+        """Close the main breaker again; the relay recloses after the enter-service delay."""
+        with self.lock:
+            self.step()
+            self.main_breaker_open = False
+            self.breaker_progress = 0.0
+
+    def set_utility(self, d: dict | None) -> None:
+        with self.lock:
+            self.step()
+            self.utility_rules = UtilityRules.from_dict(d)
+
     def _enforced_export_limit(self, ctl: dict) -> float | None:
         limits = []
         declared = self.grid.export_limit_w(len(self.phases))
         if self.export_limit_enforced and declared is not None:
             limits.append(declared)
+        if self.utility_rules is not None:            # PCS settings: enforced
+            ul = self.utility_rules.export_limit(len(self.phases))
+            if ul is not None:
+                limits.append(ul)
         if ctl.get("opModExpLimW") is not None:
             limits.append(ctl["opModExpLimW"])
         return min(limits) if limits else None
@@ -1374,6 +1451,7 @@ class Site:
         if self.install is not None:
             self._advance_cabinet(ts, dt, snap)
         self._over_temp()
+        self._advance_breaker(dt, snap)
         hours = dt / 3600
         bm = self.battery_model
         if snap.battery_w > 0:

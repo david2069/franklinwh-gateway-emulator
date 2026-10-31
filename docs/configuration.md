@@ -121,6 +121,10 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 | `grid_overrides` | object | `{}` | grid-code values to change, e.g. {es_delay_s: 5} |
 | `load_split` | object | — | share of home load per leg, e.g. {L1: 2, L2: 1}; default even |
 | `gen_split` | object | — | share of aGate generation per leg; default even |
+| `utility` | object | — | the grid operator's rules: {operator, export: allowed\|limited\|prohibited, export_limit_w, export_per_phase_w, import_limit_w, battery_export, export_rule_source}; enforced (PCS settings). Also accepted as dnsp (AU) or lines_company (NZ) |
+| `dnsp` | object | — | AU name for utility (the same block) |
+| `lines_company` | object | — | NZ name for utility (the same block) |
+| `service` | object | — | the main breaker: {main_breaker_a}; import above it trips the site off the grid (inverse-time) until reset; the site also holds grid import below it |
 
 ### House load and smart circuits
 
