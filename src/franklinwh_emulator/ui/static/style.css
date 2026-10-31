@@ -292,3 +292,14 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
   vertical-align: middle; }
 .help:hover, .help:focus-visible { color: var(--ok); border-color: var(--ok); outline: none; }
 .docs-link:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
+
+/* Monitor (#141) */
+.monitor .sub { font-weight: 400; color: var(--muted); font-size: 12px; }
+.mon { padding: 0 16px 14px; }
+.mon-line { font: 12px var(--mono); color: var(--text-2); margin: 0 0 8px; word-break: break-word; }
+.mon-table { width: 100%; border-collapse: collapse; font: 12px var(--mono); }
+.mon-table th, .mon-table td { text-align: left; padding: 4px 6px; border-top: 1px solid var(--line); vertical-align: top; word-break: break-word; }
+.mon-table thead th { color: var(--muted); font-weight: 600; border-top: 0; }
+.mon-table th:first-child { white-space: nowrap; word-break: normal; }
+.mon-table tr.cur th, .mon-table tr.cur td { background: var(--panel-2, rgba(127,127,127,.08)); }
+.linkish { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; text-decoration: underline; min-height: 24px; }

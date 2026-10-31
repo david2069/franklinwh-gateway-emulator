@@ -19,6 +19,7 @@ import time
 from dataclasses import dataclass
 
 from .device import ILLEGAL_FUNCTION, ILLEGAL_VALUE, AGateDevice
+from .monitor import ClientTable
 
 log = logging.getLogger(__name__)
 
@@ -72,6 +73,7 @@ class ModbusServer:
         self._active = 0
         self._server: asyncio.base_events.Server | None = None
         self._writers: set[asyncio.StreamWriter] = set()
+        self.clients = ClientTable()          # connected now, refusals (#141)
 
     async def start(self) -> tuple[str, int]:
         self._server = await asyncio.start_server(self._client, self.host, self.port)
@@ -102,9 +104,11 @@ class ModbusServer:
     async def _client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         peer = writer.get_extra_info("peername")
         if self.faults.offline:
+            self.clients.refuse(peer)
             writer.close()
             return
         if self._busy():
+            self.clients.refuse(peer)
             log.info("%s: session busy, %s client %s", self.device.serial,
                      self.device.profile.busy_behaviour, peer)
             if self.device.profile.busy_behaviour == "hang":
@@ -118,16 +122,19 @@ class ModbusServer:
             return
         self._active += 1
         self._writers.add(writer)
+        entry = self.clients.open(peer)
         try:
-            await self._serve(reader, writer)
+            await self._serve(reader, writer, entry)
         except (asyncio.IncompleteReadError, ConnectionError):
             pass
         finally:
+            self.clients.close(entry)
             self._active -= 1
             self._writers.discard(writer)
             writer.close()
 
-    async def _serve(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    async def _serve(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
+                     entry: dict | None = None) -> None:
         while True:
             header = await reader.readexactly(7)
             tid, pid, length, unit = struct.unpack(">HHHB", header)
@@ -135,6 +142,7 @@ class ModbusServer:
                 return
             pdu = await reader.readexactly(length - 1)
             self.requests += 1
+            self.clients.request(entry)
             f = self.faults
             if f.reset_after is not None:
                 if f.reset_after <= 0:

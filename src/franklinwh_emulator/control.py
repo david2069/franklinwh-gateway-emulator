@@ -3,6 +3,7 @@
     GET  /version                       the emulator's version (and commit, from a git checkout)
     GET  /schema                        every action, its fields and examples (schema.py)
     GET  /log                           every action applied, oldest first (also failed ones)
+    GET  /monitor                       clients per gateway and overall; the process's CPU, memory, threads
     GET  /sessions                      saved sessions in <workspace>/sessions
     POST /session/save                  {"name": "evening-test"} (optional): write the session
     POST /session/restore               {"name": "evening-test"}: replay its actions
@@ -24,6 +25,7 @@ import logging
 from dataclasses import asdict, dataclass, fields
 from typing import TYPE_CHECKING
 
+from .monitor import ProcessMonitor
 from .schema import ACTIONS, check_body, schema
 from .server import Faults
 from .site import ALARMS, INV_NAMES, MODE_NAMES, RUN_NAMES, W_PER_APOWER, WH_PER_APOWER
@@ -394,17 +396,53 @@ class ControlApi:
         self.log: list[dict] = []
         self._server: asyncio.base_events.Server | None = None
         self._version: dict | None = None
+        self.process = ProcessMonitor()
+        self._rates: dict[tuple[str, str], tuple[float, int]] = {}   # (gateway, listener) -> (t, requests)
 
     async def start(self) -> tuple[str, int]:
+        self.process.start()
         self._server = await asyncio.start_server(self._client, self.host, self.port)
         self.port = self._server.sockets[0].getsockname()[1]
         return self.host, self.port
 
     async def stop(self) -> None:
+        await self.process.stop()
         if self._server is not None:
             self._server.close()
             await self._server.wait_closed()
             self._server = None
+
+    # -- monitor (#141) ------------------------------------------------------------------
+    def _rate(self, gw_id: str, name: str, requests: int) -> float:
+        """Requests per second on one listener since the previous /monitor read."""
+        import time
+        now = time.monotonic()
+        t0, n0 = self._rates.get((gw_id, name), (now, requests))
+        self._rates[(gw_id, name)] = (now, requests)
+        return round((requests - n0) / (now - t0), 2) if now > t0 else 0.0
+
+    def monitor(self) -> dict:
+        rows, conns, refused, rate = [], 0, 0, 0.0
+        for gid, gw in self.gateways.items():
+            row = {"id": gid}
+            for name, srv, listening in (("modbus", gw.server, gw.server._server is not None),
+                                         ("dc", gw.dc, gw.dc is not None and gw.dc._server is not None)):
+                if srv is None:
+                    row[name] = None
+                    continue
+                snap = srv.clients.snapshot()
+                snap.update(listening=listening, port=srv.port,
+                            requests_per_s=self._rate(gid, name, snap["requests"]))
+                conns += len(snap["clients"])
+                refused += snap["refused_1h"]
+                rate += snap["requests_per_s"]
+                row[name] = snap
+            rows.append(row)
+        active = sum(1 for r in rows if (r["modbus"] and r["modbus"]["clients"]) or (r["dc"] and r["dc"]["clients"]))
+        return {"process": self.process.snapshot(),
+                "totals": {"gateways": len(rows), "with_clients": active, "connections": conns,
+                           "refused_1h": refused, "requests_per_s": round(rate, 2)},
+                "gateways": rows}
 
     # -- action log, sessions ------------------------------------------------------------
     def apply_logged(self, gw: "Gateway", action: str, body: dict, source: str = "api") -> None:
@@ -522,6 +560,8 @@ class ControlApi:
             return self._version
         if parts == ["log"] and method == "GET":
             return self.log
+        if parts == ["monitor"] and method == "GET":
+            return self.monitor()
         if parts == ["sessions"] and method == "GET":
             return self.sessions()
         if parts == ["session", "save"] and method == "POST":

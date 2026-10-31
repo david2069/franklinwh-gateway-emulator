@@ -295,6 +295,27 @@
         <template x-for="(e, i) in recentLog()" :key="i"><li :class="{ bad: !e.ok }" x-text="logLine(e)"></li></template>
       </ol>
     </details>
+    <details class="group monitor" @toggle="setMonitor($event.target.open)">
+      <summary>Monitor <span class="sub" x-show="mon" x-text="mon && monTotals(mon)"></span></summary>
+      <p class="empty" x-show="!mon">Loading…</p>
+      <template x-if="mon">
+        <div class="mon">
+          <p class="mon-line" x-text="monProcess(mon.process)"></p>
+          <table class="mon-table">
+            <thead><tr><th scope="col">Gateway</th><th scope="col">Modbus TCP clients</th><th scope="col">Direct Connect clients</th></tr></thead>
+            <tbody>
+              <template x-for="r in mon.gateways" :key="r.id">
+                <tr :class="{ cur: r.id === active }">
+                  <th scope="row"><button type="button" class="linkish" @click="select(r.id)" x-text="r.id"></button></th>
+                  <td x-text="monListener(r.modbus)"></td>
+                  <td x-text="monListener(r.dc)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+    </details>
     <template x-for="group in groupNames()" :key="group">
       <details class="group">
         <summary><span x-text="group"></span> <a class="help" :href="docsUrl(groupDocs(group))" target="_blank" rel="noopener"

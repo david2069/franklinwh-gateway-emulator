@@ -64,6 +64,9 @@ to SoC, local time and tags. Both are remembered by the browser.
 
 Every control action has a form, built from `GET /schema`. Only the fields you fill are sent; the
 emulator's answer stays in the form. **Activity** lists every action from any source.
+**Monitor** (below Activity) shows each gateway's Modbus TCP and Direct Connect clients and
+recent refusals, and the process's CPU, memory, threads and loop lag (`GET /monitor`, read
+only while the panel is open).
 
 ## TOU schedule
 
