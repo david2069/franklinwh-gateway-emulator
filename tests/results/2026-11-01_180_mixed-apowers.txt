@@ -1,0 +1,18 @@
+# #180 Mixed aPower models on one aGate — 2026-11-01
+
+Branch mixed-apowers, base main 7f06b2e.
+
+## New tests
+20 passed in 0.15s
+
+## Break check
+the new tests fail with the src change stashed (list not accepted).
+
+## Full suite
+686 passed in 37.56s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

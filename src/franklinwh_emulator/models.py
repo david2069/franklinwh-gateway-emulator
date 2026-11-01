@@ -143,7 +143,16 @@ def _resolve(table: dict, kind: str, value) -> int:
 @dataclass(frozen=True)
 class Model:
     agate: AGateModel
-    apower: APowerModel
+    apower: APowerModel                      # the first unit's (all of them unless mixed)
+    apowers: tuple[APowerModel, ...] = ()    # one per unit (#180); () = just ``apower``
+
+    @property
+    def units(self) -> tuple[APowerModel, ...]:
+        return self.apowers or (self.apower,)
+
+    @property
+    def mixed(self) -> bool:
+        return len({p.code for p in self.units}) > 1
 
     @property
     def region(self) -> str:
@@ -168,28 +177,51 @@ def accessories(cfg: dict | None) -> dict[str, bool]:
     return {k: cfg.get(k, True) for k in ACCESSORIES}
 
 
-def resolve(cfg: dict | None, *, country: str = "", hz: float = 50.0) -> Model:
-    """The gateway's models from ``model:`` (codes, SKUs or names), else its region's defaults."""
+def resolve(cfg: dict | None, *, country: str = "", hz: float = 50.0, units: int = 1) -> Model:
+    """The gateway's models from ``model:`` (codes, SKUs or names), else its region's defaults.
+    ``apower`` may be a list, one model per aPower (mixed models, #180): its length is the
+    number of aPowers, checked against the aGate per the Backwards Compatibility Statement."""
     cfg = dict(cfg or {})
     bad = set(cfg) - {"agate", "apower"}
     if bad:
         raise ValueError(f"model: unknown keys {sorted(bad)}; known ['agate', 'apower']")
     region = REGION_OF_COUNTRY.get(country.upper()) or (NA if round(hz) == 60 else AUNZ)
     agate = AGATES[_resolve(AGATES, "agate", cfg["agate"])] if "agate" in cfg else AGATES[DEFAULTS[region][0]]
-    if "apower" in cfg:
-        apower = APOWERS[_resolve(APOWERS, "apower", cfg["apower"])]
+    if isinstance(cfg.get("apower"), (list, tuple)):
+        if not cfg["apower"]:
+            raise ValueError("model.apower: an empty list; give one model per aPower")
+        per_unit = tuple(APOWERS[_resolve(APOWERS, "apower", v)] for v in cfg["apower"])
+    elif "apower" in cfg:
+        per_unit = (APOWERS[_resolve(APOWERS, "apower", cfg["apower"])],) * max(1, units)
     else:                                  # the aGate's region decides when only it is given
-        apower = APOWERS[DEFAULTS[agate.region][1]]
-    if apower.region != agate.region:
-        raise ValueError(f"model: {apower.name} ({apower.region}) does not go with "
-                         f"{agate.name} ({agate.region})")
-    if apower.family == "aPower S" and agate.code in (100,):
-        raise ValueError(f"model: {agate.name} does not support aPower S "
-                         "(FranklinWH Backwards Compatibility Statement)")
+        per_unit = (APOWERS[DEFAULTS[agate.region][1]],) * max(1, units)
+    for apower in dict.fromkeys(per_unit):
+        if apower.region != agate.region:
+            raise ValueError(f"model: {apower.name} ({apower.region}) does not go with "
+                             f"{agate.name} ({agate.region})")
+        if apower.family == "aPower S" and agate.code in (100,):
+            raise ValueError(f"model: {agate.name} does not support aPower S "
+                             "(FranklinWH Backwards Compatibility Statement)")
+    _check_counts(agate, per_unit)
     if round(hz) != agate.hz:
         raise ValueError(f"model: {agate.name} is a {agate.hz} Hz model; this site's grid code is "
                          f"{hz:g} Hz")
-    return Model(agate, apower)
+    return Model(agate, per_unit[0], per_unit if len(set(per_unit)) > 1 else ())
+
+
+def _check_counts(agate: AGateModel, units: tuple[APowerModel, ...]) -> None:
+    """aPowers per aGate (FranklinWH Backwards Compatibility Statement, US V1.1): 15 at most;
+    aGate X 1.0/1.1 with aPower X and aPower 2 mixed, 8; aGate X 1.3/1.3.1, up to 8 aPower S.
+    AU/NZ: no statement, so only the 15."""
+    n = len(units)
+    families = {p.family for p in units}
+    if n > 15:
+        raise ValueError(f"model: {n} aPowers; an aGate takes 15 at most")
+    if agate.code == 100 and {"aPower X", "aPower 2"} <= families and n > 8:
+        raise ValueError(f"model: {agate.name} takes 8 aPowers when aPower X and aPower 2 are mixed")
+    s = sum(p.family == "aPower S" for p in units)
+    if s > 8:
+        raise ValueError(f"model: {agate.name} takes up to 8 aPower S, not {s}")
 
 
 def describe(m: Model, units: int) -> dict:
@@ -200,4 +232,6 @@ def describe(m: Model, units: int) -> dict:
                       "status": a.status, "smart_circuits": a.smart_circuits},
             "apower": {"code": p.code, "name": p.name, "family": p.family, "skus": list(p.skus),
                        "status": p.status, "units": units, "kwh": p.kwh, "kw": p.kw,
-                       "peak_kw": p.peak_kw, "charge_kw": p.charge_kw, "mppt_count": p.mppt_count}}
+                       "peak_kw": p.peak_kw, "charge_kw": p.charge_kw, "mppt_count": p.mppt_count},
+            # Mixed models (#180): one code per aPower, in unit order; None when all the same.
+            "apowers": [u.code for u in m.units] if m.mixed else None}

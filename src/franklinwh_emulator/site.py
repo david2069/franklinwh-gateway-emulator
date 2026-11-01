@@ -530,10 +530,18 @@ class Site:
         self.ambient_override_c: float | None = None
         self.location = Location.from_dict(cfg.location)
         # Hardware models (#180): the aPower model sets capacity and power per unit.
+        listed = (cfg.model or {}).get("apower")
+        if isinstance(listed, (list, tuple)):          # mixed models: the list sets the units
+            if cfg.apower_units not in (1, len(listed)):
+                raise ValueError(f"apower_units {cfg.apower_units} but model.apower lists "
+                                 f"{len(listed)} aPowers")
+            cfg.apower_units = len(listed)
         self.model = models.resolve(cfg.model, country=self.location.country or "",
-                                    hz=self.grid.nominal_hz)
-        self.apower_w = self.model.apower.kw * 1000
-        self.rated_capacity_wh = self.model.apower.kwh * 1000 * max(1, cfg.apower_units)
+                                    hz=self.grid.nominal_hz, units=max(1, cfg.apower_units))
+        units = self.model.units if self.model.mixed else (self.model.apower,) * max(1, cfg.apower_units)
+        self.unit_models = units                     # aPower n is unit_models[n - 1]
+        self.apower_w = sum(u.kw for u in units) * 1000 / len(units)   # per aPower (mean if mixed)
+        self.rated_capacity_wh = sum(u.kwh for u in units) * 1000
         self.capacity_wh = self.rated_capacity_wh    # usable: scaled by SoH (_age, #115)
         from .components import Components
         self.components = Components(cfg.components, self.model.apower)
@@ -545,7 +553,7 @@ class Site:
         self.pcs_derate_w = None if cfg.pcs_derate_w is None else float(cfg.pcs_derate_w)
         if cfg.power_limits not in ("settable", "locked"):
             raise ValueError(f"power_limits must be settable or locked, not {cfg.power_limits!r}")
-        self.rate_w = self._unit_w() * max(1, cfg.apower_units)
+        self.rate_w = self._rate_on()
         if self.location.timezone:
             self.tz: tzinfo | None = ZoneInfo(self.location.timezone)
         elif cfg.tz_offset_hours is not None:
@@ -1292,16 +1300,22 @@ class Site:
         return net                                     # self-consumption
 
     def _unit_w(self) -> float:
-        """One aPower's power after the installer's derate."""
+        """One aPower's power after the installer's derate (the mean, with mixed models)."""
         return self.apower_w if self.pcs_derate_w is None else min(self.apower_w, self.pcs_derate_w)
+
+    def _units_on(self) -> list:
+        return [m for n, m in enumerate(self.unit_models, 1) if n not in self.apower_off]
+
+    def _rate_on(self) -> float:
+        """Discharge power of the aPowers switched on, each after the derate (#180, #185)."""
+        cap = float("inf") if self.pcs_derate_w is None else self.pcs_derate_w
+        return sum(min(m.kw * 1000, cap) for m in self._units_on())
 
     def _limits(self, floor: float, dt: float) -> tuple[float, float]:
         """(max discharge W, max charge W) given rate, SoC, floor and step length."""
         max_dis = float(self.rate_w)
-        charge_w = self.model.apower.charge_w                           # aPower 2: 8 kW of 10
-        if self.pcs_derate_w is not None:
-            charge_w = min(charge_w, self.pcs_derate_w)
-        max_chg = charge_w * self.apower_units_on()
+        cap = float("inf") if self.pcs_derate_w is None else self.pcs_derate_w
+        max_chg = sum(min(m.charge_w, cap) for m in self._units_on())   # aPower 2: 8 kW of 10
         if dt > 0:
             hours = dt / 3600
             bm = self.battery_model
@@ -1696,7 +1710,7 @@ class Site:
         with self.lock:
             self.step()
             self.pcs_derate_w = None if w is None else float(w)
-            self.rate_w = self._unit_w() * self.apower_units_on()
+            self.rate_w = self._rate_on()
 
     def set_utility(self, d: dict | None) -> None:
         with self.lock:
@@ -2043,7 +2057,7 @@ class Site:
         with self.lock:
             self.step()
             (self.apower_off.discard if on else self.apower_off.add)(n)
-            self.rate_w = self._unit_w() * self.apower_units_on()
+            self.rate_w = self._rate_on()
 
     def set_circuit(self, n: int, on: bool) -> None:
         with self.lock:

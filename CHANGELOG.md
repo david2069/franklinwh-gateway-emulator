@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Mixed aPower models: `model: {apower: [0, 3]}` gives one model per aPower; capacity, discharge and charge power add up per unit, DC 1102 `PE_HW_VER` lists each unit, and counts follow the Backwards Compatibility Statement (15 max; X + 2 on aGate X 1.1, 8; up to 8 aPower S).
 - North American aGates open the PV relay when aPower discharge + grid import + solar exceeds the 280 A busbar rating (PCS Technical Brief), for 300 s.
 - `power_limits: settable | locked`: a locked site acknowledges Direct Connect 1701 limit writes without storing them; shown in the state. A setting, not derived from the region (no evidence of which regions lock or how a lock looks).
 - `pv: {model: pvlib}` (optional extra `.[pvlib]`): pvlib computes the synthetic weather's array irradiance (Erbs split, Hay-Davies/Perez/isotropic transposition) and the cell temperature (SAPM, Faiman, PVsyst); the built-in model stays the default. pvlib joins the dev extras so CI tests it.

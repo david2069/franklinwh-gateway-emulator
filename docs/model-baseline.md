@@ -60,9 +60,13 @@ stays offline for more than 90 days.
 | aGate X 1.3/1.3.1 | yes | yes | yes | 15 max, up to 8 aPower S |
 | MAC 1 | no | yes | yes | 4 max, 120/240 V |
 
-Model capacity, power and charge power are emulated for every catalogued aPower (#180). Not
-emulated yet: aPower S's DC PV inputs (MPPT), the aPower 2 / aPower X peak-charge window, mixed
-aPower models on one aGate, MAC 1, aHub, and per-aPower SoC (backlog HARDWARE-TOPOLOGIES).
+Model capacity, power and charge power are emulated for every catalogued aPower (#180), and
+mixed models on one aGate (`model: {apower: [0, 3]}`, one per aPower, in unit order): capacity,
+discharge and charge power add up per unit, Direct Connect 1102 `PE_HW_VER` lists each unit's
+code, and the counts above are checked. With mixed models the SoC is still one combined value,
+the warranty and SoH follow the first unit's model, and the WSetPct basis is the mean aPower.
+Not emulated yet: aPower S's DC PV inputs (MPPT), the aPower 2 / aPower X peak-charge window,
+MAC 1, aHub, and per-aPower SoC (backlog HARDWARE-TOPOLOGIES).
 
 ## The influences
 

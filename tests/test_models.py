@@ -258,3 +258,33 @@ def test_na_agate_busbar_280_a_opens_the_pv_relay(clock):
     s.step()
     clock.advance(1)
     assert s.pv_auto_open == {} and s.step().solar_w > 29000
+
+
+def test_mixed_apower_models_on_one_agate(clock):
+    """Backwards Compatibility Statement (US V1.1): aGate X 1.3.1 takes aPower X and aPower 2
+    together; capacity and power add up per unit (#180)."""
+    gw = make_gateway(clock, profile="agate-v12r02b60d00-candidate",
+                      site={"ac_type": 1, "model": {"agate": 103, "apower": [0, 3]}, "initial_soc": 50})
+    s = gw.site
+    assert s.config.apower_units == 2 and s.rated_capacity_wh == 28600
+    assert s.rate_w == 15000 and s._limits(5, 0)[1] == 13000        # X 5 kW + aPower 2 8 kW charge
+    assert gw.dc.payloads.login({})["PE_HW_VER"] == [0, 3]
+    assert gateway_state(gw)["model"]["apowers"] == [0, 3]
+    s.set_apower(2, False)
+    assert s.rate_w == 5000
+
+
+def test_apower_counts_follow_the_compatibility_statement():
+    with pytest.raises(ValueError, match="15 at most"):
+        models.resolve({"agate": 103, "apower": [0] * 16}, hz=60)
+    with pytest.raises(ValueError, match="8 aPowers when aPower X and aPower 2 are mixed"):
+        models.resolve({"agate": 100, "apower": [0] * 5 + [3] * 4}, hz=60)
+    with pytest.raises(ValueError, match="up to 8 aPower S"):
+        models.resolve({"agate": 103, "apower": [4] * 9}, hz=60)
+    assert not models.resolve({"agate": 100, "apower": [0] * 15}, hz=60).mixed       # all X: fine
+
+
+def test_mixed_list_length_mismatch_caught_by_the_site(clock):
+    with pytest.raises(ValueError, match="lists 2 aPowers"):
+        make_gateway(clock, site={"ac_type": 1, "apower_units": 3,
+                                  "model": {"agate": 103, "apower": [0, 3]}})
