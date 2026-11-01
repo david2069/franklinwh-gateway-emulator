@@ -7,6 +7,8 @@
  * in the direction power flows. Signs are the API's: battery_w + = discharging, grid_w + =
  * importing. Board C (aPower S DC) and board D (non-backup panel), V2L and prices are not
  * modelled, so not drawn. The header (site, place, weather, models) is HTML above the drawing.
+ * A grouped site (#241: one grid connection, one single-phase aGate per phase) is board E:
+ * renderGroupDiagram, with each phase's Home Loads added (board E leaves them out).
  */
 const NOT_MODELLED = [
   'per-aPower SoC and power (each card shows the combined battery: its SoC and an even share)',
@@ -145,8 +147,13 @@ function weatherLine(g) {
   return `<p class="diagram-head">${ic}<span>${esc(head)}</span></p>`;
 }
 
-function renderDiagram(g) {
+function renderDiagram(g, _unit, all) {
   if (!g) return '';
+  if (g.group && all) {                       // a grouped site: all its aGates in one drawing (#241)
+    const ids = Object.values(g.group.members);
+    const members = ids.map(id => all.find(x => x.id === id)).filter(Boolean);
+    if (members.length === ids.length) return renderGroupDiagram(g, members);
+  }
   const out = [];
   const links = [];
   const ov = g.overrides || {};
@@ -288,6 +295,134 @@ function renderDiagram(g) {
       <p class="dt-tags">${tags}</p></div>
       ${modelSummary(g) ? `<p class="dt-model">${esc(modelSummary(g))}</p>` : ''}</div>
     <div class="diagram-wrap"><svg class="diagram" viewBox="20 100 1200 880" role="img" aria-label="${esc(label)}">
+      ${links.join('')}${out.join('')}
+    </svg></div>
+    <p class="diagram-note">Not modelled, so not shown: ${esc(NOT_MODELLED.join(', '))}.</p>`;
+}
+
+// Board E (#241): an AU three-phase site, one single-phase aGate per phase, in the design's
+// 1340-wide coordinates. One row per aGate: its phase line from the service meter, its aPowers,
+// then AC solar or its smart circuits and their loads, and its phase's Home Loads (not on the
+// board; the owner asked for them). g is the active member, shown with a thicker outline.
+function renderGroupDiagram(g, members) {
+  const out = [];
+  const links = [];
+  const sum = k => members.reduce((s, m) => s + (m[k] || 0), 0);
+  const n = members.length;
+  const up = members.every(m => m.grid_connected);
+  const tripped = members.some(m => m.service && m.service.open);
+  const gridW = sum('grid_w');
+
+  // Grid → service meter (one line per phase) → each aGate on its own phase.
+  const tops = [170, 480, 790];
+  members.forEach((m, i) => {
+    const y = 540 + (i - (n - 1) / 2) * 10;
+    links.push(link([[134, y], [210, y]], m.grid_w, +1));
+    const T = tops[i], ym = 511 + 35 * i, yg = T + 66;
+    links.push(link(i === 1 ? [[320, ym], [420, ym]] : [[320, ym], [370, ym], [370, yg], [420, yg]], m.grid_w, +1));
+  });
+  const gridCls = up ? '' : 'bad';
+  out.push(icon('grid', 70, 518, 64, gridCls));
+  out.push(text(102, 604, 'Grid', 'lbl ok ' + gridCls));
+  out.push(text(102, 630, kwText(gridW), 'val'));
+  out.push(text(102, 650, up ? (gridW > IDLE_W ? 'importing' : gridW < -IDLE_W ? 'exporting' : 'connected')
+                             : 'down' + (members[0].trip_reason ? ' · ' + members[0].trip_reason : ''), 'sub ' + gridCls));
+  const svc = members[0].service;
+  const vll = Math.round(g.nominal_v_ln * Math.sqrt(3) / 10) * 10;   // 230 V L-N → 400 V
+  const mcls = tripped ? 'bad' : '';
+  out.push(text(265, 456, 'Service Meter', 'lbl'));
+  out.push(text(265, 478, svc ? n + ' × ' + Math.round(svc.main_breaker_a) + ' A · ' + vll + ' V' : 'no rating set · ' + n + '-phase', 'svc ' + mcls));
+  out.push(box(210, 495, 110, 110, mcls), icon('meter', 233, 518, 64, mcls));
+  out.push(text(265, 630, 'Home Loads, all phases', 'lbl s'), text(265, 654, kwText(sum('load_w')), 'val m'));
+
+  members.forEach((m, i) => {
+    const T = tops[i];
+    const leg = m.group.phase;
+    // The phase's label and its import, beside its line (left of the riser for L1 and L3).
+    const [lx, ly, end] = i === 1 ? [370, 532, ''] : [358, i === 0 ? 372 : 712, ' end'];
+    out.push(text(lx, ly, leg, 'phase' + end));
+    out.push(text(lx, i === 1 ? 572 : ly + 18, (m.service ? Math.round(m.service.main_breaker_a) + ' A · ' : '') + kwText(m.grid_w), 'sub' + end));
+    out.push(text(490, T - 24, 'aGate ' + (i + 1) + ' · ' + leg, 'lbl b'));
+    const health = typeof cardHealth === 'function' ? cardHealth(m).state : '';
+    out.push(box(420, T, 140, 140, 'agate' + (m.force ? ' vpp' : '') + (m.id === g.id ? ' active' : '')),
+             icon('agate', 446, T + 26, 88));
+    out.push(`<circle class="dot ${health}" cx="559" cy="${T + 1}" r="9"></circle>`);
+
+    // aPowers under the aGate: the combined battery (per-aPower values are not modelled).
+    const p = m.model ? m.model.apower : null;
+    const units = Math.max(1, m.apower_units);
+    const soc = Math.max(0, Math.min(100, m.soc));
+    const C = 2 * Math.PI * 26, cy = T + 209;
+    links.push(link([[490, T + 140], [490, T + 164]], m.battery_w, -1));
+    const dir = Math.abs(m.battery_w) < IDLE_W ? '' : m.battery_w > 0 ? ' ↓' : ' ↑';
+    out.push(`<g class="bat">${box(400, T + 164, 180, 90, 'tile')}
+      <circle class="ring-bg" cx="438" cy="${cy}" r="26"></circle>
+      <circle class="ring" cx="438" cy="${cy}" r="26" stroke-dasharray="${(soc / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 438 ${cy})"></circle>
+      ${text(438, cy + 5, Math.round(soc) + '%', 'pct s')}
+      <text class="bn" x="474" y="${cy - 10}">${esc((units > 1 ? units + '× ' : '') + (p ? p.name : 'aPower'))}</text>
+      <text class="bp c-${statusKey(m)}" x="474" y="${cy + 14}">${esc(kwText(m.battery_w) + dir)}</text></g>`);
+
+    // A row tile: icon, label on the left, kW on the right.
+    const tile = (x, y, w, ic, label, watts, cls, icCls) => {
+      out.push(box(x, y, w, 46, cls), icon(ic, x + 8, y + 4, 38, icCls || ''));
+      out.push(text(x + 54, y + 28, label, 'gl'), text(x + w - 12, y + 28, watts == null ? '' : kwText(watts), 'gv'));
+    };
+    const circuits = Object.entries(m.circuits || {});
+    const pvW = (m.pv_by_input || {}).proximal || 0;
+    const hasPv = m.solar_peak_w > 0 && (m.pv_inputs || {}).proximal > 0;
+    if (circuits.length) {
+      out.push(`<rect class="band" x="636" y="${T}" width="264" height="140" rx="18"></rect>`);
+      out.push(`<text class="band-l" x="652" y="${T + 4}">SC ${circuits.map(([k]) => k).join(' + ')}</text>`);
+      links.push(link([[560, T + 66], [610, T + 66]], 0, +1));
+      links.push(link([[610, T + 39], [610, T + 101]], 0, +1));
+      circuits.slice(0, 2).forEach(([k, c], j) => {
+        const y = T + 16 + 62 * j;
+        const app = Object.entries(m.appliances || {}).find(([, a]) => String(a.circuit) === k);
+        links.push(link([[610, y + 23], [656, y + 23]], c.power_w, +1));
+        tile(656, y, 228, c.on ? 'switchOn' : 'switchOff', 'SC ' + k + ' · ' + (c.on ? 'On' : 'Off'), null,
+             c.on ? 'tile on' : 'tile', c.on ? '' : 'dim');
+        const used = app || Math.abs(c.power_w) >= IDLE_W;
+        links.push(link([[884, y + 23], [960, y + 23]], c.power_w, +1));
+        if (used) tile(960, y, 320, loadIcon(app && app[0], c.name), app ? app[0].replace(/_/g, ' ') : c.name, c.power_w, 'tile', c.on ? '' : 'dim');
+        else tile(960, y, 320, 'panel', 'Unused', null, 'tile unused', 'dim');
+      });
+    }
+    if (hasPv) {
+      const label = 'AC solar · ' + +(m.solar_peak_w / 1000).toFixed(1) + ' kWp' +
+                    ((m.pv_relays || {}).proximal === false ? ' · relay open' : '');
+      if (!circuits.length) {
+        links.push(link([[656, T + 66], [560, T + 66]], pvW, +1));
+        out.push(box(656, T + 35, 320, 70, 'tile'), icon('solar', 668, T + 46, 48));
+        out.push(text(728, T + 64, label, 'gl'), text(728, T + 88, kwText(pvW), 'gv l'));
+      } else {
+        links.push(link([[960, T + 173], [930, T + 173], [930, T + 146], [640, T + 146], [640, T + 128], [560, T + 128]], pvW, +1));
+        tile(960, T + 150, 320, 'solar', label, pvW, 'tile');
+      }
+    }
+    // This phase's backed-up house load (all of it, smart circuits included).
+    links.push(link([[560, T + 118], [620, T + 118], [620, T + 173], [656, T + 173]], m.load_w, +1));
+    tile(656, T + 150, 320, 'home', 'Home Loads · ' + leg, m.load_w, 'tile');
+  });
+
+  const label = `Energy flow for ${g.group.id}: grid ${kwText(gridW)}, home ${kwText(sum('load_w'))}; ` +
+    members.map(m => `${m.group.phase} ${m.id}: grid ${kwText(m.grid_w)}, home ${kwText(m.load_w)}, ` +
+                     `solar ${kwText(m.solar_w)}, battery ${Math.round(m.soc)}% ${kwText(m.battery_w)}`).join('; ');
+  const agate = g.model ? g.model.agate.name : 'aGate';
+  const ap = g.model ? g.model.apower : null;
+  const units = sum('apower_units');
+  const kwp = members.reduce((s, m) => s + (m.solar_peak_w > 0 && (m.pv_inputs || {}).proximal > 0 ? m.solar_peak_w : 0), 0);
+  const model = [n + '× ' + agate + ' (one per phase)', ap ? units + '× ' + ap.name : null,
+                 ap ? +(ap.kwh * units).toFixed(1) + ' kWh' : null, kwp ? 'PV ' + +(kwp / 1000).toFixed(1) + ' kWp' : null]
+    .filter(Boolean).join(' · ');
+  const tags = [g.location && g.location.state, n + '-phase · one aGate per phase']
+    .filter(Boolean).map((t, i) => `<span class="dt-tag${i === 0 && g.location.state ? '' : ' cfg'}">${esc(t)}</span>`).join('');
+  return `<div class="diagram-top"><div class="dt-left">
+      <p class="dt-site">${esc((g.location && g.location.name) || g.group.id)}</p>
+      ${placeText(g) ? `<p class="dt-place">${esc(placeText(g))}</p>` : ''}
+      ${weatherLine(g)}
+      <p class="dt-tags">${tags}</p></div>
+      <p class="dt-model">${esc(model)}</p></div>
+    <div class="diagram-wrap"><svg class="diagram group" viewBox="20 120 1300 940" role="img" aria-label="${esc(label)}">
       ${links.join('')}${out.join('')}
     </svg></div>
     <p class="diagram-note">Not modelled, so not shown: ${esc(NOT_MODELLED.join(', '))}.</p>`;

@@ -124,6 +124,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "write_bases": None if gw.profile.write_bases is None else list(gw.profile.write_bases),
         "utility": asdict(site.utility),
         "grid_code": site.grid.name,
+        "nominal_v_ln": site.grid.nominal_v_ln,              # the grid code's line-to-neutral volts
         "ac_type": site.config.ac_type,
         "legs": list(site.phases),
         # A grouped site (#241): the group, this aGate's phase and the aGate on each phase.
@@ -134,6 +135,7 @@ def gateway_state(gw: "Gateway") -> dict:
         # Opened by the aGate itself (#178): {input: reason}; the relay reads open on Direct Connect.
         "pv_relays_auto_open": {n: why for n, (why, _) in site.pv_auto_open.items()},
         "pv_inputs": dict(site.config.pv_inputs),
+        "solar_peak_w": round(site.solar_peak_w),           # 0 = no solar (#238)
         "apower_units": site.config.apower_units,
         "apower_off": sorted(site.apower_off),                # switched off at the unit (#71)
         # Per aPower, from its model (#180).

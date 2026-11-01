@@ -371,3 +371,11 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
 .diagram .c-backup { fill: var(--c-red); } .diagram .c-charging { fill: var(--c-red); }
 .diagram .c-discharging { fill: var(--c-green); } .diagram .c-standby { fill: var(--c-orange); }
 .diagram .c-orange { fill: var(--c-orange); } .diagram .c-red { fill: var(--c-red); }
+/* Board E (#241): a grouped site, one aGate per phase. */
+.diagram .phase { font: 700 15px var(--mono); fill: var(--ok); } .diagram .phase.end { text-anchor: end; }
+.diagram .gl { font-size: 14px; fill: var(--text); text-anchor: start; }
+.diagram .gv { font: 700 15px var(--mono); fill: var(--text); text-anchor: end; }
+.diagram .gv.l { font-size: 17px; text-anchor: start; }
+.diagram .pct.s { font-size: 14px; }
+.diagram .box.agate.active { stroke-width: 5; }
+.diagram .box.tile.unused { stroke-dasharray: 6 4; }

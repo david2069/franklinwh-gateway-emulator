@@ -85,6 +85,15 @@ Each aPower card shows the combined battery's SoC and an even share of its power
 values are not modelled. The design's aPower S DC board, non-backup panel, V2L and prices are not
 drawn. Below the diagram: grid legs, smart circuits, appliances, the generator and the TOU schedule.
 
+**A grouped site** (fleet `groups:`, one single-phase aGate per phase; [Configuration](configuration.md))
+is drawn as one site, after board E of the canvas: the grid and the service meter
+(e.g. `3 × 63 A · 400 V`, the site's import and its Home Loads across all phases) on the left;
+then one row per aGate, titled with its phase (`aGate 2 · L2`), fed by its phase's line with
+that phase's amps and import; its aPowers under it; AC solar or its smart circuits and their
+loads (an unused circuit dashed) to the right; and its phase's **Home Loads**, which board E
+leaves out. The active gateway has the thicker outline; pick another member from the gateway
+picker to act on it. The tables below the diagram are the active member's.
+
 ## Temperature units
 
 The **°C / °F** button in the header switches every temperature on the page (ambient, PV cells,
