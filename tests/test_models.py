@@ -4,6 +4,7 @@ import pytest
 
 from conftest import make_gateway
 from franklinwh_emulator import models
+from franklinwh_emulator.control import gateway_state
 from franklinwh_emulator.gateway import GatewayConfig
 
 
@@ -136,3 +137,60 @@ def test_x02_au_follows_the_au_datasheet(clock):
     assert m.apower.skus[0] == "APR-05K15V1-AU"                        # the datasheet's SKU first
     gw = make_gateway(clock, site={"apower_units": 2, "model": {"apower": 7}})
     assert gw.site.capacity_wh == 30000 and gw.device.read(15020, 1) == [30000]
+
+
+def _na_offgrid(clock, **site):
+    gw = make_gateway(clock, site={"ac_type": 1, "initial_soc": 50, "cap_forced_solar": False,
+                                   **site})
+    gw.site.set_grid(available=False)
+    return gw, gw.site
+
+
+def test_na_offgrid_opens_the_relay_of_non_1547_inverters(clock):
+    """PV Curtailment White Paper (NA): inverters that don't follow IEEE 1547 don't droop; the
+    PV relay toggles instead (#178)."""
+    gw, s = _na_offgrid(clock, solar_peak_w=6000, pv_non_1547=["remote1"],
+                        pv_inputs={"proximal": 0.5, "remote1": 0.5})
+    s.solar_override_w, s.load_override_w = 6000, 500
+    clock.advance(1)
+    s.step()                                                         # surplus: remote1 opens
+    assert gateway_state(gw)["pv_relays_auto_open"] == {"remote1": "not IEEE 1547"}
+    assert gw.dc.payloads.ibg_run_status({})["pvRelay2"] == 0
+    clock.advance(60)
+    snap = s.step()
+    assert snap.solar_available_w == pytest.approx(3000) and snap.hz == 60.0   # proximal only
+    clock.advance(300)
+    s.step()                                                         # closes after 300 s …
+    clock.advance(1)
+    s.step()                                                         # … and opens again
+    assert "remote1" in s.pv_auto_open and s.pv_relays["remote1"]
+
+
+def test_na_offgrid_opens_pv_relays_beyond_what_droop_can_remove(clock):
+    """Same paper: the relay opens if PV exceeds the aPower's charging capacity, whatever the
+    frequency; here 15 kW of 20 kW would need 75 % curtailment, past 62.2 Hz's 72 % (#178)."""
+    gw, s = _na_offgrid(clock, solar_peak_w=20000)
+    s.solar_override_w, s.load_override_w = 20000, 0
+    clock.advance(1)
+    s.step()
+    assert s.pv_auto_open["proximal"][0] == "above charge capacity"
+    clock.advance(1)
+    assert s.step().solar_w == 0
+    s.set_grid(available=True)                                       # grid back: relays close
+    for _ in range(100):
+        clock.advance(10)
+        if s.step().grid_connected:
+            break
+    clock.advance(1)
+    assert s.step().grid_connected and s.pv_auto_open == {}
+
+
+def test_au_offgrid_never_opens_pv_relays(clock):
+    gw = make_gateway(clock, site={"initial_soc": 50, "solar_peak_w": 20000,
+                                   "cap_forced_solar": False, "pv_non_1547": ["proximal"]})
+    s = gw.site
+    s.set_grid(available=False)
+    s.solar_override_w, s.load_override_w = 20000, 0
+    clock.advance(1)
+    s.step()
+    assert s.pv_auto_open == {}

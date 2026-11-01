@@ -210,7 +210,7 @@ class DcPayloads:
             **{k: round(v, 4) for k, v in kwh.items()},
             sharp=zeros, peak=zeros, flat=flat, valley=zeros,
             main_sw=[1 if s.grid_connected else 0, int(s.gen_relay_closed),
-                     1 if self.site.pv_relays["proximal"] else 0],
+                     1 if self.site.pv_relays_closed()["proximal"] else 0],
             diStatus=[0, 0, 0, 0], doStatus=[0, 0, 0, 0],
             fhpSn=[self.fhp_sn(i + 1) for i in range(n)],
             fhpSoc=[round(s.soc, 1)] * n,
@@ -348,7 +348,7 @@ class DcPayloads:
     def ibg_run_status(self, req: dict) -> dict:
         s = self.site.step()
         pid, name, sched = self.programme()
-        relays = self.site.pv_relays
+        relays = self.site.pv_relays_closed()
         grid = 1 if s.grid_connected else 0
         circuits = self.site.circuits
         line, v1, v2 = self.legs(s)
@@ -507,7 +507,7 @@ class DcPayloads:
             "loadSolarAmount": 0, "loadSolar1RatedPower": 0, "loadSolar2RatedPower": 0,
             "mainsSolarRatedPower": 0, "protectTime": 20, "reSolarSoc": 95,
             "solarPower": int(round(s.solar_w * 10)),                  # deciwatts
-            "solarRelayStat": int(self.site.pv_relays["proximal"]),
+            "solarRelayStat": int(self.site.pv_relays_closed()["proximal"]),
             "loadRelay1Stat": 0, "loadRelay2Stat": 0,
             "solarPowerGen": int(round(self.site.today_kwh()["kwh_sun"] * 10)),
             # -1 = not applied (the reference Ausgrid site); kW when enforced (unverified unit).

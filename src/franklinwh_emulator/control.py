@@ -123,6 +123,8 @@ def gateway_state(gw: "Gateway") -> dict:
         "ac_type": site.config.ac_type,
         "legs": list(site.phases),
         "pv_relays": dict(site.pv_relays),
+        # Opened by the aGate itself (#178): {input: reason}; the relay reads open on Direct Connect.
+        "pv_relays_auto_open": {n: why for n, (why, _) in site.pv_auto_open.items()},
         "pv_inputs": dict(site.config.pv_inputs),
         "apower_units": site.config.apower_units,
         "apower_off": sorted(site.apower_off),                # switched off at the unit (#71)

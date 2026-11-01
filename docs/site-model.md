@@ -137,7 +137,12 @@ loads:
   the 62.2 Hz). Below full, a surplus the battery can't take is drooped: the aGate forms
   60 Hz + 0.036 Hz + 3 Hz × (curtailed ÷ rated PV), moving at most 0.2 Hz/s, and 701.Hz,
   1707 `gridFreq` and the state's `droop_hz` show it. PV itself is balanced at once (the
-  inverters' response lag is not modelled). AU/NZ models only clip, since there is no AU/NZ document
+  inverters' response lag is not modelled). Inverters that don't follow IEEE 1547
+  (`pv_non_1547`) can't droop: on a surplus the aGate opens their PV relay. When the surplus is
+  more than droop can remove before 62.2 Hz (PV above the aPowers' charging capacity), it opens
+  every producing input. Each relay closes again after 300 s (not documented; IEEE 1547's
+  default reconnect delay), so a lasting surplus toggles it. The state's `pv_relays_auto_open`
+  names the open ones and why; 1707/1708 read them open. AU/NZ models only clip, since there is no AU/NZ document
   ([Sources and regions](sources-and-regions.md)).
 - **Placement and overrides.** Components can sit on a specific `leg` of a 3-phase supply.
   `ctl <gw> appliance kettle on|off|auto` forces one.

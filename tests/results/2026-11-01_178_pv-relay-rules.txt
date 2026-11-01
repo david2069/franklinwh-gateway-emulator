@@ -1,0 +1,18 @@
+# #178 Off-grid PV relay rules (North America) — 2026-11-01
+
+Branch pv-relay-rules, base main 7749f94.
+
+## New tests
+14 passed in 0.11s
+
+## Break check
+the new tests fail with the src change stashed (pv_non_1547 unknown; no auto-open).
+
+## Full suite
+650 passed in 35.76s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

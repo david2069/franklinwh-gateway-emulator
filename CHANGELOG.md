@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- North American aGates off-grid open the PV relay of inverters that don't follow IEEE 1547 (`pv_non_1547`) on a surplus, and every producing input when the surplus is beyond what droop can remove before 62.2 Hz (PV above charging capacity); each closes after 300 s, so a lasting surplus toggles it. The state's `pv_relays_auto_open` names them; 1707/1708 read them open.
 - `accessories: {smart_circuits, generator_module, apbox}` sets which modules a gateway has (default all fitted). Without smart circuits there are none, and Direct Connect sends their keys inert and zeroed; a generator needs the generator module; remote PV inputs need an aPbox. The state shows `accessories`.
 - North American aGates off-grid droop surplus PV by frequency (PV Curtailment White Paper): 60 Hz + 0.036 Hz + 3 Hz per rated PV curtailed, ramped at 0.2 Hz/s, shown on 701.Hz, 1707 `gridFreq`, the state's `droop_hz` and the card's curtailment line.
 - AU/NZ aGates limit the generator to the Generator Module's 80 A continuous rating (18.4 kW at 230 V): a fleet file or control API `rated_w` above it is refused; a Direct Connect 1901 write above it is capped at output.

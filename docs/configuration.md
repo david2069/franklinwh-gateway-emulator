@@ -108,6 +108,7 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 | Key | Type | Default | What it does |
 |---|---|---|---|
 | `pv_inputs` | object | `{'proximal': 1.0}` | share of solar per PV input: proximal (aGate), remote1/remote2 (aPbox) |
+| `pv_non_1547` | list | `[]` | PV inputs whose inverters don't follow IEEE 1547-2018 (no Freq/Watt droop), e.g. `[remote1]`; off-grid, a North American aGate opens their relay instead, for 300 s at a time |
 | `weather` | object | — | {model: bell\|synthetic\|open-meteo, kwp, tilt, azimuth, sky}; inherits lat/lon |
 | `solar_peak_w` | number | — | bell-curve solar peak, W; default derived from the seed |
 | `pv_temperature` | object | — | PV output falls as panels heat up: {temp_coeff (per °C, -0.004), noct (°C, 45), ref_cell_c (°C, 45: the 0.85 efficiency's typical warm day)}; false = off |
