@@ -1,0 +1,18 @@
+# #123 Direct Connect 1701 install profile — 2026-11-01
+
+Branch dc-1701, base main 270067f.
+
+## New tests
+53 passed in 5.47s
+
+## Break check
+the new test fails with the src change stashed (1701 refused, reason 4).
+
+## Full suite
+653 passed in 35.74s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

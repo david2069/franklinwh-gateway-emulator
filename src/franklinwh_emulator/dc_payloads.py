@@ -85,6 +85,10 @@ class DcPayloads:
         self.soc_block = {"selfMinSoc": 0, "selfMaxSoc": 0, "touMinSoc": 0, "touMaxSoc": 0,
                           "backupMinSoc": 0, "backupMaxSoc": 0, "genStartSoc": 0,
                           "genStopSoc": 0, "BBBackupSoc": 20}
+        # 1701's grid power-plane limits, -1 = unlimited (franklinwh-direct-connect-api catalogue
+        # 1701). A write stores them; nothing enforces them (enforcement untested on the aGate).
+        self.install_limits = {"kwRatePower": -1, "gridSoftLimit": -1, "gridHardLimit": -1,
+                               "gridImportLimit": -1}
         self.handlers: dict[int, Callable[[dict], Any]] = {
             1101: self.login, 1105: self.device_check, 1831: self.battery_modules,
             1119: self.network_switches, 1201: self.time_location, 1205: self.der_comms,
@@ -92,7 +96,7 @@ class DcPayloads:
             1403: self.mode_config, 1405: self.soc_settings, 1407: self.tou_schedule,
             1409: self.smart_circuits,
             1411: self.smart_circuit_meter,
-            1703: self.power_electronics, 1705: self.battery_cells,
+            1701: self.install_profile, 1703: self.power_electronics, 1705: self.battery_cells,
             1707: self.ibg_run_status, 1709: self.relay_status, 1721: self.device_control,
             1723: self.offgrid, 1725: self.mode_list, 1727: self.mode_set,
             1833: self.device_firmware, 1835: self.device_states, 1903: self.solar_pv,
@@ -376,6 +380,35 @@ class DcPayloads:
                    gridCurr1=i_grid, gridCurr2=i_grid if self.site.config.ac_type else 0.0,
                    loadCurr1=0.0, loadCurr2=0.0, genVoltage=2,
                    isTripPhsPvEn=0, isTripPhsGridEn=0)
+
+    def install_profile(self, req: dict) -> dict:
+        """1701 → 1702, the install profile (#123). Keys as the DC library's catalogue lists
+        them, plus gridImportLimit (fwh-local). From the site: electricSupply = the service amps
+        (63 on the reference site, confirmed by the owner), airSwitchCur = the aGate's air
+        switch (100 on the reference aGate; the model's service rating elsewhere, inferred),
+        gridExportEnable (0 when export is prohibited) and isPcsDischgEn (battery export).
+        fhpRatePower, genRatePower and solarInvRatePower read 0 on the aGate (it is not a source
+        of ratings), and solarInstallState read 0 on a site with solar (fwh-local capture,
+        V12R02B30D06). A full-block write (opt:1) stores the four limits with Debug Mode on
+        (read back on V12, 2026-10-23) and is acknowledged without storing them otherwise
+        (earlier firmware; V12 with Debug Mode off untested). Not enforced."""
+        site = self.site
+        if req.get("opt") == 1:
+            if set(self.install_limits) - set(req):
+                return _refused(-2)
+            if self.gw.debug_mode:
+                for k in self.install_limits:
+                    self.install_limits[k] = int(req[k])
+            return _ok()
+        u = site.utility_rules
+        return _ok(electricSys=0,
+                   electricSupply=int(site.service.main_breaker_a) if site.service else 63,
+                   airSwitchCur=site.model.agate.max_service_a, gridPhaseConSet=0,
+                   gridPhaseSeqSet=0, isThreePhaseInstall=int(site.config.ac_type == 2),
+                   ratedGridVolt=0, ratedGridHz=0, solarInstallState=0, solarInvManu=0,
+                   solarInvRatePower=0, genRatePower=0, fhpRatePower=0, **self.install_limits,
+                   gridExportEnable=int(u is None or u.export != "prohibited"),
+                   isPcsDischgEn=int(site.battery_export()))
 
     def soc_settings(self, req: dict) -> dict:
         if req.get("opt") == 1:
