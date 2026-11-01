@@ -405,6 +405,42 @@ def _scenario_cmd(args) -> int:
     return 1 if failed else 0
 
 
+def _checked_fleet(path: str):
+    """The fleet file, loaded, or None after printing every problem (as ``validate`` does)."""
+    from .validate import validate_file
+    kind, problems, _ = validate_file(path)
+    if kind != "fleet" and not problems:
+        problems = [{"path": "file", "error": f"is a {kind} file, not a fleet (gateways:)"}]
+    for p in problems:
+        print(f"{path}: {p['path']}: {p['error']}", file=sys.stderr)
+    if problems:
+        return None
+    from .gateway import load_yaml
+    return load_yaml(path)
+
+
+def _validate_cmd(files: list[str]) -> int:
+    """``validate``: every problem in every file; 0 when all are clean, 2 otherwise (#200)."""
+    from .validate import validate_file
+    bad = 0
+    for f in files:
+        kind, problems, info = validate_file(f)
+        if problems:
+            bad += 1
+            print(f"{f}: {kind}: {len(problems)} problem{'s' * (len(problems) != 1)}")
+            for p in problems:
+                print(f"{f}: {p['path']}: {p['error']}")
+            continue
+        if kind == "recording":
+            detail = (f"{info['rows']} rows, {info['first']} to {info['last']} ({info['span_h']} h), "
+                      f"largest gap {info['max_gap_s']} s ({info['gaps_over_max_gap']} over max_gap), "
+                      f"columns {', '.join(info['columns'])}")
+        else:
+            detail = ", ".join(f"{v} {k[:-1] if v == 1 else k}" for k, v in info.items())
+        print(f"{f}: {kind} ok ({detail})")
+    return 2 if bad else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="franklinwh-emulator",
                                  description="FranklinWH aGate Modbus TCP emulator")
@@ -443,6 +479,10 @@ def main(argv: list[str] | None = None) -> int:
 
     f = sub.add_parser("fleet", help="run several gateways from a YAML file")
     f.add_argument("config")
+
+    v = sub.add_parser("validate", help="check fleet, scenario, session and recording files "
+                                        "without starting anything")
+    v.add_argument("files", nargs="+", metavar="FILE")
 
     u = sub.add_parser("ui", help="run a fleet from a YAML file with the web UI")
     u.add_argument("config")
@@ -500,6 +540,8 @@ def main(argv: list[str] | None = None) -> int:
         return ctl(args.api, args.gateway, args.verb, args.args, args.json)
     if args.cmd == "scenario":
         return _scenario_cmd(args)
+    if args.cmd == "validate":
+        return _validate_cmd(args.files)
 
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -522,13 +564,8 @@ def main(argv: list[str] | None = None) -> int:
         )
         gateways = [Gateway(cfg)]
     elif args.cmd == "ui":
-        from .gateway import load_yaml
-        from .validate import validate_fleet
-        d = load_yaml(args.config)
-        problems = validate_fleet(d)
-        if problems:
-            for p in problems:
-                print(f"{args.config}: {p['path']}: {p['error']}", file=sys.stderr)
+        d = _checked_fleet(args.config)
+        if d is None:
             return 2
         gateways = list(Fleet.from_dict(d).gateways.values())
         try:
@@ -537,8 +574,11 @@ def main(argv: list[str] | None = None) -> int:
         except KeyboardInterrupt:
             pass
         return 0
-    else:
-        gateways = list(Fleet.from_yaml(args.config).gateways.values())
+    else:                                              # fleet: checked first, as ui (#200)
+        d = _checked_fleet(args.config)
+        if d is None:
+            return 2
+        gateways = list(Fleet.from_dict(d).gateways.values())
 
     try:
         asyncio.run(_run(gateways, None if args.no_control else args.control_port))

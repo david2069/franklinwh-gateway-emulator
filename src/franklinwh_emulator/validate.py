@@ -1,4 +1,5 @@
-"""Fleet and scenario files: what each key means, and checking a file without running it.
+"""Fleet, scenario, session and recording files: what each key means, and checking a file
+without running it (``franklinwh-emulator validate``, #200).
 
 ``CONFIG`` describes every gateway key (types and defaults come from ``GatewayConfig`` and
 ``SiteConfig``, so they can't drift; the docs are here). ``validate_fleet`` and
@@ -11,6 +12,7 @@ isn't offline fetches that day, as starting it would.
 from __future__ import annotations
 
 from dataclasses import MISSING, fields
+from pathlib import Path
 import time
 from typing import Any
 
@@ -132,6 +134,14 @@ def config_schema() -> dict[str, dict]:
     return out
 
 
+def _unknown_key(key: Any, known) -> str:
+    """"unknown key", the closest known key if one is close, and where every key is listed."""
+    import difflib
+    near = difflib.get_close_matches(str(key), list(known), n=1)
+    hint = f"; did you mean {near[0]!r}?" if near else ""
+    return f"unknown key{hint} (every key: docs/configuration.md, or GET /schema gateway_config)"
+
+
 def _problem(path: str, error: Any) -> dict[str, str]:
     return {"path": path, "error": str(error)}
 
@@ -150,7 +160,7 @@ def validate_fleet(d: Any, *, prefix: str = "", at: float | None = None) -> list
         defaults = {}
     for k in defaults:
         if k not in known:
-            out.append(_problem(f"{prefix}defaults.{k}", "unknown key"))
+            out.append(_problem(f"{prefix}defaults.{k}", _unknown_key(k, known)))
     gws = d.get("gateways")
     if not isinstance(gws, list) or not gws:
         return out + [_problem(f"{prefix}gateways", "needs a list of at least one gateway")]
@@ -163,17 +173,21 @@ def validate_fleet(d: Any, *, prefix: str = "", at: float | None = None) -> list
             out.append(_problem(path, "must be a mapping"))
             continue
         bad = [k for k in g if k not in known]
-        out += [_problem(f"{path}.{k}", "unknown key") for k in bad]
+        out += [_problem(f"{path}.{k}", _unknown_key(k, known)) for k in bad]
         merged = {k: v for k, v in {**defaults, **g}.items() if k in known}
         try:
             cfg = GatewayConfig.from_dict(merged)
         except Exception as e:                       # noqa: BLE001 - reported, not raised
             out.append(_problem(path, e))
             continue
-        try:
-            Gateway(cfg, clock=ManualClock(time.time() if at is None else at))
-        except Exception as e:                       # noqa: BLE001
-            out.append(_problem(path, e))
+        rec = cfg.site.replay if cfg.site is not None else None
+        rec_problems = check_recording(rec, prefix=f"{path}.replay")[0] if rec else []
+        out += rec_problems
+        if not rec_problems:                         # a bad recording would only fail again here
+            try:
+                Gateway(cfg, clock=ManualClock(time.time() if at is None else at))
+            except Exception as e:                   # noqa: BLE001
+                out.append(_problem(path, e))
         if cfg.id in ids:
             out.append(_problem(f"{path}.id", f"duplicate of gateways[{ids[cfg.id]}]"))
         ids.setdefault(cfg.id, i)
@@ -228,3 +242,128 @@ def validate_scenario(d: Any) -> list[dict[str, str]]:
         if problem:
             out.append(_problem(f"{path}.with", problem))
     return out
+
+
+# -- recordings (replay sources) and sessions (#200) -------------------------------------------
+# The recorded columns each ``use:`` entry plays from (replay.py).
+USE_COLUMNS = {"solar": ("solar_w",), "load": ("home_w",), "ambient": ("ambient_temp_c",),
+               "battery": ("battery_w",), "dispatch": ("battery_w", "soc"), "mode": ("mode_name",)}
+
+
+def check_recording(cfg: Any, *, prefix: str = "replay") -> tuple[list[dict[str, str]], dict]:
+    """Problems with a replay recording (a path, or a fleet's ``replay:`` mapping) and what it
+    holds: rows, first and last time (UTC), span, the largest gap, gaps over ``max_gap`` and the
+    columns with values. Every problem is reported, not only the first."""
+    import datetime as dt
+    from .replay import CANONICAL, STATE, ReplayConfig, load_rows
+    try:
+        rc = ReplayConfig.from_dict(cfg)
+    except Exception as e:                           # noqa: BLE001
+        return [_problem(prefix, e)], {}
+    src = Path(rc.source).expanduser()
+    if not src.is_file():
+        return [_problem(f"{prefix}.source", f"no such file: {src}")], {}
+    try:
+        rows = load_rows(rc)
+    except Exception as e:                           # noqa: BLE001
+        hint = (" (CSV: a `timestamp` or `ts` column; SQLite: a `metrics` or `metrics_archive` "
+                "table, as the Modbus bridge writes)")
+        return [_problem(f"{prefix}.source", f"{e}{hint}")], {}
+    ts = [r["ts"] for r in rows]
+    gaps = [b - a for a, b in zip(ts, ts[1:])]
+    present = [c for c in CANONICAL + STATE if any(r.get(c) is not None for r in rows)]
+    iso = lambda t: dt.datetime.fromtimestamp(t, dt.timezone.utc).isoformat(timespec="seconds")
+    info = {"rows": len(rows), "first": iso(ts[0]), "last": iso(ts[-1]),
+            "span_h": round((ts[-1] - ts[0]) / 3600, 1), "max_gap_s": round(max(gaps)),
+            "gaps_over_max_gap": sum(g > rc.max_gap for g in gaps), "columns": present}
+    out = []
+    for use in rc.use:
+        missing = [c for c in USE_COLUMNS[use] if c not in present]
+        if missing:
+            out.append(_problem(f"{prefix}.use", f"{use!r} plays {missing}, which has no values in "
+                                                 f"{src.name}; columns with values: {present}"))
+    if rc.columns:
+        for canon in rc.columns:
+            if canon not in CANONICAL + STATE + ("ts",):
+                out.append(_problem(f"{prefix}.columns.{canon}",
+                                    f"unknown column; known {['ts', *CANONICAL, *STATE]}"))
+    return out, info
+
+
+def validate_session(d: Any) -> list[dict[str, str]]:
+    """Every problem in a saved session (sessions/<name>.yaml), or []."""
+    if not isinstance(d, dict):
+        return [_problem("session", "must be a mapping with `actions`")]
+    d = fix_bool_keys(d)
+    acts = d.get("actions")
+    if not isinstance(acts, list):
+        return [_problem("actions", "needs a list of {gateway, do, with}")]
+    gws = d.get("gateways")
+    out = []
+    for i, a in enumerate(acts):
+        path = f"actions[{i}]"
+        if not isinstance(a, dict):
+            out.append(_problem(path, "must be a mapping {gateway, do, with}"))
+            continue
+        bad = sorted(set(a) - {"gateway", "do", "with"})
+        if bad:
+            out.append(_problem(path, f"unknown keys {bad}; known ['do', 'gateway', 'with']"))
+        if not a.get("gateway"):
+            out.append(_problem(f"{path}.gateway", "missing"))
+        elif isinstance(gws, list) and a["gateway"] not in gws:
+            out.append(_problem(f"{path}.gateway", f"{a['gateway']!r} is not in this session's "
+                                                   f"gateways {gws}"))
+        do = a.get("do")
+        if do not in ACTIONS:
+            out.append(_problem(f"{path}.do", f"unknown action {do!r}; known {sorted(ACTIONS)}"))
+            continue
+        problem = check_body(do, dict(a.get("with") or {}))
+        if problem:
+            out.append(_problem(f"{path}.with", problem))
+    return out
+
+
+RECORDING_SUFFIXES = (".csv", ".db", ".sqlite", ".sqlite3")
+
+
+def file_kind(path: Path, doc: Any = None) -> str:
+    """fleet | scenario | session | recording | unknown, from the suffix and the top-level keys."""
+    if path.suffix.lower() in RECORDING_SUFFIXES:
+        return "recording"
+    if not isinstance(doc, dict):
+        return "unknown"
+    if "actions" in doc:
+        return "session"
+    if "steps" in doc or "fleet" in doc:
+        return "scenario"
+    if "gateways" in doc:
+        return "fleet"
+    return "unknown"
+
+
+def validate_file(path: str | Path) -> tuple[str, list[dict[str, str]], dict]:
+    """(kind, problems, info) for one file: what ``franklinwh-emulator validate`` prints."""
+    import yaml
+    from .gateway import load_yaml
+    p = Path(path).expanduser()
+    if not p.is_file():
+        return "unknown", [_problem("file", f"no such file: {p}")], {}
+    if p.suffix.lower() in RECORDING_SUFFIXES:
+        problems, info = check_recording(str(p), prefix="recording")
+        return "recording", problems, info
+    try:
+        doc = load_yaml(p)
+    except yaml.YAMLError as e:
+        mark = getattr(e, "problem_mark", None)
+        where = f"line {mark.line + 1}, column {mark.column + 1}" if mark else "file"
+        return "unknown", [_problem(where, f"not valid YAML: {getattr(e, 'problem', e)}")], {}
+    kind = file_kind(p, doc)
+    if kind == "fleet":
+        gws = doc.get("gateways")
+        return kind, validate_fleet(doc), {"gateways": len(gws) if isinstance(gws, list) else 0}
+    if kind == "scenario":
+        return kind, validate_scenario(doc), {"steps": len(doc.get("steps") or [])}
+    if kind == "session":
+        return kind, validate_session(doc), {"actions": len(doc.get("actions") or [])}
+    return kind, [_problem("file", "not a fleet (gateways:), scenario (steps:), session (actions:) "
+                                    "or recording (.csv, .db, .sqlite)")], {}
