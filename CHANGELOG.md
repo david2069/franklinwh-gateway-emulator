@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Commissioning lifecycle: `setup: commissioning`, the `commission` action (start, the app's System Parameters, PTO date, complete) and the state's `lifecycle`; `pto_date` in the fleet file. Only the state and settings change (the guide documents no per-state protocol behaviour, nothing before/after PTO).
 - `pcs_derate_w`, the installer's PCS Permanent Derate (Commissioning Guide p. 24): caps each aPower's charge and discharge, on- and off-grid, and stacks with temperature derating; above the unit's rating it has no effect. The state shows it.
 - Direct Connect 1701 → 1702 install profile: the catalogue's key set from the site (`electricSupply` = service amps, `gridExportEnable`, `isPcsDischgEn`); the four −1 power-plane limits are stored by a full-block write with Debug Mode on, and not enforced.
 - `service.busbar_a`: on North American models with no utility export limit, the PCS export limit is ((busbar × 1.2) − main) / 1.25 A across the legs (PCS Technical Brief; 200 A / 200 A → 7.68 kW). The state shows `pcs_export_limit_w` and `service.busbar_a`.

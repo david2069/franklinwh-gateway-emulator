@@ -1544,6 +1544,15 @@ class Site:
             self.main_breaker_open = False
             self.breaker_progress = 0.0
 
+    def set_pcs_derate(self, w: float | None) -> None:
+        """PCS Permanent Derate at run time (#185); None = not derated."""
+        if w is not None and float(w) <= 0:
+            raise ValueError("pcs_derate_w: the derated power per aPower in W (> 0), or null")
+        with self.lock:
+            self.step()
+            self.pcs_derate_w = None if w is None else float(w)
+            self.rate_w = self._unit_w() * self.apower_units_on()
+
     def set_utility(self, d: dict | None) -> None:
         with self.lock:
             self.step()

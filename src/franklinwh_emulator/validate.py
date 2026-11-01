@@ -36,13 +36,16 @@ DOCS: dict[str, str] = {
     "quirks": "overrides of the profile's switches",
     "time_scale": "site clock speed; > 1 fast-forwards",
     "dc_port": "Direct Connect port; 0 = ephemeral. aGate profiles always run one (see directconnect)",
-    "setup": "factory (default: Modbus TCP off until a Direct Connect 1205 write) or in-service "
+    "setup": "factory (default: Modbus TCP off until a Direct Connect 1205 write), commissioning "
+             "(as factory, the installer part-way through; commission action) or in-service "
              "(already set up: Modbus TCP on)",
     "modbus_enabled": "start with the Modbus TCP Server on or off, whatever the setup",
     "events": "off | normal (default) | verbose, or {level, file}: what the gateway did (mode, battery status, trips, alarms, clients); file appends JSON lines",
     "commissioned": "commissioning date, YYYY-MM-DD (Direct Connect sno); default: the start day "
                     "(factory) or the reference site's 2024-07-25 (in-service), so in-service "
                     "gateways read the same sno unless each sets its own",
+    "pto_date": "the utility's permission to operate, YYYY-MM-DD (the app's PTO Date); recorded "
+                "and shown only, as no behaviour before or after it is documented",
     "history_days": "in-service: run the model over this many days before start (max 105) to fill "
                     "the history, today's totals and the lifetime counters; ~0.2 s per day",
     "apower_units": "number of aPowers",

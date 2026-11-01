@@ -153,6 +153,8 @@ def gateway_state(gw: "Gateway") -> dict:
         "modbus_listening": gw.server._server is not None,   # :502 open now (lags a 1205 write ~3 s)
         "rebooting": gw.rebooting,                          # both listeners down for a 1721 reboot
         "episode_phase": gw.episode_phase,
+        # Commissioning (#185): factory → commissioning → in-service; PTO date recorded only.
+        "lifecycle": {"state": gw.lifecycle, "commissioned": gw.commissioned, "pto_date": gw.pto_date},
         "debug_mode": gw.debug_mode,              # Debug Mode (DC 1821): battery stopped
         "export_limit_enforced": site.export_limit_enforced,
         "export_breach_s": site.export_breach_s,
@@ -256,6 +258,8 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
                 site.set_utility(None)
             else:
                 site.set_utility({k: v for k, v in body.items() if k != "clear"})
+        elif action == "commission":
+            gw.commission(body)
         elif action == "service":
             if body.get("reset"):
                 site.reset_main_breaker()

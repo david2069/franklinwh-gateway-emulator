@@ -53,6 +53,34 @@ Any of them can be set per gateway: `grid_import_wh`, `grid_export_wh`, `pv_wh`,
 agree; the totals given are as of the start of that period, and the SoC is wherever the model
 ends. An `open-meteo` gateway that isn't `offline` fetches those days.
 
+### Commissioning
+
+A gateway goes **factory → commissioning → in-service**, as in the installer's app (FranklinWH
+Commissioning Guide, MAC 1 & aPower 2 & aPower S, app V2.18.0). `setup: commissioning` starts
+it part-way (as factory: totals at 0, Modbus TCP off). The `commission` action does each step:
+
+```bash
+ctl <gw> commission '{"start": true}'
+ctl <gw> commission '{"grid_import": "not-allowed", "energy_export": "solar", "grid_export_limit_w": 5000, "pcs_derate_w": 5000}'
+ctl <gw> commission '{"pto_date": "2026-12-15"}'
+ctl <gw> commission '{"complete": true}'
+```
+
+| App setting (System Parameters) | `commission` field | Sets |
+|---|---|---|
+| Grid Import: charge from grid allowed / not allowed | `grid_import: allowed \| not-allowed` | `utility.grid_charge` |
+| Grid Import Limit (No Limit) | `grid_import_limit_w` (null) | `utility.import_limit_w` |
+| Energy Export: Only Solar / Solar + aPower / No Export | `energy_export: solar \| solar-apower \| none` | `utility.export`, `battery_export` |
+| Grid Export Limit (No Limit) | `grid_export_limit_w` (null) | `utility.export` limited, `export_limit_w` |
+| PCS Permanent Derate | `pcs_derate_w` | `pcs_derate_w` |
+| PTO Date | `pto_date` | recorded |
+
+Settings need commissioning started and stay changeable in service. `complete` makes the
+commissioned date (1303 `sno`) today. The state's `lifecycle` shows `{state, commissioned,
+pto_date}`. The guide describes no difference before and after PTO, and nothing on what the
+protocols report per state, so only the state and the settings change. Its "Commissioning on
+hold" (waiting for the utility to install the meter socket adapter) is MAC 1 only.
+
 ## Location and time
 
 Each gateway can have its own location:
