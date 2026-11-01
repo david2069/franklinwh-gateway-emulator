@@ -141,7 +141,7 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 
 | Key | Type | Default | What it does |
 |---|---|---|---|
-| `generator` | object | — | {installed, rated_w, ...} plus 1901 fields; null = none fitted |
+| `generator` | object | — | {installed, rated_w, ...} plus 1901 fields; null = none fitted; AU/NZ: `rated_w` at most 80 A × line-to-neutral V (18.4 kW at 230 V) |
 | `model` | object | — | hardware models (#180): {agate, apower}, each a code, SKU or name, e.g. {agate: 102, apower: 2}; the aPower model sets kWh, kW and charge kW per unit, Direct Connect 1102 serves the codes; default by region: AU/NZ 102 + 2, North America 103 + 0 ([Sources and regions](sources-and-regions.md)) |
 
 ### Location, time and placement

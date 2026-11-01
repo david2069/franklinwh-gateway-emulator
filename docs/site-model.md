@@ -157,6 +157,11 @@ generator: {installed: true, rated_w: 7000, genStartElec: 20, genCloseElec: 80,
 - **Start sequence:** cranking, then warm-up (relay open), then running, then cooldown. Loaded,
   it carries the house and charges the battery so it runs at `genOptiPPoint` (70 %) of rated;
   above rated the battery covers the rest.
+- **AU/NZ Generator Module limit:** 80 A continuous (FranklinWH Generator Module Datasheet,
+  AU & NZ, 2026-06-24), so 18.4 kW at 230 V on an aGate X-01-AU. A fleet file or `ctl`
+  `rated_w` above it is refused; a Direct Connect 1901 write above it is stored, and the output
+  is capped at the limit (how the aGate treats that write is unmeasured). North American
+  aGates have no documented limit.
 - **`startDelTime`** is the app's *Alarm delay after starting fails* (1800 s; FranklinWH PCS
   Technical Brief, North America): a start that hasn't produced a running generator within it
   raises the fail-to-start fault. It does not delay the start.

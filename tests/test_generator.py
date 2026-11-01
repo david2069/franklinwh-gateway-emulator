@@ -209,3 +209,20 @@ def test_start_del_time_is_the_fail_to_start_alarm_delay():
     snap = after(s, clock, 20)
     assert snap.gen_state == 3 and s.generator.fault == "fail-to-start"
     assert Generator({"installed": True, "start_fail_alarm_s": 900}).block["startDelTime"] == 900
+
+
+def test_au_generator_module_limits_rating_to_80_a():
+    """Generator Module Datasheet (AU & NZ), 2026-06-24: 80 A continuous (#189)."""
+    from franklinwh_emulator.control import ApiError, apply
+    with pytest.raises(ValueError, match="18400 W continuous limit"):     # 80 A × 230 V
+        site(gen={"rated_w": 20000})
+    us, _ = site(gen={"rated_w": 20000}, ac_type=1)                       # no NA limit documented
+    assert us.generator.max_w is None
+    gw = Gateway(GatewayConfig(seed=7), clock=ManualClock(NIGHT))
+    for body in ({"rated_w": 20000}, {"set": {"genRatedPower": 20000}}):
+        with pytest.raises(ApiError, match="continuous limit"):
+            apply(gw, "generator", body)
+    s, clock = site(initial_soc=10, gen={"mode": "manual"})
+    s.generator.block["genRatedPower"] = 25000          # a Direct Connect 1901 write
+    s.generator.relay_closed = True
+    assert s.generator.output_w(30000, 0) == 18400

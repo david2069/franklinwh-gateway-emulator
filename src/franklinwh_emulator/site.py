@@ -500,6 +500,14 @@ class Site:
             self.tz = None                                    # the host's local zone
         self.loads = LoadModel(cfg.loads, seed=cfg.seed, legs=self.phases) if cfg.loads else None
         # Smart circuits per aGate model (#189): AU 1–2, North America 1–3.
+        max_a = self.model.agate.gen_module_max_a      # #189: AU Generator Module, 80 A
+        if max_a:
+            self.generator.max_w = max_a * self.grid.nominal_v_ln
+            try:
+                self.generator.check_rating(self.generator.rated_w)
+            except ValueError as e:
+                raise ValueError(f"{e} ({max_a} A at {self.grid.nominal_v_ln:g} V, "
+                                 f"{self.model.agate.name})") from None
         k = self.model.agate.smart_circuits
         self.circuits: dict[int, Circuit] = {n: Circuit(DEFAULT_CIRCUITS[n]) for n in range(1, k + 1)}
         self.circuit_range = f"1–{k}"

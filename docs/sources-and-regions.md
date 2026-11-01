@@ -24,6 +24,7 @@ owner; get them from FranklinWH.
 | *Commissioning Guide (MAC 1 & aPower 2 & aPower S)*, app V2.18.0 (65 pp.) | V1.3, 2026-10-19 | North America (MAC 1 systems, not the aGate) | — | Commissioning steps, PCS settings, derating, PTO ([#185](https://github.com/david2069/franklinwh-gateway-emulator/issues/185)) |
 | *aHub Installation and Operations Manual*, ACCY-AHUBV1-US (63 pp.) | V1.5, 2026-10-16 | North America (US, Canada) | — | Accessories ([#189](https://github.com/david2069/franklinwh-gateway-emulator/issues/189)) |
 | *System Datasheet aGate X-01-AU & aPower X-02-AU* (2 pp.) | V1.7, 2026-09-10 | AU/NZ | AS/NZS 4777.2, IEC 62109, IEC 62116 | aPower X-02-AU specs; AU aGate limits ([#180](https://github.com/david2069/franklinwh-gateway-emulator/issues/180), [#189](https://github.com/david2069/franklinwh-gateway-emulator/issues/189)) |
+| *Generator Module Datasheet* (AU & NZ) | 2026-06-24 | AU/NZ | — | Generator Module limit, 80 A continuous; control types and modes ([#189](https://github.com/david2069/franklinwh-gateway-emulator/issues/189)) |
 | Warranties (AU & NZ; US & CA) and the Backwards Compatibility Statement (US) | 2026 | per document | — | Products and compatibility ([Model baseline](model-baseline.md)) |
 
 ### What they document (North America)
