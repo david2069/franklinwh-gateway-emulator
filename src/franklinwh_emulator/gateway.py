@@ -357,6 +357,27 @@ class Gateway:
                 self.events.add("reboot", "Back up after the reboot")
         self._spawn(loop, cycle)
 
+    def set_firmware(self, name: str, down_s: float | None = None) -> None:
+        """A firmware update (#130): the profile ``name`` (with the fleet file's quirks)
+        replaces the running one. Its Modbus image, versions (Model 1 Vr, DC 1102/1834) and
+        Direct Connect behaviour apply; the site (SoC, energy, settings) and the test write
+        rules are kept, and SunSpec settings written by clients return to the new image's
+        defaults (what a real update keeps is unmeasured). While serving, both listeners drop
+        and come back as on a reboot. ``spec`` is not aGate firmware, so it can't be switched
+        to or from."""
+        profile = get_profile(name, **self.config.quirks)
+        if (profile.name == "spec") != (self.profile.name == "spec"):
+            raise ValueError("firmware: spec is not aGate firmware; choose an agate-* profile")
+        old = self.profile.name
+        with self.device.lock:
+            device = AGateDevice(self.site, profile, serial=self.serial)
+            device.write_rejects = self.device.write_rejects
+            self.profile, self.device = profile, device
+            self.server.device = device
+            self.config.profile = profile.name
+        self.events.add("firmware", f"Firmware update: {old} -> {profile.name}")
+        self.reboot(down_s)
+
     def episode(self, down_s: float, offgrid_s: float) -> None:
         """Drop-and-return-islanded, as the reference aGate did twice on 2026-10-21 (fw
         V12R02B60D00): the utility fails, both listeners go away (open Modbus sessions are

@@ -60,6 +60,15 @@ Its M704 reversion is inverted: a `WSetRvrtTms` write starts the countdown, the 
 `agate-v10r01b04d00` is the earlier firmware (the May and October scans), described below.
 Every flag can be overridden via `quirks:`.
 
+**Updating firmware while it runs** (#130): `ctl <gw> firmware '{"profile": "agate-v10r01b04d00"}'`
+(or the *firmware* form in the UI) switches a gateway to another aGate profile, keeping the fleet
+file's `quirks:`. Both listeners drop and come back as on a reboot (20 s, or `down_s`). The new
+profile's Modbus image, versions (Model 1 `Vr`, Direct Connect 1102/1834) and Direct Connect
+behaviour apply. The site's state (SoC, energy, settings) and the write-reject test rules are
+kept; SunSpec settings clients wrote return to the new image's defaults (what a real update keeps
+is unmeasured). `spec` is not aGate firmware, so it can't be switched to or from. Sessions save
+the switch.
+
 **Quirk profile `agate-v10r01b04d00`**.
 
 - One Modbus client at a time. An extra client is closed, or with `busy_behaviour: hang` it is

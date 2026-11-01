@@ -1,0 +1,18 @@
+# #130 Switch firmware at run time — 2026-11-01
+
+Branch firmware-switch, base main 4245817.
+
+## New tests
+1 passed in 0.02s
+
+## Break check
+the new test fails with the src change stashed (unknown action firmware).
+
+## Full suite
+662 passed in 36.04s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
