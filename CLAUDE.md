@@ -98,3 +98,20 @@ python3 scripts/check_pii.py --scan     # before every commit
 ```
 
 Use a login shell (`zsh -lc`) for Homebrew's `gh` and `python3.12`.
+
+## Issues and PRs
+
+Follow the shared issue policy (franklinwh-modbus-bridge `docs/issue-policy.md`, built on the
+franklinwh-modbus Change Management Policy):
+
+- **Every issue** gets a type (`bug`, `enhancement`, `documentation`, `chore`), a `sev:S1-blocker`…
+  `sev:S4-low` label and one area: `area:modbus-server`, `area:direct-connect`, `area:site-model`,
+  `area:control-ui`, `area:fleet-sessions`, `area:packaging`. Triage decisions go on the pinned
+  Triage log issue (#137).
+- **PRs say `Refs #N`**, never `Fixes`/`Closes`. At merge the issue is labelled `fixed`; it is
+  closed after the published release is checked, with a comment naming the version.
+- **PR body:** `.github/pull_request_template.md` (evidence, break check, verification).
+- **CHANGELOG:** Keep a Changelog categories under `## Unreleased`, each heading once
+  (`tests/test_version.py` checks it).
+- **Releases:** set the plain version in `pyproject.toml` and `__init__.py`, move Unreleased under
+  `## X.Y.Z (date)`, tag `vX.Y.Z`; the next commit bumps to the next `.dev0`.
