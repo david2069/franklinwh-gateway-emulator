@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+- `solar_peak_w: 0` is a site without solar; it was ignored and the seed picked 3.5–6 kW of PV ([#238](https://github.com/david2069/franklinwh-gateway-emulator/issues/238)).
+
 ## 0.2.2 (2026-11-02)
 
 ### Added

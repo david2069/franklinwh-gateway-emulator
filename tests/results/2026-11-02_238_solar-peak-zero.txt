@@ -1,0 +1,18 @@
+# #238 solar_peak_w: 0 means no solar — 2026-11-02
+
+Branch fix/238-solar-peak-zero, base main e47db3a.
+
+## New tests
+2 passed in 0.02s
+
+## Break check
+src stashed: test_solar_peak_zero_means_no_solar fails (solar_peak_w 3836), unset-from-seed test passes
+
+## Full suite
+692 passed in 38.17s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
