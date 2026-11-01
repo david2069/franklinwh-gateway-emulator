@@ -556,8 +556,9 @@ class ControlApi:
             raise ApiError(400, "session name: letters, digits, - and _ only (max 64)")
         return name
 
-    def save_session(self, name: str | None = None) -> dict:
-        """Write the successful, non-transient actions so far, then each gateway's SoC."""
+    def save_session(self, name: str | None = None, snapshot: bool = False) -> dict:
+        """Write the successful, non-transient actions so far, then each gateway's SoC; with
+        ``snapshot``, also each site's running state (#88), put back after the actions."""
         import datetime as dt
         import yaml
         now = dt.datetime.now(dt.timezone.utc)
@@ -569,13 +570,15 @@ class ControlApi:
                             "with": {"value": round(gateway_state(gw)["soc"], 1)}})
         doc = {"saved": now.isoformat(timespec="seconds"), "emulator": version_info(),
                "fleet": self.fleet_file, "gateways": sorted(self.gateways), "actions": actions}
+        if snapshot:
+            doc["snapshot"] = {gid: gw.site.snapshot() for gid, gw in self.gateways.items()}
         d = self._sessions_dir()
         d.mkdir(parents=True, exist_ok=True)
         path = d / f"{name}.yaml"
         path.write_text("# franklinwh-emulator session: the actions applied, in order, then each "
                         "gateway's SoC.\n# Restore with the UI's Restore, POST /session/restore, or "
                         "`ui FLEET --restore NAME`.\n" + yaml.safe_dump(doc, sort_keys=False))
-        return {"name": name, "path": str(path), "actions": len(actions)}
+        return {"name": name, "path": str(path), "actions": len(actions), "snapshot": snapshot}
 
     def _fleet_doc(self) -> dict:
         """The fleet as a scenario's ``fleet:``: the fleet file, else each gateway's settings
@@ -652,8 +655,22 @@ class ControlApi:
                 results.append({**a, "ok": True, "error": None})
             except ApiError as e:
                 results.append({**a, "ok": False, "error": str(e)})
+        restored = []
+        for gid, snap in (doc.get("snapshot") or {}).items():
+            gw = self.gateways.get(gid)
+            if gw is None:
+                results.append({"gateway": gid, "do": "snapshot", "with": {}, "ok": False,
+                                "error": f"no gateway {gid!r} in this fleet"})
+                continue
+            try:
+                gw.site.restore_snapshot(snap)
+                restored.append(gid)
+            except (ValueError, KeyError, TypeError) as e:
+                results.append({"gateway": gid, "do": "snapshot", "with": {}, "ok": False,
+                                "error": f"snapshot: {e}"})
         return {"name": name, "applied": sum(r["ok"] for r in results),
-                "failed": sum(not r["ok"] for r in results), "results": results}
+                "failed": sum(not r["ok"] for r in results), "results": results,
+                "snapshot_restored": restored}
 
     def _route(self, method: str, path: str, body: dict):
         parts = [p for p in path.split("?")[0].split("/") if p]
@@ -668,7 +685,7 @@ class ControlApi:
         if parts == ["sessions"] and method == "GET":
             return self.sessions()
         if parts == ["session", "save"] and method == "POST":
-            return self.save_session(body.get("name"))
+            return self.save_session(body.get("name"), bool(body.get("snapshot", False)))
         if parts == ["session", "scenario"] and method == "POST":
             return self.save_scenario(body.get("name"))
         if parts == ["session", "restore"] and method == "POST":

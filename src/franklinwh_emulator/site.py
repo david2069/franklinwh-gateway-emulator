@@ -623,6 +623,73 @@ class Site:
         self._roll_day(self._t)
         self._last = self._instant(self._t)
 
+    SNAPSHOT_VERSION = 1
+    _SNAP_COUNTERS = ("grid_import_wh", "grid_export_wh", "pv_wh", "batt_discharge_wh",
+                      "batt_charge_wh", "gen_wh", "load_wh")
+
+    def snapshot(self) -> dict:
+        """The site's running state (#88): clock, SoC, counters, today's base, the quarter-hour
+        history, circuit and generator energy, appliance (EV) sessions, the sky and the
+        cabinet temperature. JSON/YAML-safe; :meth:`restore_snapshot` puts it back."""
+        with self.lock:
+            self.step()
+            comps = self.loads.components if self.loads else []
+            return {
+                "version": self.SNAPSHOT_VERSION, "ts": self._t,
+                "local_time": self.local_datetime(self._t).isoformat(timespec="seconds"),
+                "timezone": self.timezone_name, "soc": self.soc,
+                "counters": {k: getattr(self, k) for k in self._SNAP_COUNTERS},
+                "phase_import_wh": dict(self.phase_import_wh),
+                "phase_export_wh": dict(self.phase_export_wh),
+                "day_key": self._day_key, "day_base": dict(self._day_base),
+                "history": {d: [dict(h) for h in slots] for d, slots in self.history.items()},
+                "circuit_wh": {n: c.energy_wh for n, c in self.circuits.items()},
+                "generator": {"energy_wh": self.generator.energy_wh, "fuel_l": self.generator.fuel_l,
+                              "starts": self.generator.starts},
+                "appliances": {c.name: dict(c.state) for c in comps if getattr(c, "state", None)},
+                "sky": None if self.weather is None else self.weather.cfg.sky,
+                "cabinet_c": self.cabinet_state_c, "ambient_lag": self._ambient_lag,
+            }
+
+    def restore_snapshot(self, snap: dict) -> None:
+        """Put a :meth:`snapshot` back. A manual or scaled clock is moved to its time, so the
+        run continues from there; the real clock can't move, so the site resumes now with
+        the saved state (the gap is not simulated)."""
+        from .clock import ManualClock, ScaledClock
+        import time as _time
+        if snap.get("version") != self.SNAPSHOT_VERSION:
+            raise ValueError(f"snapshot version {snap.get('version')!r}; this emulator reads "
+                             f"{self.SNAPSHOT_VERSION}")
+        with self.lock:
+            if isinstance(self.clock, ManualClock):
+                self.clock.set(float(snap["ts"]))
+            elif isinstance(self.clock, ScaledClock):
+                self.clock._sim0, self.clock._real0 = float(snap["ts"]), _time.time()
+            self.soc = float(snap["soc"])
+            for k, v in snap["counters"].items():
+                setattr(self, k, float(v))
+            self.phase_import_wh.update(snap.get("phase_import_wh") or {})
+            self.phase_export_wh.update(snap.get("phase_export_wh") or {})
+            self.history = {d: [dict(h) for h in slots] for d, slots in snap["history"].items()}
+            self._day_key, self._day_base = snap.get("day_key"), dict(snap.get("day_base") or {})
+            for n, wh in (snap.get("circuit_wh") or {}).items():
+                if int(n) in self.circuits:
+                    self.circuits[int(n)].energy_wh = float(wh)
+            g = snap.get("generator") or {}
+            self.generator.energy_wh = float(g.get("energy_wh", 0.0))
+            self.generator.fuel_l = g.get("fuel_l")
+            self.generator.starts = int(g.get("starts", 0))
+            for c in (self.loads.components if self.loads else []):
+                if c.name in (snap.get("appliances") or {}):
+                    c.state = dict(snap["appliances"][c.name])
+            if snap.get("sky") and self.weather is not None:
+                self.weather.cfg.sky = snap["sky"]
+            self.cabinet_state_c = snap.get("cabinet_c")
+            self._ambient_lag = snap.get("ambient_lag")
+            self._t = self.clock.now()
+            self._roll_day(self._t)
+            self._last = self._instant(self._t)
+
     def backfill(self, days: float, step_s: float = 60.0) -> None:
         """Run the model over the ``days`` before now, as if the site had been running: the
         quarter-hour history, today's totals and the lifetime counters advance together. The

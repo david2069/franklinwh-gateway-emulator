@@ -24,6 +24,7 @@ function running() {
     version: null,
     sessionsList: [],  // saved sessions, newest first
     saveName: '',
+    saveSnapshot: false,
     restoreName: '',
     sessionMsg: null,  // {ok, text, details}: the last save/restore, shown until the next
     log: [],           // the emulator's action log (newest last)
@@ -258,8 +259,10 @@ function running() {
     },
     async saveSession() {
       try {
-        const r = await this._post('/session/save', this.saveName.trim() ? { name: this.saveName.trim() } : {});
-        this.sessionMsg = { ok: true, text: 'Saved "' + r.name + '": ' + r.actions + ' actions (incl. each gateway\'s SoC) to ' + r.path, details: [] };
+        const body = this.saveName.trim() ? { name: this.saveName.trim() } : {};
+        if (this.saveSnapshot) body.snapshot = true;
+        const r = await this._post('/session/save', body);
+        this.sessionMsg = { ok: true, text: 'Saved "' + r.name + '": ' + r.actions + ' actions (incl. each gateway\'s SoC)' + (r.snapshot ? ' and each site\'s state' : '') + ' to ' + r.path, details: [] };
         this.saveName = '';
         await this.loadSessions();
         this.restoreName = r.name;

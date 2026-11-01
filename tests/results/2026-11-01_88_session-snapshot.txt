@@ -1,0 +1,18 @@
+# #88 Session snapshots save the running state — 2026-11-01
+
+Branch session-snapshot, base main a8dc975.
+
+## New tests
+2 passed in 0.13s
+
+## Break check
+the new tests fail with the src change stashed (no snapshot).
+
+## Full suite
+667 passed in 36.62s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
