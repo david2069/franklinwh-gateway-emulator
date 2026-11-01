@@ -87,7 +87,7 @@ DOCS: dict[str, str] = {
     "dnsp": "AU name for utility (the same block)",
     "lines_company": "NZ name for utility (the same block)",
     "service": "the main breaker and busbar: {main_breaker_a, busbar_a}; import above the breaker "
-               "trips the site off the grid (inverse-time) until reset; the site also holds grid "
+               "trips the site off the grid (inverse-time, each pole on its own leg's import) until reset; the site also holds grid "
                "import below it. North American models: busbar_a sets the PCS export limit by the "
                "120 % rule when utility sets none",
     "install": "where the aGate/aPower sits: {indoor: heated|unheated|uninsulated} or {outdoor: {sun: "
