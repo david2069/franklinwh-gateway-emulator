@@ -17,11 +17,11 @@ import time
 from typing import Any
 
 from .clock import ManualClock
-from .gateway import Gateway, GatewayConfig, fix_bool_keys, mock_serial
+from .gateway import Gateway, GatewayConfig, expand_groups, fix_bool_keys, mock_serial
 from .schema import ACTIONS, check_body
 from .site import SiteConfig
 
-FLEET_KEYS = ("defaults", "gateways")
+FLEET_KEYS = ("defaults", "groups", "gateways")
 
 # One line per gateway key. Shorthands first, then GatewayConfig, then SiteConfig.
 DOCS: dict[str, str] = {
@@ -58,6 +58,11 @@ DOCS: dict[str, str] = {
     "location": "{latitude, longitude, timezone (IANA, DST-aware), postcode, name, country (ISO alpha-2), "
                 "state, city, site_id}; country/state/city/site_id only group gateways in the UI",
     "tz_offset_hours": "fixed UTC offset, no DST; location.timezone wins",
+    "group": "the fleet `groups:` entry this aGate shares a site and grid connection with (#241): "
+             "one single-phase aGate per phase (phases: [L1]); it takes the group's location, "
+             "weather, grid code, utility, service (per phase), clock and sky",
+    "sky_seed": "seed for the sky (clouds, synthetic weather, ambient); set by the group, "
+                "default the gateway's seed",
     "native_mode": "Modbus 15507 numbering: 1 Emergency Backup, 2 Self-Consumption, 3 TOU "
                    "(Direct Connect and the cloud number them differently)",
     "self_reserve": "Self-Consumption reserve, %",
@@ -167,6 +172,8 @@ def validate_fleet(d: Any, *, prefix: str = "", at: float | None = None) -> list
     out = [_problem(f"{prefix}{k}", f"unknown key; known {list(FLEET_KEYS)}")
            for k in d if k not in FLEET_KEYS]
     known = config_schema()
+    entries, group_problems = expand_groups(d)
+    out += [_problem(f"{prefix}{p}", m) for p, m in group_problems]
     defaults = d.get("defaults") or {}
     if not isinstance(defaults, dict):
         out.append(_problem(f"{prefix}defaults", "must be a mapping"))
@@ -187,7 +194,7 @@ def validate_fleet(d: Any, *, prefix: str = "", at: float | None = None) -> list
             continue
         bad = [k for k in g if k not in known]
         out += [_problem(f"{path}.{k}", _unknown_key(k, known)) for k in bad]
-        merged = {k: v for k, v in {**defaults, **g}.items() if k in known}
+        merged = {k: v for k, v in entries[i].items() if k in known}
         try:
             cfg = GatewayConfig.from_dict(merged)
         except Exception as e:                       # noqa: BLE001 - reported, not raised

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- Fleet `groups:` (#241): aGates at one site and grid connection, one per phase (`group:` + `phases: [L1]`), share the group's location, weather, grid code, utility, service (per phase), clock and sky; `validate` refuses a member that sets a group setting, a shared phase or more than one leg. Example: `examples/au-3phase-group.yaml` (solar on L1, air conditioning and hot water on L2, EV on L3). Grid events and the combined meter are not shared yet.
+
 ### Fixed
 - `solar_peak_w: 0` is a site without solar; it was ignored and the seed picked 3.5–6 kW of PV ([#238](https://github.com/david2069/franklinwh-gateway-emulator/issues/238)).
 

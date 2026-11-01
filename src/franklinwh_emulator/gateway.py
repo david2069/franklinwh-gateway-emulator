@@ -13,13 +13,16 @@
     fleet.stop()
 
 All gateways of a fleet share one event-loop thread. Each gateway has its own
-:class:`Site`, so state never leaks between them.
+:class:`Site`, so state never leaks between them. Gateways in one of the fleet's ``groups``
+(#241) are aGates at the same site, one per phase: they share the group's location, weather,
+grid code, service and clock.
 """
 
 from __future__ import annotations
 
 import asyncio
 import random
+import zlib
 import threading
 from dataclasses import asdict, dataclass, field, fields
 from typing import Any
@@ -464,20 +467,94 @@ class Gateway:
         self.stop()
 
 
+# Fleet `groups:` (#241): settings an aGate shares with the others on the same grid connection.
+GROUP_KEYS = ("seed", "location", "weather", "grid_code", "grid_overrides", "service", "utility",
+              "dnsp", "lines_company", "tz_offset_hours", "time_scale")
+
+
+def expand_groups(d: dict) -> tuple[list[dict], list[tuple[str, str]]]:
+    """A fleet's gateway entries with ``defaults`` and their group's settings merged, and the
+    problems as (path, message).
+
+    A group is one site and grid connection with one single-phase aGate per phase (an AU
+    three-phase home: the AU aGate is single phase, owner 2026-11-02). Each member names it
+    with ``group:`` and its leg with ``phases: [L2]``; it takes the group's location,
+    weather, grid code, service (per phase) and clock, and the group's seed for the sky.
+    """
+    defaults = d.get("defaults") or {}
+    defaults = defaults if isinstance(defaults, dict) else {}    # validate_fleet reports it
+    groups = d.get("groups") or {}
+    out: list[dict] = []
+    problems: list[tuple[str, str]] = []
+    if not isinstance(groups, dict):
+        problems.append(("groups", "must be a mapping of group id to its settings"))
+        groups = {}
+    for gid, grp in groups.items():
+        if not isinstance(grp, dict):
+            problems.append((f"groups.{gid}", "must be a mapping"))
+            continue
+        for k in grp:
+            if k not in GROUP_KEYS:
+                problems.append((f"groups.{gid}.{k}", f"not a group setting; group settings are "
+                                                      f"{list(GROUP_KEYS)}"))
+    legs: dict[tuple[str, str], int] = {}
+    members: dict[str, int] = {}
+    for i, g in enumerate(d.get("gateways") or []):
+        if not isinstance(g, dict):
+            out.append(g)
+            continue
+        gid = g.get("group")
+        if gid is None:
+            out.append({**defaults, **g})
+            continue
+        path = f"gateways[{i}]"
+        grp = groups.get(gid)
+        if not isinstance(grp, dict):
+            problems.append((f"{path}.group", f"no group {gid!r} in groups"))
+            out.append({**defaults, **g})
+            continue
+        members[gid] = members.get(gid, 0) + 1
+        shared = {k: v for k, v in grp.items() if k in GROUP_KEYS and k != "seed"}
+        for k in g:
+            if k in GROUP_KEYS and k != "seed":
+                problems.append((f"{path}.{k}", f"set by group {gid!r}; set it there"))
+        phases = g.get("phases")
+        if not (isinstance(phases, list) and len(phases) == 1):
+            problems.append((f"{path}.phases", "a grouped aGate is on one phase: phases: [L1], [L2] or [L3]"))
+        else:
+            key = (str(gid), str(phases[0]).upper())
+            if key in legs:
+                problems.append((f"{path}.phases", f"{key[1]} already has gateways[{legs[key]}] in group {gid!r}"))
+            legs.setdefault(key, i)
+        if g.get("ac_type", 0) != 0:
+            problems.append((f"{path}.ac_type", "a grouped aGate is single phase (ac_type 0)"))
+        sky = grp.get("seed", zlib.crc32(str(gid).encode()) & 0x7FFFFFFF)
+        out.append({**defaults, **shared, **g, "ac_type": 0, "group": gid, "sky_seed": int(sky)})
+    for gid in groups:
+        if gid not in members:
+            problems.append((f"groups.{gid}", "no gateway names this group"))
+    return out, problems
+
+
 class Fleet:
     def __init__(self, configs: list[GatewayConfig], *, clock: Clock | None = None):
         ids = [c.id for c in configs]
         if len(set(ids)) != len(ids):
             raise ValueError(f"duplicate gateway ids: {ids}")
-        self.gateways = {c.id: Gateway(c, clock=clock) for c in configs}
+        clocks: dict[str, Clock] = {}          # one clock per group (#241)
+        for c in configs:
+            if clock is None and c.site.group is not None and c.site.group not in clocks:
+                clocks[c.site.group] = ScaledClock(c.time_scale) if c.time_scale != 1.0 else SystemClock()
+        self.gateways = {c.id: Gateway(c, clock=clock or clocks.get(c.site.group)) for c in configs}
         self.control: ControlApi | None = None
         self._loop: _LoopThread | None = None
 
     @classmethod
     def from_dict(cls, d: dict, *, clock: Clock | None = None) -> "Fleet":
-        defaults = d.get("defaults", {})
-        return cls([GatewayConfig.from_dict({**defaults, **g}) for g in d["gateways"]],
-                   clock=clock)
+        entries, problems = expand_groups(d)
+        if problems:
+            raise ValueError("; ".join(f"{p}: {m}" for p, m in problems))
+        return cls([GatewayConfig.from_dict(g) for g in entries], clock=clock)
 
     @classmethod
     def from_yaml(cls, path: str) -> "Fleet":

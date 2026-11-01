@@ -1,0 +1,64 @@
+# franklinwh-emulator fleet ./examples/au-3phase-group.yaml
+#
+# One AU three-phase home, one grid connection, three aGates (#241). The AU aGate is single
+# phase, so a three-phase home has one per phase, each with its own aPower and that phase's
+# share of the service (63 A per phase here). The group holds what they share: location,
+# weather, grid code, service and clock; each aGate holds what is on its phase.
+#
+#   L1: aGate with 6 kW of AC-coupled solar on its AC port
+#   L2: aGate with air conditioning and hot water + induction cooktop on smart circuits 1 and 2
+#   L3: aGate with the EV charger on smart circuit 1 (V2L is not modelled), circuit 2 unused
+defaults:
+  host: 127.0.0.1
+  setup: in-service
+
+groups:
+  au-3phase-home:
+    seed: 30                    # one sky for the whole site
+    location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000",
+               country: AU, state: NSW, city: Sydney, site_id: demo-3phase-home}
+    weather: {model: synthetic, sky: broken}
+    grid_code: as4777-au-a
+    service: {main_breaker_a: 63}   # per phase: 63 A x 230 V = 14.5 kW on each aGate
+
+gateways:
+  - id: agate-l1
+    group: au-3phase-home
+    phases: [L1]
+    seed: 31
+    solar_peak_w: 6000
+    accessories: {smart_circuits: false, apbox: false}
+    loads:
+      - {name: base, type: base, w: 220, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: kettle, type: events, w: 2200, duration: 3m, per_day: 5,
+         windows: ["06:30-08:30", "15:00-21:30"]}
+    modbus: {port: 5027}
+    directconnect: {port: 9027}
+
+  - id: agate-l2
+    group: au-3phase-home
+    phases: [L2]
+    seed: 32
+    solar_peak_w: 0
+    loads:
+      - {name: base, type: base, w: 120, drift: 0.1}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 26, heat_below: 15, span: 8,
+         on: ["07:00-23:00"], circuit: 1}
+      - {name: hot_water, type: schedule, w: 3600, on: ["11:00-13:30"], circuit: 2}
+      - {name: induction, type: events, w: 2400, duration: 30m, per_day: 1,
+         windows: ["17:30-19:00"], circuit: 2}
+    modbus: {port: 5028}
+    directconnect: {port: 9028}
+
+  - id: agate-l3
+    group: au-3phase-home
+    phases: [L3]
+    seed: 33
+    solar_peak_w: 0
+    loads:
+      - {name: base, type: base, w: 100, drift: 0.1}
+      - {name: ev, type: ev, w: 7000, min_w: 1400, arrive: "18:00", depart: "07:30", kwh: 18,
+         mode: offpeak, start: "22:00", circuit: 1}
+    modbus: {port: 5029}
+    directconnect: {port: 9029}

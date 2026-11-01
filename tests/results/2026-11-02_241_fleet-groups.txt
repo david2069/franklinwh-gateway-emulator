@@ -1,0 +1,18 @@
+# #241 Fleet groups: one site, one single-phase aGate per phase — 2026-11-02
+
+Branch feat/241-fleet-groups, base main 7002b66.
+
+## New tests
+13 passed in 1.76s
+
+## Break check
+src stashed: all 13 tests in test_groups.py fail
+
+## Full suite
+705 passed in 39.43s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
