@@ -54,6 +54,7 @@ from .replay import Replay, ReplayConfig
 from .loads import DEFAULT_CIRCUITS, Circuit, Component, Context, LoadModel
 from .weather import Weather, WeatherConfig, sun_position
 from . import models, thermal, tou
+from .components import CALIBRATION_SOH
 from .utility import Service, Utility as UtilityRules, trip_seconds
 
 # Off-grid full-battery PV cut-off, North American models (PV Curtailment White Paper, #178).
@@ -279,6 +280,9 @@ class SiteConfig:
     # on- and off-grid (FranklinWH Commissioning Guide, MAC 1 & aPower 2 & aPower S, p. 24).
     # Above the unit's rating it has no effect. None = not derated.
     pcs_derate_w: float | None = None
+    # Component age and warranty (#115): {agate, apower, pv_inverter, pv_panels}, each
+    # {installed, warranty_years, ...}; installed defaults to the commissioned date.
+    components: dict | None = None
     # Starting values for the lifetime counters (Wh). None → the reference scan's
     # (REFERENCE_COUNTERS); a factory gateway sets them to 0 (gateway.py).
     grid_import_wh: float | None = None
@@ -519,7 +523,13 @@ class Site:
         self.model = models.resolve(cfg.model, country=self.location.country or "",
                                     hz=self.grid.nominal_hz)
         self.apower_w = self.model.apower.kw * 1000
-        self.capacity_wh = self.model.apower.kwh * 1000 * max(1, cfg.apower_units)
+        self.rated_capacity_wh = self.model.apower.kwh * 1000 * max(1, cfg.apower_units)
+        self.capacity_wh = self.rated_capacity_wh    # usable: scaled by SoH (_age, #115)
+        from .components import Components
+        self.components = Components(cfg.components, self.model.apower)
+        self.soh = CALIBRATION_SOH
+        self._soh_day: str | None = None
+        self._pv_age = 1.0
         if cfg.pcs_derate_w is not None and float(cfg.pcs_derate_w) <= 0:
             raise ValueError("pcs_derate_w: the derated power per aPower in W (> 0), or null")
         self.pcs_derate_w = None if cfg.pcs_derate_w is None else float(cfg.pcs_derate_w)
@@ -620,6 +630,7 @@ class Site:
         self._t = self.clock.now()
         if self.replay is not None:
             self.replay.start(self._t)
+        self._age(self._t, force=True)
         self._roll_day(self._t)
         self._last = self._instant(self._t)
 
@@ -807,7 +818,7 @@ class Site:
             if v is not None:
                 return v
         poa, base = self._solar_poa_w(ts)
-        return base * self.pv_temperature_factor(ts, poa)[1]
+        return base * self.pv_temperature_factor(ts, poa)[1] * self._pv_age
 
     def _solar_poa_w(self, ts: float) -> tuple[float, float]:
         """(irradiance on the array W/m², PV output before the temperature loss W)."""
@@ -819,6 +830,19 @@ class Site:
         cloud = 0.88 + 0.12 * math.sin(ts / 15.0 + self.config.seed * 0.7)
         base = max(0.0, self.solar_peak_w * factor ** 1.3 * cloud)
         return base / self.solar_peak_w * 1000.0 if self.solar_peak_w else 0.0, base   # peak ≈ 1000 W/m²
+
+    def _age(self, ts: float, force: bool = False) -> None:
+        """Once a local day (#115): aPower SoH from age and throughput, and the usable
+        capacity with it. Capacity scales against the SoH the loss model was calibrated at, so
+        the reference site at that age is unchanged."""
+        today = self.local_date(ts)
+        if today == self._soh_day and not force:
+            return
+        self._soh_day = today
+        units = max(1, self.config.apower_units)
+        self.soh = self.components.apower_soh(today, self.batt_discharge_wh / units)
+        self.capacity_wh = self.rated_capacity_wh * self.soh / CALIBRATION_SOH
+        self._pv_age = self.components.pv_factor(today)
 
     def pv_temperature_factor(self, ts: float, poa: float | None = None) -> tuple[float | None, float]:
         """(cell °C, output factor). (None, 1.0) when turned off or in the dark."""
@@ -1784,6 +1808,7 @@ class Site:
         """Advance to the clock's now and return the current state."""
         with self.lock:
             now = self.clock.now()
+            self._age(now)
             while now - self._t > 1e-9:
                 self.csip.tick(self._t)
                 self._protect(self._t)

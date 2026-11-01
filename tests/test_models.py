@@ -14,7 +14,7 @@ def test_defaults_by_region_keep_the_reference_numbers(clock):
     assert (au.site.model.agate.code, au.site.model.apower.code) == (102, 2)
     assert (us.site.model.agate.code, us.site.model.apower.code) == (103, 0)
     for gw in (au, us):                                            # aPower X: as before #180
-        assert gw.site.capacity_wh == 13600 and gw.site.rate_w == 5000
+        assert gw.site.rated_capacity_wh == 13600 and gw.site.rate_w == 5000
 
 
 def test_country_decides_before_frequency(clock):
@@ -44,7 +44,7 @@ def test_apower_2_capacity_power_and_charge_limit(clock):
     gw = make_gateway(clock, site={"ac_type": 1, "apower_units": 2, "initial_soc": 50,
                                    "model": {"agate": 103, "apower": 3}})
     s = gw.site
-    assert s.capacity_wh == 30000 and s.rate_w == 20000
+    assert s.rated_capacity_wh == 30000 and s.rate_w == 20000
     assert s._limits(0.0, 0.0) == pytest.approx((20000.0, 16000.0))   # charges at 8 kW per unit
     regs = gw.device.read(15020, 1)
     assert regs == [30000]                                             # capacity follows the model
@@ -136,7 +136,7 @@ def test_x02_au_follows_the_au_datasheet(clock):
     assert (m.apower.code, m.apower.kwh, m.apower.kw, m.apower.peak_kw) == (7, 15.0, 5.0, 10.0)
     assert m.apower.skus[0] == "APR-05K15V1-AU"                        # the datasheet's SKU first
     gw = make_gateway(clock, site={"apower_units": 2, "model": {"apower": 7}})
-    assert gw.site.capacity_wh == 30000 and gw.device.read(15020, 1) == [30000]
+    assert gw.site.rated_capacity_wh == 30000 and gw.device.read(15020, 1) == [30000]
 
 
 def _na_offgrid(clock, **site):

@@ -133,6 +133,11 @@ def gateway_state(gw: "Gateway") -> dict:
         # Per aPower, from its model (#180).
         "apower_rating": {"wh": round(site.model.apower.kwh * 1000), "w": round(site.apower_w)},
         "pcs_derate_w": site.pcs_derate_w,                    # installer's derate (#185)
+        # Age and warranty (#115): aPower SoH, PV ageing, each component's warranty.
+        "components": {"soh": round(site.soh, 2), "pv_age_factor": round(site._pv_age, 4),
+                       "usable_capacity_wh": round(site.capacity_wh),
+                       **{n: site.components.warranty(n, site.local_date(site._t))
+                          for n in site.components.parts}},
         "model": (None if gw.profile.name == "spec"           # not an aGate: no FranklinWH model
                   else models.describe(site.model, max(1, site.config.apower_units))),
         "accessories": dict(site.accessories),                # fitted modules (#189)

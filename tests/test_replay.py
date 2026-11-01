@@ -148,14 +148,15 @@ def test_replayed_battery_drives_soc_through_the_loss_model(tmp_path, preset, ex
     s.clock.advance(3600)
     snap = s.step()
     assert snap.battery_w == pytest.approx(1000)          # follows the recording, not the mode
-    assert 60 - snap.soc == pytest.approx(expected, rel=1e-3)
+    # expected is per 13.6 kWh; the usable capacity follows SoH (#115)
+    assert 60 - snap.soc == pytest.approx(expected * 13600 / s.capacity_wh, rel=1e-3)
 
 
 def test_charging_efficiency_and_no_drain_while_idle(tmp_path):
     s = site({"source": battery_csv(tmp_path / "c.csv", -1000), "use": ["battery"]},
              initial_soc=40, battery="agate-measured")
     s.clock.advance(3600)
-    assert s.step().soc - 40 == pytest.approx(1000 * 0.971 / 13600 * 100, rel=1e-3)
+    assert s.step().soc - 40 == pytest.approx(1000 * 0.971 / s.capacity_wh * 100, rel=1e-3)
     idle = site({"source": battery_csv(tmp_path / "i.csv", 0), "use": ["battery"]},
                 initial_soc=80, battery="agate-measured")
     idle.clock.advance(6 * 3600)

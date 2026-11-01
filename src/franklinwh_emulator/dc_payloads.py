@@ -311,7 +311,7 @@ class DcPayloads:
                    singleHighestVolt=max(cells), singleLowestVolt=min(cells),
                    singleHighestTemp=max(temps), singleLowestTemp=min(temps),
                    currGrp=round(per / (sum(cells) / 1000.0), 1), batSoc=round(s.soc, 1),
-                   batSoh=94.8, alarmLevel=0)
+                   batSoh=round(self.site.soh, 1), alarmLevel=0)
 
     def device_states(self, req: dict) -> dict:
         dev = self._dev_id(req)
