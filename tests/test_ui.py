@@ -530,3 +530,38 @@ def test_result_and_activity_use_the_gateway_clock(tmp_path):
                                               check=True).stdout)
     assert line == '23:05:18 · site · reserve {"self":25} · page'
     assert applied == 'Applied to site at 23:05:18: {"self":25}'
+
+
+# -- the diagram follows the owner's design (#205) --------------------------------------------------
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_diagram_follows_the_design(ui, tmp_path):
+    """private/ui-design boards A/B: an icon per element, one line per phase, a card per aPower;
+    header: site name, place, weather, model summary."""
+    import subprocess
+    fleet, _ = ui
+    states = {i: gateway_state(fleet[i]) for i in ("site", "us-split")}
+    harness = tmp_path / "diag.js"
+    harness.write_text("const performance = {now: () => 0};\n" +
+                       (STATIC / "units.js").read_text() + (STATIC / "groups.js").read_text() +
+                       (STATIC / "diagram.js").read_text() +
+                       f"\nconst S = {json.dumps(states, default=str)};\nconst r = {{}};\n"
+                       "for (const k in S) { const h = renderDiagram(S[k]); r[k] = {\n"
+                       "  icons: (h.match(/<svg class=\"ic /g) || []).length,\n"
+                       "  grid: (h.match(/d=\"M 1\\d\\d 4[678]\\d L 245 /g) || []).length,\n"
+                       "  cards: (h.match(/class=\"bat\"/g) || []).length,\n"
+                       "  site: /class=\"dt-site\">([^<]*)/.exec(h)[1],\n"
+                       "  place: /class=\"dt-place\">([^<]*)/.exec(h)[1],\n"
+                       "  model: /class=\"dt-model\">([^<]*)/.exec(h)[1],\n"
+                       "  weather: h.includes('class=\"diagram-head\"'),\n"
+                       "  loads: ['hvac', 'hotWater', 'ev'].map(n => h.includes(ICONS[n])) }; }\n"
+                       "print(JSON.stringify(r));\n")
+    r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
+    au, us = r["site"], r["us-split"]
+    # grid, meter, panel, home, PV, aGate, generator, 3 switches, 3 loads
+    assert au["icons"] == us["icons"] == 13
+    assert (au["grid"], us["grid"]) == (1, 2)                   # one line per phase
+    assert (au["cards"], us["cards"]) == (states["site"]["apower_units"], 1)
+    assert au["site"] == "site" and au["place"].endswith(" · Australia/Sydney")    # no city set here
+    assert au["model"] == "aGate X-01-AU · 1× aPower X-01-AU · 13.6 kWh · PV 6.6 kWp"
+    assert us["model"] == "aGate X 20 (US) · 1× aPower X-10 · 13.6 kWh"           # no weather: no kWp
+    assert au["weather"] and us["loads"] == [True, True, True]

@@ -101,7 +101,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 .diagram-head .icon { width: 22px; height: 22px; flex: none; fill: none; stroke: var(--warn); stroke-width: 2; stroke-linecap: round; }
 .diagram-head .icon circle, .diagram-head .icon path { fill: var(--warn); }
 .diagram-wrap { overflow-x: auto; margin-bottom: 8px; }   /* narrow screens scroll, text stays legible */
-.diagram { display: block; width: 100%; min-width: 720px; height: auto; }
+.diagram { display: block; width: 100%; min-width: 760px; height: auto; }
 .diagram .node rect { fill: var(--panel-2); stroke: var(--ok); stroke-width: 1.5; }
 .diagram .node.agate rect { fill: var(--ok-bg); stroke-width: 2.5; }
 .diagram .node.vpp rect { stroke: var(--warn); }
@@ -114,9 +114,9 @@ main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 .diagram .v { font: 600 18px var(--mono); fill: var(--text); }
 .diagram .s { font-size: 12px; fill: var(--muted); }
 .diagram .node.dim text { fill: var(--muted); }
-.diagram .flow { fill: none; stroke-width: 2.5; stroke-dasharray: 8 6; stroke-linejoin: round; }
-.diagram .flow.idle { stroke: var(--line); }
-.diagram .flow.fwd, .diagram .flow.rev { stroke: var(--ok); animation: dash 1s linear infinite; }
+.diagram .flow { fill: none; stroke-width: 2.5; stroke-dasharray: 7 7; stroke-linecap: round; stroke-linejoin: round; }
+.diagram .flow.idle { stroke: var(--muted); opacity: .6; }
+.diagram .flow.fwd, .diagram .flow.rev { stroke: var(--ok); animation: dash .8s linear infinite; }
 .diagram .flow.rev { animation-direction: reverse; }
 @keyframes dash { to { stroke-dashoffset: -14; } }
 @media (prefers-reduced-motion: reduce) { .diagram .flow { animation: none; } }
@@ -196,9 +196,6 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
 .tag.st-charging, .c-charging { color: var(--c-red); border-color: var(--c-red); }
 .tag.st-discharging, .c-discharging { color: var(--c-green); border-color: var(--c-green); }
 .tag.st-standby, .c-standby { color: var(--c-orange); border-color: var(--c-orange); }
-.diagram text.c-self { fill: var(--c-green); } .diagram text.c-tou { fill: var(--c-cyan); }
-.diagram text.c-backup { fill: var(--c-red); } .diagram text.c-charging { fill: var(--c-red); }
-.diagram text.c-discharging { fill: var(--c-green); } .diagram text.c-standby { fill: var(--c-orange); }
 .card .fw { font: 12px var(--mono); color: var(--muted); }
 .card .soc small { display: block; font: 12px var(--sans); color: var(--muted); text-align: right; }
 
@@ -328,3 +325,49 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
   border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; min-height: 36px; cursor: pointer; }
 .pick-gw:focus-visible, .pick-filter select:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
 .picker .pick-count { margin: 0; }
+
+/* Energy diagram after the owner's design (#205): private/ui-design boards A and B. */
+.diagram-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 16px; flex-wrap: wrap; margin: 4px 0 8px; }
+.dt-left { min-width: 0; flex: 1 1 320px; }
+.dt-site { margin: 0; font-size: 17px; font-weight: 700; color: var(--text); }
+.dt-place { margin: 2px 0 4px; color: var(--text-2); font-size: 14px; }
+.dt-tags { margin: 2px 0 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.dt-tag { padding: 2px 8px; border-radius: 4px; background: var(--line); color: var(--text-2); font-size: 13px; }
+.dt-tag.cfg { background: var(--ok-bg); color: var(--ok); font-weight: 600; }
+.dt-model { margin: 0; flex: 0 1 auto; max-width: 45%; color: var(--text-2); font-size: 14px; text-align: right; }
+.diagram .ic { fill: none; stroke: var(--ok); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.diagram .ic .fill { fill: var(--ok); stroke: none; } .diagram .ic .half { opacity: .55; }
+.diagram .ic .hole { fill: var(--panel); }
+.diagram .ic.dim { stroke: var(--muted); } .diagram .ic.dim .fill { fill: var(--muted); }
+.diagram .ic.bad { stroke: var(--bad); } .diagram .ic.forced { stroke: var(--warn); }
+.diagram .box { fill: var(--panel-2); stroke: var(--ok); stroke-width: 2; }
+.diagram .box.agate, .diagram .box.apbox, .diagram .box.tile.on { fill: var(--ok-bg); }
+.diagram .box.agate { stroke-width: 3; } .diagram .box.vpp { stroke: var(--warn); }
+.diagram .box.bad { stroke: var(--bad); }
+.diagram .box.card, .diagram .box.tile { stroke: var(--line); stroke-width: 1.5; }
+.diagram .box.tile.on { stroke: var(--ok); stroke-width: 2; }
+.diagram .band { fill: var(--ok-bg); fill-opacity: .5; stroke: var(--ok); stroke-opacity: .6; stroke-width: 1.5; stroke-dasharray: 6 4; }
+.diagram .band-l { font: 700 11px var(--sans); fill: var(--ok); text-anchor: start; letter-spacing: .04em; }
+.diagram .lbl { font-size: 15px; fill: var(--text-2); } .diagram .lbl.ok { fill: var(--ok); font-size: 17px; }
+.diagram .lbl.b { font-size: 13px; font-weight: 600; } .diagram .lbl.s { font-size: 13px; }
+.diagram .lbl.l { font-size: 18px; fill: var(--text); }
+.diagram .muted { fill: var(--muted); }
+.diagram .val { font: 700 22px var(--sans); fill: var(--text); }
+.diagram .val.m { font-size: 17px; } .diagram .val.s { font-size: 19px; }
+.diagram .sub { font-size: 13px; fill: var(--muted); } .diagram .sub.end { text-anchor: end; }
+.diagram .svc { font: 700 15px var(--mono); fill: var(--ok); } .diagram .svc.bad, .diagram .lbl.bad, .diagram .sub.bad { fill: var(--bad); }
+.diagram .side { font-size: 13px; fill: var(--text-2); text-anchor: start; }
+.diagram .pct { font: 800 17px var(--sans); fill: var(--ok); }
+.diagram .bn, .diagram .bs, .diagram .bp { text-anchor: start; }
+.diagram .bn { font-size: 16px; font-weight: 700; } .diagram .bs { font-size: 13px; fill: var(--muted); }
+.diagram .bp { font-size: 14px; font-weight: 700; fill: var(--muted); }
+.diagram .ring-bg, .diagram .ring { fill: none; stroke-width: 6; } .diagram .ring-bg { stroke: var(--line); }
+.diagram .ring { stroke: var(--ok); stroke-linecap: butt; }
+.diagram .tt { font-size: 12px; font-weight: 600; fill: var(--text-2); }
+.diagram .ts { font-size: 12px; fill: var(--muted); } .diagram .ts.ok { fill: var(--ok); }
+.diagram .dot { fill: var(--ok); stroke: var(--panel); stroke-width: 3; }
+.diagram .dot.fault { fill: var(--bad); } .diagram .dot.offline { fill: var(--warn); }
+.diagram .c-self { fill: var(--c-green); } .diagram .c-tou { fill: var(--c-cyan); }
+.diagram .c-backup { fill: var(--c-red); } .diagram .c-charging { fill: var(--c-red); }
+.diagram .c-discharging { fill: var(--c-green); } .diagram .c-standby { fill: var(--c-orange); }
+.diagram .c-orange { fill: var(--c-orange); } .diagram .c-red { fill: var(--c-red); }

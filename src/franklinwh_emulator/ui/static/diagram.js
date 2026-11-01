@@ -1,25 +1,54 @@
-/* Energy diagram for the active gateway, after the owner's design (docs/UI_PLAN.md).
+/* Energy diagram for the active gateway: the owner's design (private/ui-design, "Battery Flow
+ * Diagram", boards A and B; #205), drawn as one SVG in the design's 1240-wide coordinates.
  *
- * Built as an SVG string from the control API's state, so only modelled values appear:
- * grid, home, PV per input (aGate or aPbox), the battery (one combined unit), generator and
- * smart circuits. Dashed lines move in the direction power flows. Signs are the API's:
- * battery_w + = discharging, grid_w + = importing.
+ * Built from the control API's state, so only modelled values appear: grid (one line per
+ * phase), service meter, main panel and home, PV on the aGate's AC port or remote PV through
+ * an aPbox, one card per aPower, generator, smart circuits and their loads. Dashed lines move
+ * in the direction power flows. Signs are the API's: battery_w + = discharging, grid_w + =
+ * importing. Board C (aPower S DC) and board D (non-backup panel), V2L and prices are not
+ * modelled, so not drawn. The header (site, place, weather, models) is HTML above the drawing.
  */
 const NOT_MODELLED = [
-  'per-aPower SoC and power (one combined battery)', 'two PV inputs on the aGate',
-  'aPower S DC hybrid', 'V2L', 'non-backup panel', 'EV battery SoC',
-  'hot-water temperature', 'tariff prices', 'remote (cloud) VPP mode',
+  'per-aPower SoC and power (each card shows the combined battery: its SoC and an even share)',
+  'two PV inputs on the aGate', 'aPower S DC hybrid', 'V2L', 'non-backup panel',
+  'EV battery SoC', 'hot-water temperature', 'tariff prices', 'remote (cloud) VPP mode',
   'network connection (Ethernet, WiFi, 4G)',
 ];
 const SKY_LABELS = { clear: 'clear sky', broken: 'broken cloud', overcast: 'overcast', storm: 'storm' };
 function skyLabel(sky) { return SKY_LABELS[sky] || sky; }
 
-// Small inline icons (decorative; the text beside them says the same).
+// Small inline icons for the weather line (decorative; the text beside them says the same).
 const SUN_ICON = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"></circle>' +
   [0, 45, 90, 135, 180, 225, 270, 315].map(a => `<line x1="12" y1="2.5" x2="12" y2="5" transform="rotate(${a} 12 12)"></line>`).join('') + '</svg>';
 const MOON_ICON = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 3.5a8.5 8.5 0 1 0 5 15 7 7 0 0 1-5-15z"></path></svg>';
+
+// The design's icons (48×48 strokes), as drawn there.
+const ICONS = {
+  grid: '<path d="M24 4 L16 44 M24 4 L32 44 M11 12 H37 M9 20 H39 M18.5 32 H29.5 M17 20 L30 32 M31 20 L18 32 M14 12 L24 20 L34 12 M15 44 H33"></path>',
+  meter: '<rect x="8" y="4" width="32" height="40" rx="3"></rect><circle cx="24" cy="17" r="8"></circle><path d="M24 17 L28 13"></path><rect x="14" y="31" width="20" height="7" rx="1.5"></rect><path d="M19 31 V38 M24 31 V38 M29 31 V38"></path>',
+  panel: '<rect x="9" y="4" width="30" height="40" rx="3"></rect><path d="M24 8 V40 M14 12 H20 M28 12 H34 M14 19 H20 M28 19 H34 M14 26 H20 M28 26 H34 M14 33 H20 M28 33 H34"></path>',
+  home: '<path d="M6 22 L24 6 L42 22 M10 19 V42 H38 V19 M20 42 V30 H28 V42"></path>',
+  solar: '<path d="M8 10 H40 L44 32 H4 Z M6 21 H42 M18 10 L16 32 M30 10 L32 32 M24 32 V40 M14 40 H34"></path>',
+  agate: '<rect x="11" y="8" width="26" height="36" rx="4"></rect><path d="M19 4.5 H29"></path><rect class="fill" x="15.5" y="26" width="17" height="14" rx="1.5"></rect><rect class="fill half" x="15.5" y="20" width="17" height="4" rx="1.5"></rect><path d="M25.5 11 L21 17 H27 L22.5 23" stroke-width="2"></path>',
+  generator: '<rect x="5" y="10" width="38" height="26" rx="3"></rect><path d="M26 14 L19 24 H25 L22 32 L29 22 H23 Z"></path><circle cx="13" cy="40" r="3"></circle><circle cx="35" cy="40" r="3"></circle>',
+  switchOn: '<rect x="5" y="15" width="38" height="18" rx="9"></rect><circle class="fill" cx="34" cy="24" r="5.5"></circle>',
+  switchOff: '<rect x="5" y="15" width="38" height="18" rx="9"></rect><circle cx="14" cy="24" r="5"></circle>',
+  hvac: '<rect x="4" y="10" width="40" height="28" rx="3"></rect><circle cx="17" cy="24" r="8"></circle><path d="M17 16 V32 M9 24 H25 M11.5 18.5 L22.5 29.5 M22.5 18.5 L11.5 29.5"></path><path d="M31 17 H39 M31 24 H39 M31 31 H39"></path>',
+  hotWater: '<rect x="13" y="5" width="22" height="36" rx="8"></rect><path d="M19 24 C21 21 21 18.5 19 15.5 C17 12.5 17 10.5 19 8.5 M24 24 C26 21 26 18.5 24 15.5 C22 12.5 22 10.5 24 8.5 M29 24 C31 21 31 18.5 29 15.5 C27 12.5 27 10.5 29 8.5" stroke-width="1.9"></path><path d="M17 31 H31 M20 41 V45 M28 41 V45"></path>',
+  ev: '<path d="M4 32 V26 L9 17 H33 L40 24 L44 26 V32 Z M8 24 H41"></path><circle class="hole" cx="13" cy="33" r="4"></circle><circle class="hole" cx="35" cy="33" r="4"></circle><path d="M25 2 L20 9 H26 L22 15" stroke-width="2"></path>',
+};
+// Appliance → icon for the load under a smart circuit (the design's HVAC, hot water and EV).
+const LOAD_ICONS = { aircon: 'hvac', hvac: 'hvac', hot_water: 'hotWater', ev: 'ev' };
+// The appliance on the circuit, else the circuit's name ("Water Heater", "EV Charger"), else a panel.
+function loadIcon(appliance, name) {
+  if (LOAD_ICONS[appliance]) return LOAD_ICONS[appliance];
+  const n = (name || '').toLowerCase();
+  return /water/.test(n) ? 'hotWater' : /\bev\b|car|vehicle/.test(n) ? 'ev'
+       : /air|hvac|heat pump|cool/.test(n) ? 'hvac' : 'panel';
+}
+
 const IDLE_W = 10;
-const DASH_PERIOD_MS = 1000;   // one dash cycle; matches the CSS animation
+const DASH_PERIOD_MS = 800;    // one dash cycle; matches the CSS animation
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -28,29 +57,24 @@ function kwText(w) { return (Math.abs(w) / 1000).toFixed(2) + ' kW'; }   // dire
 
 // A dashed connector through the given points; dir +1 = flows from first point to last.
 // The diagram is redrawn on every poll; a negative delay keeps the dashes moving smoothly.
-function link(points, w, dir) {
+function link(points, w, dir, extra) {
   const d = 'M ' + points.map(p => p[0] + ' ' + p[1]).join(' L ');
   const cls = Math.abs(w) < IDLE_W ? 'idle' : (dir * Math.sign(w) > 0 ? 'fwd' : 'rev');
   const delay = -((performance.now() % DASH_PERIOD_MS) / 1000).toFixed(3);
-  return `<path class="flow ${cls}" d="${d}" style="animation-delay:${delay}s"></path>`;
+  return `<path class="flow ${cls} ${extra || ''}" d="${d}" style="animation-delay:${delay}s"></path>`;
+}
+// The same connector once per phase, as the design: 1 phase the middle line, 2 the sides, 3 all.
+function phaseLinks(points, offset, legs, w, dir) {
+  const offs = legs === 1 ? [0] : legs === 2 ? [-10, 10] : [-10, 0, 10];
+  return offs.map(o => link(points.map(([x, y]) => offset === 'y' ? [x, y + o] : [x + o, y]), w, dir)).join('');
 }
 
-function node(x, y, w, h, title, value, sub, cls, lines, valueCls) {
-  // ``lines``: extra small lines under the value (the aGate's status); each a string or
-  // [text, class]. ``valueCls``: a colour class for the value.
-  const extra = (lines || []).map((l, i) => {
-    const [t, c] = Array.isArray(l) ? l : [l, ''];
-    return `<text class="s ${c}" x="${w / 2}" y="${74 + i * 18}">${esc(t)}</text>`;
-  }).join('');
-  const vy = lines && lines.length ? 48 : h / 2 + 10;
-  return `<g class="node ${cls || ''}" transform="translate(${x - w / 2} ${y - h / 2})">
-    <rect width="${w}" height="${h}" rx="12"></rect>
-    <text class="t" x="${w / 2}" y="22">${esc(title)}</text>
-    ${value ? `<text class="v ${valueCls || ''}" x="${w / 2}" y="${vy}">${esc(value)}</text>` : ''}
-    ${extra}
-    ${sub ? `<text class="s" x="${w / 2}" y="${h - 12}">${esc(sub)}</text>` : ''}
-  </g>`;
+function icon(name, x, y, size, cls) {
+  return `<svg class="ic ${cls || ''}" x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 48 48" aria-hidden="true">${ICONS[name]}</svg>`;
 }
+function text(x, y, s, cls) { return `<text class="${cls}" x="${x}" y="${y}">${esc(s)}</text>`; }
+// A rounded box with an icon in the middle (meter, panel, aGate) or icon and two lines (tiles).
+function box(x, y, w, h, cls) { return `<rect class="box ${cls || ''}" x="${x}" y="${y}" width="${w}" height="${h}" rx="${w > 100 ? 18 : 14}"></rect>`; }
 
 // 'charging' | 'discharging' | 'standby' (off-grid versions included), for the colour classes.
 function statusKey(g) {
@@ -70,89 +94,32 @@ function meterText(g) {
   return { value: Math.round(s.main_breaker_a) + ' A', sub: legs, lines, cls: s.open ? 'bad' : '' };
 }
 
-function renderDiagram(g) {
-  if (!g) return '';
-  const out = [];
-  const links = [];
-  const ov = g.overrides || {};
-  const forced = k => ov[k] != null;   // a value set by pv / load / ambient, not the model
-  const agate = [500, 300];
-
-  // Grid → service meter → aGate (+ = import, towards the aGate).
-  const legs = g.legs.length;
-  links.push(link([[150, 300], [250, 300]], g.grid_w, +1));
-  links.push(link([[330, 300], [430, 300]], g.grid_w, +1));
-  out.push(node(90, 300, 120, 86, 'Grid', kwText(g.grid_w),
-    g.grid_connected ? (g.grid_w > IDLE_W ? 'importing' : g.grid_w < -IDLE_W ? 'exporting' : 'connected')
-                     : 'down' + (g.trip_reason ? ' · ' + g.trip_reason : ''),
-    g.grid_connected ? '' : 'bad'));
-  const m = meterText(g);
-  out.push(node(290, 300, 96, 118, 'Meter', m.value, m.sub, m.cls, m.lines));
-
-  // aGate → main panel → home.
-  links.push(link([[500, 240], [500, 160]], g.load_w, +1));
-  links.push(link([[440, 110], [360, 110]], g.load_w, +1));
-  out.push(node(500, 110, 120, 80, 'Main panel', '', 'backed up'));
-  out.push(node(290, 110, 130, 86, 'Home', kwText(g.load_w), forced('load_w') ? 'load · forced' : 'load',
-    forced('load_w') ? 'forced' : ''));
-
-  // PV: the aGate's own input, and remote inputs through an aPbox.
+// Header (#205): the site's name, where it is (and its local time), and its hardware.
+function siteName(g) { return (g.location && g.location.name) || g.id; }
+function placeText(g) {
+  const l = g.location || {};
+  const place = [l.city, l.state, l.postcode, l.country].filter(Boolean).join(', ');
+  return [place, typeof localTimeText === 'function' ? localTimeText(g) : ''].filter(Boolean).join(' · ');
+}
+function modelSummary(g) {
+  const m = g.model;
+  if (!m) return '';
+  const p = m.apower;
+  const kwp = g.weather && g.weather.kwp;
+  return [m.agate.name, p.units + '× ' + p.name, +(p.kwh * p.units).toFixed(1) + ' kWh',
+          kwp ? 'PV ' + kwp + ' kWp' : null].filter(Boolean).join(' · ');
+}
+// The design's configuration label: how solar reaches the aGate.
+function configLabel(g) {
   const inputs = Object.keys(g.pv_inputs || {}).filter(k => g.pv_inputs[k] > 0);
   const remote = inputs.filter(k => k !== 'proximal');
-  if (inputs.includes('proximal')) {
-    const w = g.pv_by_input.proximal || 0;
-    links.push(link([[700, 150], [700, 270], [570, 270]], w, +1));
-    out.push(node(700, 105, 130, 86, 'PV · aGate', kwText(w),
-      (g.pv_relays.proximal ? 'relay closed' : 'relay open') + (forced('solar_w') ? ' · forced' : ''),
-      g.pv_relays.proximal ? (forced('solar_w') ? 'forced' : '') : 'dim'));
-  }
-  if (remote.length) {
-    const total = remote.reduce((s, k) => s + (g.pv_by_input[k] || 0), 0);
-    remote.forEach((k, i) => {
-      const x = 830 + i * 140;
-      const w = g.pv_by_input[k] || 0;
-      links.push(link([[x, 150], [x, 175], [880, 175], [880, 195]], w, +1));
-      out.push(node(x, 105, 120, 86, 'Remote PV ' + k.replace('remote', ''), kwText(w),
-        (g.pv_relays[k] ? 'relay closed' : 'relay open') + (forced('solar_w') ? ' · forced' : ''),
-        g.pv_relays[k] ? (forced('solar_w') ? 'forced' : '') : 'dim'));
-    });
-    links.push(link([[880, 235], [880, 255], [570, 255]], total, +1));
-    out.push(node(880, 215, 90, 40, 'aPbox', '', ''));
-  }
+  return [inputs.includes('proximal') ? 'Solar → aGate AC port' : null,
+          remote.length ? 'Remote PV ×' + remote.length + ' → aPbox' : null].filter(Boolean).join(' · ') || 'No solar';
+}
 
-  // Battery: one combined unit (per-aPower values are not modelled). + = discharging.
-  links.push(link([[570, 330], [770, 330]], g.battery_w, -1));
-  const r = g.apower_rating;
-  out.push(node(860, 345, 180, 100, 'aPower ×' + g.apower_units,
-    Math.round(g.soc) + '% · ' + kwText(g.battery_w),
-    (r.wh / 1000).toFixed(1) + ' kWh · ' + (r.w / 1000) + ' kW each' +
-    (Math.abs(g.battery_w) < IDLE_W ? '' : g.battery_w > 0 ? ' · out' : ' · in')));
-
-  // aGate in the middle: mode, then its status. Battery + = discharging (out of the battery).
-  const force = g.force;   // an M704 setpoint (FORCE); the app calls it VPP Mode
-  out.push(node(agate[0], agate[1], 180, 156, 'aGate', g.native_mode_name,
-    force ? 'FORCE · ' + force.direction : '', force ? 'agate vpp' : 'agate', [
-      [g.run_status_name + ' · ' + kwText(g.battery_w), 'c-' + statusKey(g)],
-      'SoC ' + Math.round(g.soc) + '% · ' + (g.grid_connected ? 'reserve ' + Math.round(g.active_reserve)
-                                                             : 'off-grid floor ' + Math.round(g.offgrid_floor_soc)) + '%',
-      'inverter ' + g.inverter_state_name.toLowerCase() + ' · cabinet ' + temp(g.cabinet_c),
-    ], 'c-' + ({ 1: 'backup', 2: 'self', 3: 'tou' })[g.native_mode]));
-
-  // Bottom row: generator and smart circuits.
-  const gen = g.generator || {};
-  links.push(link([[230, 470], [230, 400], [450, 400], [450, 360]], g.generator_w || 0, +1));
-  out.push(node(230, 510, 130, 80, 'Generator', gen.installed ? kwText(g.generator_w) : '',
-    gen.installed ? gen.state_name : 'not fitted', gen.installed ? '' : 'dim'));
-  [1, 2, 3].forEach((n, i) => {
-    const c = (g.circuits || {})[n];
-    if (!c) return;
-    const x = 400 + i * 165;
-    links.push(link([[540, 360], [540, 430], [x, 430], [x, 470]], c.power_w, +1));
-    const names = Object.entries(g.appliances || {}).filter(([, a]) => a.circuit === n).map(([k]) => k);
-    out.push(node(x, 510, 155, 80, 'SW' + n + ' · ' + c.name, kwText(c.power_w),
-      (c.on ? 'on' : 'off') + (names.length ? ' · ' + names.join(', ') : ''), c.on ? '' : 'dim'));
-  });
-
+function weatherLine(g) {
+  const ov = g.overrides || {};
+  const forced = k => ov[k] != null;
   const w = g.weather;
   const sun = g.sun;
   // PV cell temperature and its effect on output (#109), e.g. "PV cells 58 °C (−5 %)" (or °F).
@@ -161,7 +128,7 @@ function renderDiagram(g) {
     const pct = Math.round((t.factor - 1) * 100);
     return 'PV cells ' + temp(t.cell_c, 0) + ' (' + (pct > 0 ? '+' : pct < 0 ? '−' : '±') + Math.abs(pct) + ' %)';
   };
-  const icon = sun ? (sun.up ? SUN_ICON : MOON_ICON) : '';
+  const ic = sun ? (sun.up ? SUN_ICON : MOON_ICON) : '';
   const head = [
     sun ? (sun.up ? 'Day' : 'Night') + ' · sun ' + sun.elevation_deg + '°' : 'No location, so no sun position',
     w ? skyLabel(w.sky || w.model) : 'bell curve (no weather model)',
@@ -173,11 +140,154 @@ function renderDiagram(g) {
       : 'solar forced to ' + kwText(ov.solar_w) + ', not capped by the sun') : null,
     'cabinet ' + temp(g.cabinet_c) + ' (' + (g.install
       ? g.install.label + ', surroundings ' + temp(g.install.surroundings_c)
-      : 'modelled') + ')'].filter(Boolean).join(' · ');
+      : 'modelled') + ')',
+    'inverter ' + (g.inverter_state_name || '').toLowerCase()].filter(Boolean).join(' · ');
+  return `<p class="diagram-head">${ic}<span>${esc(head)}</span></p>`;
+}
+
+function renderDiagram(g) {
+  if (!g) return '';
+  const out = [];
+  const links = [];
+  const ov = g.overrides || {};
+  const forced = k => ov[k] != null;   // a value set by pv / load / ambient, not the model
+  const legs = Math.max(1, Math.min(3, g.legs.length));
+
+  // Grid → service meter → aGate (+ = import, towards the aGate), one line per phase.
+  links.push(phaseLinks([[142, 470], [245, 470]], 'y', legs, g.grid_w, +1));
+  links.push(phaseLinks([[355, 470], [520, 470]], 'y', legs, g.grid_w, +1));
+  const gridCls = g.grid_connected ? '' : 'bad';
+  out.push(icon('grid', 80, 440, 60, gridCls));
+  out.push(text(110, 522, 'Grid', 'lbl ok ' + gridCls));
+  out.push(text(110, 550, kwText(g.grid_w), 'val'));
+  out.push(text(110, 570, g.grid_connected ? (g.grid_w > IDLE_W ? 'importing' : g.grid_w < -IDLE_W ? 'exporting' : 'connected')
+                                         : 'down' + (g.trip_reason ? ' · ' + g.trip_reason : ''), 'sub ' + gridCls));
+  const m = meterText(g);
+  out.push(text(300, 376, 'Service Meter', 'lbl'));
+  out.push(text(300, 398, (m.value ? m.value + ' · ' : 'no rating set · ') + m.sub, 'svc ' + m.cls));
+  out.push(box(245, 415, 110, 110, m.cls), icon('meter', 268, 438, 64, m.cls));
+  (m.value ? m.lines : []).forEach((l, i) => {
+    const [t, c] = Array.isArray(l) ? l : [l, ''];
+    out.push(text(300, 545 + i * 18, t, 'sub ' + c));
+  });
+
+  // aGate backup port → main panel → home loads.
+  links.push(phaseLinks([[600, 380], [600, 255]], 'x', legs, g.load_w, +1));
+  links.push(phaseLinks([[545, 200], [432, 200]], 'y', legs, g.load_w, +1));
+  out.push(`<text class="lbl" x="600" y="131">Main Panel <tspan class="muted">· backed up</tspan></text>`);
+  out.push(box(545, 145, 110, 110), icon('panel', 568, 168, 64));
+  out.push(`<text class="side" x="620" y="321">${esc(kwText(g.load_w))}</text>`);
+  out.push(icon('home', 336, 156, 88, forced('load_w') ? 'forced' : ''));
+  out.push(text(380, 266, 'Home Loads' + (forced('load_w') ? ' · forced' : ''), 'lbl b'));
+  out.push(text(380, 292, kwText(g.load_w), 'val'));
+
+  // PV: the aGate's AC port (board A), and remote inputs through an aPbox (board B).
+  const inputs = Object.keys(g.pv_inputs || {}).filter(k => g.pv_inputs[k] > 0);
+  const remote = inputs.filter(k => k !== 'proximal').slice(0, 2);
+  const pvTile = (x, label, w, closed) => {
+    out.push(icon('solar', x, 158, 60, closed ? (forced('solar_w') ? 'forced' : '') : 'dim'));
+    out.push(text(x + 30, 238, label, 'lbl s'));
+    out.push(text(x + 30, 262, kwText(w), 'val m'));
+    out.push(text(x + 30, 280, (closed ? 'relay closed' : 'relay open') + (forced('solar_w') ? ' · forced' : ''), 'sub'));
+  };
+  if (inputs.includes('proximal')) {
+    const w = g.pv_by_input.proximal || 0;
+    if (remote.length) {                          // both: the aGate's port takes the right column
+      links.push(link([[1008, 290], [1008, 392], [680, 392]], w, +1));
+      pvTile(978, 'PV · AC port', w, g.pv_relays.proximal);
+    } else {
+      links.push(link([[760, 290], [760, 400], [680, 400]], w, +1));
+      pvTile(730, 'PV · AC port', w, g.pv_relays.proximal);
+    }
+  }
+  if (remote.length) {
+    const total = remote.reduce((s, k) => s + (g.pv_by_input[k] || 0), 0);
+    remote.forEach((k, i) => {
+      const x = 740 + i * 120;
+      const w = g.pv_by_input[k] || 0;
+      links.push(link([[x, 290], [x, 326], [i ? 840 : 760, 326]], w, +1));
+      pvTile(x - 30, 'Remote PV ' + k.replace('remote', ''), w, g.pv_relays[k]);
+    });
+    links.push(link([[800, 352], [800, 410], [680, 410]], total, +1));
+    out.push(box(760, 300, 80, 52, 'apbox'), text(800, 331, 'aPbox', 'lbl b'));
+  }
+
+  // aPower cards, one per unit (per-aPower values are not modelled: each shows the combined
+  // battery's SoC and an even share of its power). + = discharging (out of the battery).
+  const units = Math.max(1, g.apower_units);
+  const shown = Math.min(units, 4);
+  const each = g.battery_w / units;
+  const p = g.model ? g.model.apower : null;
+  const name = p ? p.name : 'aPower';
+  const spec = p ? p.kwh + ' kWh · ' + p.kw + ' kW inverter'
+                 : (g.apower_rating.wh / 1000).toFixed(1) + ' kWh · ' + (g.apower_rating.w / 1000) + ' kW inverter';
+  const soc = Math.max(0, Math.min(100, g.soc));
+  const C = 2 * Math.PI * 33;
+  links.push(link([[680, 470], [880, 470]], g.battery_w, -1));
+  for (let i = 0; i < shown; i++) {
+    const top = 414 + i * 140, cy = top + 56;
+    if (i) links.push(link([[840, cy - 140], [840, cy], [880, cy]], each, -1));
+    const dir = Math.abs(each) < IDLE_W ? '' : each > 0 ? ' ↓' : ' ↑';
+    out.push(`<g class="bat">${box(880, top, 268, 112, 'card')}
+      <circle class="ring-bg" cx="${934}" cy="${cy}" r="33"></circle>
+      <circle class="ring" cx="${934}" cy="${cy}" r="33" stroke-dasharray="${(soc / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 934 ${cy})"></circle>
+      ${text(934, cy + 6, Math.round(soc) + '%', 'pct')}
+      <text class="bn" x="986" y="${cy - 16}">${esc(name + ' ' + (i + 1))}</text>
+      <text class="bs" x="986" y="${cy + 5}">${esc(spec)}</text>
+      <text class="bp c-${statusKey(g)}" x="986" y="${cy + 27}">${esc(kwText(each) + dir)}</text></g>`);
+  }
+  if (units > shown) out.push(text(1014, 414 + shown * 140 + 20, '+ ' + (units - shown) + ' more aPower', 'sub'));
+
+  // aGate in the middle; its status dot follows the card's health (groups.js cardHealth).
+  const force = g.force;   // an M704 setpoint (FORCE); the app calls it VPP Mode
+  const health = typeof cardHealth === 'function' ? cardHealth(g).state : '';
+  out.push(box(520, 380, 160, 180, 'agate' + (force ? ' vpp' : '')), icon('agate', 556, 426, 88));
+  out.push(`<circle class="dot ${health}" cx="679" cy="379" r="9"></circle>`);
+  out.push(text(600, 586, 'FranklinWH aGate', 'lbl l'));
+  out.push(`<text class="sub" x="600" y="608"><tspan class="c-${({ 1: 'backup', 2: 'self', 3: 'tou' })[g.native_mode]}">${esc(g.native_mode_name)}</tspan>` +
+    ` · <tspan class="c-${statusKey(g)}">${esc(g.run_status_name)}</tspan>` +
+    (force ? ` · <tspan class="c-orange">FORCE ${esc(force.direction)}</tspan>` : '') + '</text>');
+  out.push(text(470, 600, g.grid_connected ? 'reserve ' + Math.round(g.active_reserve) + '%'
+                                           : 'off-grid floor ' + Math.round(g.offgrid_floor_soc) + '%', 'sub end'));
+
+  // I/O bus: generator, smart circuits 1–3, and the loads on them.
+  links.push(link([[600, 616], [600, 660]], 0, +1));
+  links.push(link([[402, 660], [784, 660]], 0, +1));
+  const gen = g.generator || {};
+  links.push(link([[402, 690], [402, 660]], g.generator_w || 0, +1));
+  out.push(box(358, 690, 88, 88, gen.installed ? 'tile' : 'tile dim'), icon('generator', 384, 700, 36, gen.installed ? '' : 'dim'));
+  out.push(text(402, 754, 'Generator', 'tt'), text(402, 770, gen.installed ? gen.state_name + ' · ' + kwText(g.generator_w) : 'not fitted', 'ts'));
+  const circuits = g.circuits || {};
+  const xs = { 1: 544, 2: 656, 3: 784 };
+  if (circuits[1] || circuits[2]) {
+    out.push(`<rect class="band" x="488" y="674" width="224" height="116" rx="18"></rect>`);
+    out.push(`<text class="band-l" x="510" y="678">SC 1 + 2</text>`);
+  }
+  [1, 2, 3].forEach(n => {
+    const c = circuits[n];
+    if (!c) return;
+    const x = xs[n];
+    if (n !== 1) links.push(link([[x, 660], [x, n === 2 ? 674 : 690]], 0, +1));
+    else links.push(link([[x, 660], [x, 674]], 0, +1));
+    out.push(box(x - 44, 690, 88, 88, c.on ? 'tile on' : 'tile'), icon(c.on ? 'switchOn' : 'switchOff', x - 19, 698, 38, c.on ? '' : 'dim'));
+    out.push(text(x, 754, 'SW ' + n, 'tt'), text(x, 770, c.on ? 'On' : 'Off', 'ts' + (c.on ? ' ok' : '')));
+    const app = Object.entries(g.appliances || {}).find(([, a]) => a.circuit === n);
+    links.push(link([[x, 778], [x, 846]], c.power_w, +1));
+    out.push(icon(loadIcon(app && app[0], c.name), x - 27, 848, 54, c.on ? '' : 'dim'));
+    out.push(text(x, 922, c.name, 'lbl'), text(x, 946, kwText(c.power_w), 'val s'));
+  });
+
   const label = `Energy flow for ${g.id}: grid ${kwText(g.grid_w)}, home ${kwText(g.load_w)}, ` +
     `solar ${kwText(g.solar_w)}, battery ${Math.round(g.soc)}% ${kwText(g.battery_w)}`;
-  return `<p class="diagram-head">${icon}<span>${esc(head)}</span></p>
-    <div class="diagram-wrap"><svg class="diagram" viewBox="0 50 1060 520" role="img" aria-label="${esc(label)}">
+  const tags = [g.location && g.location.state, configLabel(g)].filter(Boolean)
+    .map((t, i) => `<span class="dt-tag${i === 0 && g.location.state ? '' : ' cfg'}">${esc(t)}</span>`).join('');
+  return `<div class="diagram-top"><div class="dt-left">
+      <p class="dt-site">${esc(siteName(g))}</p>
+      ${placeText(g) ? `<p class="dt-place">${esc(placeText(g))}</p>` : ''}
+      ${weatherLine(g)}
+      <p class="dt-tags">${tags}</p></div>
+      ${modelSummary(g) ? `<p class="dt-model">${esc(modelSummary(g))}</p>` : ''}</div>
+    <div class="diagram-wrap"><svg class="diagram" viewBox="20 100 1200 880" role="img" aria-label="${esc(label)}">
       ${links.join('')}${out.join('')}
     </svg></div>
     <p class="diagram-note">Not modelled, so not shown: ${esc(NOT_MODELLED.join(', '))}.</p>`;

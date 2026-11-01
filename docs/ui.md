@@ -42,8 +42,20 @@ gateway**; the actions column works on it.
 
 ![The active gateway's energy diagram and tables](assets/ui/energy-diagram.png)
 
-Lines move in the direction power flows; idle lines are grey. Below it: grid legs, smart
-circuits, appliances, the generator and the TOU schedule.
+The diagram follows the owner's design (boards A and B of the "Battery Flow Diagram" canvas):
+the grid (one line per phase) through the service meter to the aGate; the main panel and home
+loads above; PV on the aGate's AC port, or remote PV through an aPbox, top right; one card per
+aPower on the right; the generator, smart circuits 1–3 and the loads on them below. Each element
+has the design's icon. Lines move in the direction power flows; idle lines are grey. The aGate's
+dot is green, red when faulted and orange when offline, as the card border.
+
+Above it: the site's name in bold (`location.name`, else the gateway id), its place and local
+time, the weather line, and tags for the state and how solar is connected; top right, the
+hardware: aGate model, aPower count and model, total kWh and PV kWp.
+
+Each aPower card shows the combined battery's SoC and an even share of its power: per-aPower
+values are not modelled. The design's aPower S DC board, non-backup panel, V2L and prices are not
+drawn. Below the diagram: grid legs, smart circuits, appliances, the generator and the TOU schedule.
 
 ## Temperature units
 
