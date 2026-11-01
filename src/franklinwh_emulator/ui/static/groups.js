@@ -122,3 +122,21 @@ function logLine(e) {
   return (e.site_time || e.at).slice(11, 19) + ' · ' + e.gateway + ' · ' + e.action + ' ' + JSON.stringify(e.body) +
          (e.source !== 'api' ? ' · ' + e.source : '') + (e.ok ? '' : ' · ' + e.error);
 }
+
+// -- solar: forced, capped by the sun, curtailed (#176) ---------------------------------------------
+// The sun caps a forced value at solar_available_w; anything below that is curtailment, with
+// its cause (off-grid: nowhere to put it, or the full-battery 62.2 Hz cut-off; on-grid: an
+// export limit or grid support). The two used to be one "capped by the sun" tag.
+function _kw(w) { return (Math.abs(w) / 1000).toFixed(2) + ' kW'; }
+function forcedSolarText(g) {
+  const forced = g.overrides.solar_w;
+  const capped = g.cap_forced_solar && g.solar_available_w < forced - 1;
+  return 'solar forced ' + _kw(forced) + (capped ? ', capped at ' + _kw(g.solar_available_w) + ' by the sun' : '');
+}
+function curtailText(g) {
+  if (!(g.solar_clipped_w > 1)) return '';
+  const why = !g.grid_connected
+    ? (g.pv_cutoff ? 'off-grid, battery full: 62.2 Hz cut-off' : 'off-grid, nowhere to put it')
+    : 'export limit or grid support';
+  return 'PV curtailed ' + _kw(g.solar_clipped_w) + ': ' + why;
+}

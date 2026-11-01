@@ -1,0 +1,18 @@
+# #176 Curtailment is labelled with its cause, not blamed on the sun — 2026-11-01
+
+Branch curtail-label-176, base main 61c095a.
+
+## New tests
+2 passed, 35 deselected in 0.04s
+
+## Break check
+with src stashed, test_curtailment_is_not_blamed_on_the_sun and test_state_has_curtailment_fields fail
+
+## Full suite
+636 passed in 34.82s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

@@ -433,10 +433,9 @@ function running() {
     overrideList(g) {
       const o = g.overrides || {};
       const out = [];
-      if (o.solar_w != null) {
-        const capped = g.cap_forced_solar && g.solar_w < o.solar_w - 1;
-        out.push('solar forced ' + this.kw(o.solar_w) + (capped ? ', capped at ' + this.kw(g.solar_w) + ' by the sun' : ''));
-      }
+      if (o.solar_w != null) out.push(forcedSolarText(g));
+      const cut = curtailText(g);
+      if (cut) out.push(cut);
       if (o.load_w != null) out.push('load forced ' + this.kw(o.load_w));
       if (o.ambient_c != null) out.push('ambient forced ' + temp(o.ambient_c));
       return out;
