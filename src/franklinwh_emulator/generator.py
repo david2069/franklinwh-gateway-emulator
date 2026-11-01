@@ -93,6 +93,7 @@ class Generator:
                 raise ValueError(f"generator: unknown setting {k!r}")
             block[key] = v
         self.block = block
+        self.max_w: float | None = None          # the Generator Module's limit (Site sets it)
         self.state = STATE_OFF
         self.fault: str | None = None
         self.manual_on = False
@@ -111,6 +112,12 @@ class Generator:
     @property
     def rated_w(self) -> float:
         return float(self.block.get("genRatedPower") or 0)
+
+    def check_rating(self, rated_w: float) -> None:
+        """Refuse a rating above the Generator Module's continuous limit."""
+        if self.max_w is not None and rated_w > self.max_w:
+            raise ValueError(f"generator: rated_w {rated_w:g} W is above the Generator Module's "
+                             f"{self.max_w:g} W continuous limit")
 
     @property
     def enabled(self) -> bool:
@@ -262,10 +269,10 @@ class Generator:
         """Power the generator delivers when its relay is closed: the house's deficit
         (``net_load_w`` = load − solar, may be negative), plus battery charging up to the
         optimal operating point, within the battery's remaining charge headroom; at most
-        rated."""
+        rated, and at most the Generator Module's limit."""
         if not self.relay_closed:
             return 0.0
-        rated = self.rated_w
+        rated = self.rated_w if self.max_w is None else min(self.rated_w, self.max_w)
         deficit = max(0.0, net_load_w)
         headroom = max(0.0, max_charge_w - max(0.0, -net_load_w))   # after any PV surplus
         target = max(deficit, rated * float(self.block.get("genOptiPPoint") or 70) / 100.0)

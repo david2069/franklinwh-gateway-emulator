@@ -1,0 +1,18 @@
+# #189 AU Generator Module is limited to 80 A — 2026-11-01
+
+Branch au-gen-80a, base main 4d56208.
+
+## New tests
+16 passed in 0.04s
+
+## Break check
+the new test fails with the src change stashed (ValueError not raised).
+
+## Full suite
+641 passed in 34.47s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

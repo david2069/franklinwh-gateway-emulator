@@ -332,8 +332,17 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
                 for k, v in dict(body["set"]).items():
                     if k not in gen.block:
                         raise ApiError(400, f"generator: unknown 1901 field {k!r}")
+                    if k == "genRatedPower":
+                        try:
+                            gen.check_rating(int(v))
+                        except ValueError as e:
+                            raise ApiError(400, str(e)) from None
                     gen.block[k] = v
             if "rated_w" in body:
+                try:
+                    gen.check_rating(int(body["rated_w"]))
+                except ValueError as e:
+                    raise ApiError(400, str(e)) from None
                 gen.block["genRatedPower"] = int(body["rated_w"])
             if "installed" in body:
                 if body["installed"]:

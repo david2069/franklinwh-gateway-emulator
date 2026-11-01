@@ -48,6 +48,9 @@ class AGateModel:
     # reference aGate's 1412 meter block (SW1, SW2 only; fwh-local capture, V12R02B30D06). NA: 3,
     # unchanged (no evidence either way).
     smart_circuits: int = 3
+    # The Generator Module's maximum continuous current, where documented (#189). AU/NZ: 80 A,
+    # FranklinWH Generator Module Datasheet (AU & NZ), 2026-06-24. None = no documented limit.
+    gen_module_max_a: int | None = None
 
 
 @dataclass(frozen=True)
@@ -80,7 +83,8 @@ AGATES: dict[int, AGateModel] = {m.code: m for m in (
     AGateModel(101, ("AGT-R1V2-US",), "aGate X-20", "aGate X 1.3", NA, 60, 200, 2, "inferred",
                "discontinued; supports aPower S"),
     AGateModel(102, ("AGT-R1V1-AU",), "aGate X-01-AU", "aGate X", AUNZ, 50, 100, 1, "measured",
-               "the reference aGate (realSysHdVersion FHP1.2)", smart_circuits=2),
+               "the reference aGate (realSysHdVersion FHP1.2)", smart_circuits=2,
+               gen_module_max_a=80),
     AGateModel(103, ("AGT-R1V3-US",), "aGate X 20 (US)", "aGate X 1.3.1", NA, 60, 200, 2, "inferred"),
     AGateModel(104, ("AGT-R1V3-US",), "aGate X 20 (US)", "aGate X 1.3.1", NA, 60, 200, 2, "inferred",
                "a hardware revision of 103"),
