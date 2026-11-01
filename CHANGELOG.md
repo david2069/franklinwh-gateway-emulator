@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Component age and warranty (`components:`): aPower SoH falls to 70 % over FranklinWH's warranty term (12 y / 43 MWh aPower X, 12 y / 60 MWh X-02-AU, 15 y / 60 MWh aPower 2 and S) by age or throughput; served in 713 SoH, 15036 and DC 1705 batSoh, and the usable capacity follows it (against the 94.8 % calibration). PV panels lose 0.5 %/year. The state shows each component's warranty. Behaviour change: SoH is no longer a fixed 95.6/94.8.
 - Force events (side panel, `POST /events`): ten presets (offline, slow, faulty responses, DC offline/slow, aPower failure, grid outage, brown-out, frequency drop/spike) on all or chosen gateways, with optional auto-clear; logged per gateway as `event:<name>`.
 - Session snapshots (UI "with state", `POST /session/save {snapshot: true}`): each site's clock, SoC, counters, today's totals, 1303 history, circuit/generator energy, EV sessions, sky and cabinet temperature, versioned; restore puts them back after the actions (manual/scaled clocks move to the saved time).
 - Save as scenario (UI button, `POST /session/scenario`): writes the run as `scenarios/<name>.yaml` with `start`, the fleet and the logged actions as timed steps, replayable with `franklinwh-emulator scenario`.

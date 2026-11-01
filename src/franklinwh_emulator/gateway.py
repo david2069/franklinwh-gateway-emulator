@@ -180,11 +180,14 @@ class Gateway:
                 if getattr(cfg.site, k) is None:
                     setattr(cfg.site, k, 0.0)
         self.site = Site(cfg.site, clock)
-        if cfg.history_days:
-            self.site.backfill(float(cfg.history_days))
-        # Commissioning day, for Direct Connect sno (days since).
+        # Commissioning day, for Direct Connect sno (days since), and the components' install
+        # date unless they set their own (#115).
         self.commissioned = cfg.commissioned or (
             self.site.local_date(clock.now()) if cfg.setup != "in-service" else REFERENCE_COMMISSIONED)
+        self.site.components.default_installed = self.commissioned
+        self.site._age(clock.now(), force=True)
+        if cfg.history_days:
+            self.site.backfill(float(cfg.history_days))
         self.lifecycle = cfg.setup                      # factory → commissioning → in-service (#185)
         self.pto_date = cfg.pto_date
         self.site.serial = self.serial

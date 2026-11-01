@@ -1,0 +1,18 @@
+# #115 Component age and warranty — 2026-11-01
+
+Branch component-age, base main 2b12b80.
+
+## New tests
+3 passed in 0.02s
+
+## Break check
+the new tests fail with the src change stashed (no components module).
+
+## Full suite
+673 passed in 36.16s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

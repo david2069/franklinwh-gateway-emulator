@@ -53,6 +53,27 @@ Any of them can be set per gateway: `grid_import_wh`, `grid_export_wh`, `pv_wh`,
 agree; the totals given are as of the start of that period, and the SoC is wherever the model
 ends. An `open-meteo` gateway that isn't `offline` fetches those days.
 
+### Age and warranty
+
+Each component has an install date (`components:`, default: the `commissioned` date) and a
+warranty term ([Configuration](configuration.md)). FranklinWH's terms, from its warranties
+(AU & NZ, effective June 2026; US & CA, effective 2026-10-28; owner's copies, not committed):
+aPower X 12 years or 43 MWh, aPower X-02-AU 12 years or 60 MWh, aPower 2 and aPower S 15 years
+or 60 MWh, whichever comes first, retaining at least 70 % of rated capacity; aGate 12 years.
+
+- **aPower SoH** falls linearly from 100 % to 70 % at the end of the term, by age or by
+  energy discharged per aPower, whichever is further along. The curve in between is not
+  documented (plausible); it passes near the reference aPower's measured 94.8 % (2026-10-07,
+  about 2.2 years in). 713 `SoH`, 15036 and Direct Connect 1705 `batSoh` serve it.
+- **Usable capacity** follows SoH, against the 94.8 % the loss model was calibrated at, so the
+  reference site at that age is unchanged. 713 `WHRtg`, `WHAvail` and 15020 stay on the rated
+  capacity, as on the aGate.
+- **PV panels** lose 0.5 % of output a year (plausible; `degradation_pct_per_year`). Replayed
+  solar is as recorded.
+- **Warranty**: the state's `components` shows SoH, the PV age factor, the usable capacity and,
+  per component, age, years left, expiry year and whether it is in warranty. The PV inverter
+  (10 years) and panels (25 years) have no FranklinWH term: plausible defaults.
+
 ### Commissioning
 
 A gateway goes **factory → commissioning → in-service**, as in the installer's app (FranklinWH

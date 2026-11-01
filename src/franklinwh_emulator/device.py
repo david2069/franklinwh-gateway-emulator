@@ -87,7 +87,7 @@ class AGateDevice:
         img.set(701, "ACType", site.config.ac_type)
         if profile.m702_wmaxrtg is not None:
             img.set(702, "WMaxRtg", profile.m702_wmaxrtg)
-        img.set(713, "WHRtg", min(0xFFFF, int(site.capacity_wh)))
+        img.set(713, "WHRtg", min(0xFFFF, int(site.rated_capacity_wh)))
         # 703 enter-service settings from the grid code. The AU firmware reports volts
         # (V_SF -1) in ESVHi/ESVLo despite the SunSpec %VRef unit; keep that convention.
         code = site.grid
@@ -221,7 +221,8 @@ class AGateDevice:
         # Real exports: 99 % of 30 days of 10 s samples sit on whole percent and 100 W steps.
         soc10 = int(round(s.soc)) * 10 if p.soc_whole_percent else int(round(s.soc * 10))
         img.set(713, "SoC", soc10)
-        img.set(713, "WHAvail", min(0xFFFF, int(s.soc / 100 * site.capacity_wh)))
+        img.set(713, "WHAvail", min(0xFFFF, int(s.soc / 100 * site.rated_capacity_wh)))
+        img.set(713, "SoH", int(round(site.soh * 10)))     # from age and throughput (#115)
         if not p.m713_sta_zero:
             # 713.Sta enum is not modelled by FranklinWH; report 1 (OK) when spec.
             img.set(713, "Sta", 1)
@@ -261,7 +262,7 @@ class AGateDevice:
             15507: site.native_mode, 15508: site.self_reserve, 15509: tou,
             15510: pv_wh >> 16, 15511: pv_wh & 0xFFFF,
             15512: pv_wh >> 16, 15513: pv_wh & 0xFFFF,
-            15017: int(round(s.ambient_c)), 15020: min(0xFFFF, int(site.capacity_wh)),
+            15017: int(round(s.ambient_c)), 15020: min(0xFFFF, int(site.rated_capacity_wh)),
             15025: v_ln10, 15036: img.get(713, "SoH") or 0,
             # Mapped from the 2026-10-07 reference scan (franklinwh-modbus#18): exact matches
             # within one scan, so live here rather than static.
