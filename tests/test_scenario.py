@@ -139,3 +139,18 @@ def test_cli_scenario_run(tmp_path, capsys):
     assert (tmp_path / "csip-zero-export" / "timeseries.csv").exists()
     assert "PASS" in capsys.readouterr().out
     assert main(["scenario", "list"]) == 0
+
+
+def test_timeseries_has_temperatures_and_running_counters(tmp_path):
+    """#89: cabinet temperature and the lifetime Wh counters, appended after the original
+    columns; the counters run with the model."""
+    res = run_scenario("latent-export-breach")
+    out = res.write(tmp_path / "x")
+    rows = list(csv.DictReader(open(out / "timeseries.csv")))
+    cols = list(rows[0])
+    new = ["cabinet_c", "grid_import_wh", "grid_export_wh", "pv_wh", "batt_charge_wh",
+           "batt_discharge_wh", "generator_wh"]
+    assert cols[-len(new):] == new and cols.index("ambient_c") < cols.index("cabinet_c")
+    assert float(rows[-1]["pv_wh"]) > float(rows[0]["pv_wh"])
+    sky = run_scenario("cloud-edge-export-limit").rows[0]
+    assert "sky" in sky                                              # with a weather model

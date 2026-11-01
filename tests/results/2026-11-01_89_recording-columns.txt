@@ -1,0 +1,18 @@
+# #89 Recording adds cabinet temperature, sky and running counters — 2026-11-01
+
+Branch recording-columns, base main 2865270.
+
+## New tests
+29 passed in 4.20s
+
+## Break check
+the new test fails with the src change stashed (columns missing).
+
+## Full suite
+663 passed in 37.60s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

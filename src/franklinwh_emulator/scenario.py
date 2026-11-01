@@ -58,6 +58,7 @@ RECORD_FIELDS = (  # plus t, ts, local_time, utc_offset_hours and per-leg column
     "alarms", "throttle_pct", "export_limit_w", "declared_export_limit_w",
     "export_over_limit_w", "der_connected", "csip_source", "generator_w", "gen_state",
 )
+RECORD_COUNTERS = ("grid_import_wh", "grid_export_wh", "pv_wh", "batt_charge_wh", "batt_discharge_wh")
 
 _PART = re.compile(r"(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)?")
 _UNITS = {None: 1.0, "": 1.0, "ms": 0.001, "s": 1.0, "m": 60.0, "h": 3600.0, "d": 86400.0}
@@ -374,6 +375,14 @@ class Runner:
                 row["rec_grid_w"] = rec.get("grid_w")
                 row["rec_soc"] = rec.get("soc")
                 row["rec_dispatch"] = gw.site.replay.dispatch_w(snap.ts)
+            # Appended after the original columns (#89): cabinet temperature, the sky (with a
+            # weather model) and the running lifetime counters.
+            row["cabinet_c"] = round(snap.cabinet_c, 2)
+            if gw.site.weather is not None:
+                row["sky"] = gw.site.weather.cfg.sky
+            for k in RECORD_COUNTERS:
+                row[k] = round(getattr(snap, k), 1)
+            row["generator_wh"] = round(gw.site.gen_wh, 1)
             res.rows.append(row)
             for name in self.sc.checks:
                 fn = INVARIANTS[name]
