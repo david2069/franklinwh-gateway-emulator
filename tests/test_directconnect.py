@@ -547,3 +547,24 @@ def test_smart_circuits_per_model(clock):
         au.site.loads = None
     m = p.handlers[1411]({"opt": 0})
     assert m["Sw2Volt"] > 0 and m["CarSWPower"] == 0          # SW2 is metered; no car switch here
+
+
+def test_1701_install_profile_from_the_site(clock):
+    """1701 → 1702 (#123): the catalogue's key set, the site's values, writes stored only with
+    Debug Mode on, never enforced."""
+    gw = make_gateway(clock, site={"service": {"main_breaker_a": 63}})
+    p = gw.dc.payloads
+    r = p.handlers[1701]({"opt": 0})
+    assert (r["electricSupply"], r["airSwitchCur"], r["gridExportEnable"], r["isPcsDischgEn"]) == (63, 100, 1, 1)
+    assert r["fhpRatePower"] == r["genRatePower"] == r["solarInstallState"] == 0
+    limits = {"kwRatePower": 2000, "gridSoftLimit": 2000, "gridHardLimit": -1, "gridImportLimit": -1}
+    assert p.handlers[1701]({"opt": 1, "kwRatePower": 2000})["reason"] == -2      # full block only
+    assert p.handlers[1701]({"opt": 1, **limits})["result"] == 0
+    assert p.handlers[1701]({"opt": 0})["kwRatePower"] == -1                       # Debug Mode off
+    gw.set_debug_mode(True)
+    p.handlers[1701]({"opt": 1, **limits})
+    r = p.handlers[1701]({"opt": 0})
+    assert (r["kwRatePower"], r["gridSoftLimit"]) == (2000, 2000)
+    us = make_gateway(clock, site={"ac_type": 1, "utility": {"export": "prohibited"}})
+    r = us.dc.payloads.handlers[1701]({"opt": 0})
+    assert (r["gridExportEnable"], r["isPcsDischgEn"], r["airSwitchCur"], r["electricSupply"]) == (0, 0, 200, 63)
