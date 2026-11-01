@@ -49,8 +49,9 @@ gateways:
   - {id: agate-l3, group: au-3phase-home, phases: [L3], solar_peak_w: 0}
 ```
 
-So far the group shares settings, sky and clock; a grid event on one member and the combined
-three-phase meter are not shared yet (#241).
+A grid event (outage, voltage, frequency) on any member reaches the whole group, and
+`GET /groups` reports the site's three-phase meter ([Control API](control-api.md)). The web UI
+still draws each aGate on its own (#241).
 
 ## A complete example
 

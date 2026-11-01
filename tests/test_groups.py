@@ -77,3 +77,72 @@ def test_ungrouped_fleet_unchanged(clock):
     f = Fleet.from_dict(load_yaml("examples/fleet.yaml"), clock=clock)
     assert all(gw.site.config.group is None and gw.site.sky_seed == gw.config.seed
                for gw in f.gateways.values())
+
+
+# --- step 2: one grid connection (#241) ----------------------------------------------------
+
+from franklinwh_emulator.control import ApiError, apply, gateway_state, group_state  # noqa: E402
+
+
+def test_outage_on_one_member_reaches_the_group(clock):
+    f = Fleet.from_dict(_fleet(), clock=clock)
+    apply(f["g1"], "grid", {"available": False})
+    assert all(not any(gw.site.utility.available.values()) for gw in f.gateways.values())
+    apply(f["g0"], "grid", {"restore": True})
+    assert all(all(gw.site.utility.available.values()) for gw in f.gateways.values())
+
+
+def test_phase_event_hits_only_that_phase_but_frequency_is_common(clock):
+    f = Fleet.from_dict(_fleet(), clock=clock)
+    apply(f["g0"], "grid", {"available": False, "phase": "L2", "hz_offset": -0.5})
+    up = {gw.site.phases[0]: all(gw.site.utility.available.values()) for gw in f.gateways.values()}
+    assert up == {"L1": True, "L2": False, "L3": True}
+    assert {gw.site.utility.hz for gw in f.gateways.values()} == {49.5}
+    with pytest.raises(ApiError, match="not connected"):
+        apply(f["g0"], "grid", {"available": False, "phase": "L4"})
+
+
+def test_ungrouped_grid_event_stays_on_its_gateway(clock):
+    f = Fleet.from_dict(load_yaml("examples/fleet.yaml"), clock=clock)
+    apply(f["site"], "grid", {"available": False})
+    assert not any(f["site"].site.utility.available.values())
+    assert all(f[g].site.utility.available["L1"] for g in ("au-3phase", "us-split", "fresh"))
+
+
+def test_group_state_sums_the_phases(clock):
+    f = Fleet.from_dict(load_yaml(EXAMPLE), clock=clock)
+    for _ in range(3):
+        clock.advance(60)
+        for gw in f.gateways.values():
+            gw.site.step()
+    g = group_state(f["agate-l2"].group_members)
+    assert list(g["phases"]) == ["L1", "L2", "L3"]
+    assert g["phases"]["L1"]["gateway"] == "agate-l1"
+    for k in ("grid_w", "load_w", "solar_w", "battery_w"):
+        assert g["totals"][k] == pytest.approx(sum(p[k] for p in g["phases"].values()), abs=0.5)
+    assert g["phases"]["L1"]["load_w"] > 0 and g["totals"]["load_w"] > g["phases"]["L1"]["load_w"]
+    assert g["service"]["label"] == "3 × 63 A · 400 V"
+    st = gateway_state(f["agate-l3"])["group"]
+    assert st == {"id": "au-3phase-home", "phase": "L3",
+                  "members": {"L1": "agate-l1", "L2": "agate-l2", "L3": "agate-l3"}}
+    assert gateway_state(Fleet.from_dict(_fleet(), clock=clock)["g0"])["group"]["phase"] == "L1"
+
+
+def test_groups_endpoint():
+    import json
+    import urllib.request
+    d = load_yaml(EXAMPLE)
+    for g in d["gateways"]:
+        g["modbus"], g["directconnect"] = {"port": 0}, {"port": 0}
+    f = Fleet.from_dict(d)
+    try:
+        f.start(control_port=0)
+        base = f"http://127.0.0.1:{f.control.port}"
+        allg = json.load(urllib.request.urlopen(f"{base}/groups"))
+        assert list(allg) == ["au-3phase-home"]
+        one = json.load(urllib.request.urlopen(f"{base}/groups/au-3phase-home"))
+        assert set(one["phases"]) == {"L1", "L2", "L3"}
+        with pytest.raises(urllib.error.HTTPError):
+            urllib.request.urlopen(f"{base}/groups/nope")
+    finally:
+        f.stop()

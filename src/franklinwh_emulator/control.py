@@ -7,6 +7,8 @@
     GET  /sessions                      saved sessions in <workspace>/sessions
     POST /session/save                  {"name": "evening-test"} (optional): write the session
     POST /session/restore               {"name": "evening-test"}: replay its actions
+    GET  /groups                        grouped sites (#241): each phase's aGate and the meter totals
+    GET  /groups/<id>                   one group
     GET  /gateways                      list gateways
     GET  /gateways/<id>                 live state
     GET  /gateways/<id>/events          what the gateway did (?since=<rev>&limit=<n>), oldest first
@@ -124,6 +126,10 @@ def gateway_state(gw: "Gateway") -> dict:
         "grid_code": site.grid.name,
         "ac_type": site.config.ac_type,
         "legs": list(site.phases),
+        # A grouped site (#241): the group, this aGate's phase and the aGate on each phase.
+        "group": None if site.config.group is None else {
+            "id": site.config.group, "phase": site.phases[0],
+            "members": {m.site.phases[0]: m.config.id for m in gw.group_members}},
         "pv_relays": dict(site.pv_relays),
         # Opened by the aGate itself (#178): {input: reason}; the relay reads open on Direct Connect.
         "pv_relays_auto_open": {n: why for n, (why, _) in site.pv_auto_open.items()},
@@ -222,6 +228,59 @@ def _num_or_none(body: dict, key: str):
     return None if v is None else float(v)
 
 
+def _grid(gw: "Gateway", body: dict) -> None:
+    """The utility's supply. Grouped aGates share one grid connection (#241): an event on one
+    reaches them all; ``phase`` picks the aGate on that leg, and frequency is common to all."""
+    members, phase = gw.group_members, body.get("phase")
+    if body.get("restore"):
+        for m in members:
+            m.site.restore_grid()
+        return
+    leg_kw, hz_kw = {}, {}
+    if "available" in body:
+        leg_kw["available"] = bool(body["available"])
+    for key in ("v_pu", "voltage"):
+        if key in body:
+            leg_kw[key] = float(body[key])
+    for key in ("hz", "hz_offset"):
+        if key in body:
+            hz_kw[key] = float(body[key])
+    if not leg_kw and not hz_kw:
+        raise ApiError(400, "grid: nothing to change")
+    if len(members) == 1:
+        gw.site.set_grid(phase=phase, **leg_kw, **hz_kw)
+        return
+    on_leg = [m for m in members if phase is None or phase in m.site.phases]
+    if not on_leg:
+        legs = [m.site.phases[0] for m in members]
+        raise ValueError(f"phase {phase!r} is not connected; the group's legs are {legs}")
+    for m in members:
+        kw = {**(leg_kw if m in on_leg else {}), **hz_kw}
+        if kw:
+            m.site.set_grid(**kw)
+
+
+def group_state(members: list["Gateway"]) -> dict:
+    """A grouped site (#241): each phase's aGate and the service meter's totals."""
+    import math
+    phases, totals = {}, {"grid_w": 0.0, "load_w": 0.0, "solar_w": 0.0, "battery_w": 0.0}
+    for m in members:
+        snap, site = m.site.step(), m.site
+        leg = site.phases[0]
+        phases[leg] = {"gateway": m.config.id, "grid_available": all(site.utility.available.values()),
+                       "main_breaker_open": site.main_breaker_open, "soc": round(snap.soc, 1),
+                       **{k: round(getattr(snap, k), 1) for k in totals}}
+        for k in totals:
+            totals[k] += getattr(snap, k)
+    first = members[0].site
+    amps = None if first.service is None else first.service.main_breaker_a
+    v_ll = round(first.grid.nominal_v_ln * math.sqrt(3), -1)
+    return {"id": first.config.group, "phases": phases,
+            "totals": {k: round(v, 1) for k, v in totals.items()},
+            "service": {"main_breaker_a": amps, "phases": len(members), "v_ll": v_ll,
+                        "label": None if amps is None else f"{len(members)} × {amps:g} A · {v_ll:g} V"}}
+
+
 def apply(gw: "Gateway", action: str, body: dict) -> None:
     if action not in ACTIONS:
         raise ApiError(404, f"unknown action {action!r}")
@@ -234,18 +293,7 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
     site = gw.site
     try:
         if action == "grid":
-            if body.get("restore"):
-                site.restore_grid()
-                return
-            kw = {}
-            if "available" in body:
-                kw["available"] = bool(body["available"])
-            for key in ("v_pu", "voltage", "hz", "hz_offset"):
-                if key in body:
-                    kw[key] = float(body[key])
-            if not kw:
-                raise ApiError(400, "grid: nothing to change")
-            site.set_grid(phase=body.get("phase"), **kw)
+            _grid(gw, body)
         elif action == "offgrid":
             site.request_offgrid(bool(body["on"]))
         elif action == "write-reject":
@@ -527,6 +575,11 @@ class ControlApi:
                 "gateways": rows}
 
     # -- action log, sessions ------------------------------------------------------------
+    def groups(self) -> dict[str, list["Gateway"]]:
+        """Grouped sites (#241): group id → its aGates in phase order."""
+        return {gw.site.config.group: gw.group_members for gw in self.gateways.values()
+                if gw.site.config.group is not None}
+
     def apply_logged(self, gw: "Gateway", action: str, body: dict, source: str = "api") -> None:
         """``apply``, recording what was asked and what happened."""
         import datetime as dt
@@ -776,6 +829,13 @@ class ControlApi:
             return self.restore_session(body["name"])
         if parts == ["schema"] and method == "GET":
             return schema()
+        if parts and parts[0] == "groups" and method == "GET" and len(parts) <= 2:
+            groups = self.groups()
+            if len(parts) == 1:
+                return {gid: group_state(m) for gid, m in groups.items()}
+            if parts[1] not in groups:
+                raise ApiError(404, f"no group {parts[1]!r}")
+            return group_state(groups[parts[1]])
         if parts == ["gateways"] and method == "GET":
             return [{"id": g.config.id, "serial": g.serial, "address": list(g.address)}
                     for g in self.gateways.values()]

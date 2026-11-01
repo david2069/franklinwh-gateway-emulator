@@ -228,6 +228,9 @@ class Gateway:
         self.modbus_apply_delay_s = 3.0
         self.reboot_s = 20.0
         self.rebooting = False                   # True while reboot() has the listeners down
+        # The aGates on this one's grid connection, itself included, in phase order (#241);
+        # the fleet sets them for a group.
+        self.group_members: list[Gateway] = [self]
         self.episode_phase: str | None = None   # "down" | "offgrid" during episode()
         self.debug_mode = False                  # Debug Mode (DC 1821 enable); see set_debug_mode
 
@@ -546,6 +549,14 @@ class Fleet:
             if clock is None and c.site.group is not None and c.site.group not in clocks:
                 clocks[c.site.group] = ScaledClock(c.time_scale) if c.time_scale != 1.0 else SystemClock()
         self.gateways = {c.id: Gateway(c, clock=clock or clocks.get(c.site.group)) for c in configs}
+        groups: dict[str, list[Gateway]] = {}
+        for gw in self.gateways.values():
+            if gw.site.config.group is not None:
+                groups.setdefault(gw.site.config.group, []).append(gw)
+        for members in groups.values():
+            members.sort(key=lambda g: g.site.phases[0])
+            for gw in members:
+                gw.group_members = members
         self.control: ControlApi | None = None
         self._loop: _LoopThread | None = None
 

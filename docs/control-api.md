@@ -37,5 +37,13 @@ uptime. Memory now comes from psutil when installed, else `/proc` or `ps`.
 count, last_at, last_site_time}]}`, oldest first. `?since=<rev>` returns only entries added or
 folded into since that revision; `?limit=` caps the count (default 200; the log keeps 1000).
 
+**Groups.** aGates in a fleet group (one site and grid connection, one per phase; see
+[Configuration](configuration.md), #241) share the grid: a `grid` action on any member reaches
+them all, `phase` picks the member on that leg, and frequency is common to all. Each member's
+state has `group: {id, phase, members: {L1: <id>, …}}`. `GET /groups` (or `/groups/<id>`) is
+the site as one: per phase the aGate, `grid_w`, `load_w`, `solar_w`, `battery_w`, `soc`,
+`grid_available` and `main_breaker_open`; `totals` (the service meter: their sums); and
+`service: {main_breaker_a, phases, v_ll, label}`, e.g. `3 × 63 A · 400 V`.
+
 **Sign conventions on the wire:** `701.W` positive = grid import; `714.DCW` positive =
 battery discharging.
