@@ -194,6 +194,8 @@ class Gateway:
         self._loop: _LoopThread | None = None
         self._own_loop = False
         self._event_loop: asyncio.AbstractEventLoop | None = None
+        # Running reboots, episodes and Modbus on/off changes: cancelled on stop (#21).
+        self._background: set[asyncio.Task] = set()
         # Direct Connect 1205 sunsMdEn. Writes are delayed-apply (~seconds, both
         # directions) on FW V12R02B30D06: the listener closes/reopens after a delay.
         if cfg.modbus_enabled is not None:
@@ -226,6 +228,20 @@ class Gateway:
             await self.dc.stop()
         await self.server.stop()
 
+    def _spawn(self, loop: asyncio.AbstractEventLoop, make) -> None:
+        """Run ``make()`` (a coroutine) on ``loop`` as a background task, from any thread."""
+        def go():
+            task = loop.create_task(make())
+            self._background.add(task)
+            task.add_done_callback(self._background.discard)
+        loop.call_soon_threadsafe(go)
+
+    async def _cancel_background(self) -> None:
+        tasks = [t for t in self._background if t is not asyncio.current_task()]
+        for t in tasks:
+            t.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+
     async def start_async(self) -> tuple[str, int]:
         """Start on the caller's running event loop."""
         self._event_loop = asyncio.get_running_loop()
@@ -248,10 +264,10 @@ class Gateway:
         if loop is None:
             return
 
-        def later():
-            loop.call_later(self.modbus_apply_delay_s,
-                            lambda: asyncio.ensure_future(self._apply_modbus()))
-        loop.call_soon_threadsafe(later)
+        async def later():
+            await asyncio.sleep(self.modbus_apply_delay_s)
+            await self._apply_modbus()
+        self._spawn(loop, later)
 
     def reboot(self, down_s: float | None = None) -> None:
         """What a 1721 reboot does: both listeners drop for ``down_s`` (default
@@ -275,7 +291,7 @@ class Gateway:
             finally:
                 self.rebooting = False
                 self.events.add("reboot", "Back up after the reboot")
-        loop.call_soon_threadsafe(lambda: asyncio.ensure_future(cycle()))
+        self._spawn(loop, cycle)
 
     def episode(self, down_s: float, offgrid_s: float) -> None:
         """Drop-and-return-islanded, as the reference aGate did twice on 2026-10-21 (fw
@@ -304,7 +320,7 @@ class Gateway:
             await asyncio.sleep(offgrid_s)
             self.site.restore_grid()
             self.episode_phase = None
-        loop.call_soon_threadsafe(lambda: asyncio.ensure_future(run()))
+        self._spawn(loop, run)
 
     ADDRESSING_KEYS = ("base_aliases", "write_bases")
 
@@ -330,6 +346,7 @@ class Gateway:
             self.events.add("modbus", "Modbus TCP Server closed")
 
     async def stop_async(self) -> None:
+        await self._cancel_background()
         await self._stop_all()
 
     def start(self, _loop: _LoopThread | None = None) -> tuple[str, int]:
@@ -344,6 +361,7 @@ class Gateway:
     def stop(self) -> None:
         if self._loop is None:
             return
+        self._loop.run(self._cancel_background())
         self._loop.run(self._stop_all())
         if self._own_loop:
             self._loop.close()

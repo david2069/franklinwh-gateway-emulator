@@ -21,6 +21,7 @@
 - Page: a °C / °F toggle; every shown temperature converts; °F by default for US-region browsers; the emulator stays metric ([#119](https://github.com/david2069/franklinwh-gateway-emulator/issues/119)).
 
 ### Fixed
+- Stopping a gateway cancels a running episode, reboot or Modbus on/off change instead of leaving its task pending ("Task was destroyed but it is pending!") (#21).
 - Single phase (`ac_type: 0`) with a North American grid code (120 V line-to-neutral) is refused with the fix (`ac_type: 1`); it served 60 V half-legs. The `commissioned` key says in-service gateways share the reference sno unless each sets its own. The control API and UI stay on loopback: they are unauthenticated (#153).
 - Docs: Direct Connect error rules say what the listener does: odd request codes 1101–1997 get `reason:4`, even (reply) codes get no reply, other odd codes close; a read missing `id`/`date` keeps its keys, empty; `mainRelay2Status` (genset relay) is present on single phase too (#152).
 - Docs: the Control API page's `ctl` and `curl` examples use `agate`, the gateway `serve` starts (`--id`), and say to use `site` with examples/fleet.yaml; they failed with `serve` (#165).

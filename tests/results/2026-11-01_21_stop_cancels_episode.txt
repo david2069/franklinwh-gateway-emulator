@@ -1,0 +1,18 @@
+# #21 Stopping a gateway cancels its running episode or reboot — 2026-11-01
+
+Branch episode-stop-21, base main b58f701.
+
+## New tests
+95 passed in 10.55s
+
+## Break check
+with the cancel removed, test_stop_during_an_episode_cancels_it fails with the pending episode task
+
+## Full suite
+633 passed in 35.02s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
