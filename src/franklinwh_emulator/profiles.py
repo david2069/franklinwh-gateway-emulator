@@ -147,6 +147,8 @@ DC_FIRMWARE: dict[str, dict] = {
         "per_apower": {"FPGA_VER": "V12R01B00D00", "DCDC_VER": "V12R02B07D01", "INV_VER": "V12R02B09D03",
                        "BMS_VER": "V11R50B03D00", "BL_VER": "V11R06B00D00", "TH_VER": "V11R02B01D00"},
         "extra": {},
+        # 1702 limit keys: no gridImportLimit on this firmware (fwh-local capture, 4 replies) (#228).
+        "install_limits": ("kwRatePower", "gridSoftLimit", "gridHardLimit"),
     },
     # Shape, IBG_VER, protocolVer and result 0: franklinwh-direct-connect-api's live login on
     # 2026-10-31 (owner-approved, #94). The other version values: a payload recorded by a DC
@@ -156,6 +158,8 @@ DC_FIRMWARE: dict[str, dict] = {
         "SL_VER": "V12R02B12D00", "METER_VER": "V12R00B11D00", "SyHdVersion": 102,
         "per_apower": {"FPGA_VER": "V12R01B00D00", "DCDC_VER": "V12R02B10D00", "INV_VER": "V12R02B15D00",
                        "BMS_VER": "V11R50B07D00", "BL_VER": "V11R06B00D00", "TH_VER": "V11R02B01D00"},
+        # 1702 adds gridImportLimit (-1) on this firmware (bridge session raw read, 2026-10-24) (#228).
+        "install_limits": ("kwRatePower", "gridSoftLimit", "gridHardLimit", "gridImportLimit"),
         "extra": {"deviceType": 0, "threePhasePvPower": 0, "PE_HW_VER": [2], "BMS_MAIN_HW_VER": [0],
                   "BMS_BL_HW_VER": [0], "BMS_TH_HW_VER": [0]},
         # result 0, reason 0: fwh-local's live read of 2026-10-31, the same request, confirmed

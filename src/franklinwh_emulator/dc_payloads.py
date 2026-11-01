@@ -87,6 +87,7 @@ class DcPayloads:
                           "genStopSoc": 0, "BBBackupSoc": 20}
         # 1701's grid power-plane limits, -1 = unlimited (franklinwh-direct-connect-api catalogue
         # 1701). A write stores them; nothing enforces them (enforcement untested on the aGate).
+        # Which keys exist depends on the firmware (DC_FIRMWARE install_limits, #228).
         self.install_limits = {"kwRatePower": -1, "gridSoftLimit": -1, "gridHardLimit": -1,
                                "gridImportLimit": -1}
         self.handlers: dict[int, Callable[[dict], Any]] = {
@@ -382,8 +383,8 @@ class DcPayloads:
                    isTripPhsPvEn=0, isTripPhsGridEn=0)
 
     def install_profile(self, req: dict) -> dict:
-        """1701 → 1702, the install profile (#123). Keys as the DC library's catalogue lists
-        them, plus gridImportLimit (fwh-local). From the site: electricSupply = the service amps
+        """1701 → 1702, the install profile (#123). The key set read on V12R02B30D06 (fwh-local
+        capture, 4 replies); V12R02B60D00 adds gridImportLimit (#228). From the site: electricSupply = the service amps
         (63 on the reference site, confirmed by the owner), airSwitchCur = the aGate's air
         switch (100 on the reference aGate; the model's service rating elsewhere, inferred),
         gridExportEnable (0 when export is prohibited) and isPcsDischgEn (battery export).
@@ -393,11 +394,12 @@ class DcPayloads:
         (read back on V12, 2026-10-23) and is acknowledged without storing them otherwise
         (earlier firmware; V12 with Debug Mode off untested). Not enforced."""
         site = self.site
+        keys = DC_FIRMWARE[self.gw.profile.dc_firmware]["install_limits"]
         if req.get("opt") == 1:
-            if set(self.install_limits) - set(req):
+            if set(keys) - set(req):
                 return _refused(-2)
             if self.gw.debug_mode:
-                for k in self.install_limits:
+                for k in keys:
                     self.install_limits[k] = int(req[k])
             return _ok()
         u = site.utility_rules
@@ -405,8 +407,9 @@ class DcPayloads:
                    electricSupply=int(site.service.main_breaker_a) if site.service else 63,
                    airSwitchCur=site.model.agate.max_service_a, gridPhaseConSet=0,
                    gridPhaseSeqSet=0, isThreePhaseInstall=int(site.config.ac_type == 2),
-                   ratedGridVolt=0, ratedGridHz=0, solarInstallState=0, solarInvManu=0,
-                   solarInvRatePower=0, genRatePower=0, fhpRatePower=0, **self.install_limits,
+                   ratedGridVolt=0, ratedGridHz=1, solarInstallState=0, solarInvManu=0,
+                   solarInvRatePower=0, genRatePower=0, fhpRatePower=0,
+                   **{k: self.install_limits[k] for k in keys},
                    gridExportEnable=int(u is None or u.export != "prohibited"),
                    isPcsDischgEn=int(site.battery_export()))
 

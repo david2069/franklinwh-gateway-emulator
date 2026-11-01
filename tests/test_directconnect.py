@@ -568,3 +568,20 @@ def test_1701_install_profile_from_the_site(clock):
     us = make_gateway(clock, site={"ac_type": 1, "utility": {"export": "prohibited"}})
     r = us.dc.payloads.handlers[1701]({"opt": 0})
     assert (r["gridExportEnable"], r["isPcsDischgEn"], r["airSwitchCur"], r["electricSupply"]) == (0, 0, 200, 63)
+
+
+def test_1702_key_set_follows_the_firmware(clock):
+    """#228: V12R02B30D06 sends no gridImportLimit (fwh-local capture, 4 replies); V12R02B60D00
+    adds it; ratedGridHz reads 1."""
+    measured = {"airSwitchCur", "electricSupply", "electricSys", "fhpRatePower", "genRatePower",
+                "gridExportEnable", "gridHardLimit", "gridPhaseConSet", "gridPhaseSeqSet",
+                "gridSoftLimit", "isPcsDischgEn", "isThreePhaseInstall", "kwRatePower",
+                "ratedGridHz", "ratedGridVolt", "solarInstallState", "solarInvManu",
+                "solarInvRatePower", "opt", "result", "reason"}
+    old = make_gateway(clock, profile="agate-v10r01b04d00").dc.payloads
+    r = old.handlers[1701]({"opt": 0})
+    assert set(r) == measured and r["ratedGridHz"] == 1
+    assert old.handlers[1701]({"opt": 1, "kwRatePower": 1, "gridSoftLimit": 1,
+                               "gridHardLimit": -1})["result"] == 0     # full block on this firmware
+    new = make_gateway(clock, profile="agate-v12r02b60d00-candidate").dc.payloads
+    assert set(new.handlers[1701]({"opt": 0})) == measured | {"gridImportLimit"}

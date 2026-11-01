@@ -1,0 +1,18 @@
+# #228 DC 1702 key set follows the firmware — 2026-11-01
+
+Branch dc-1701-keys, base main 1056dd0.
+
+## New tests
+54 passed in 5.47s
+
+## Break check
+the new test fails with the src change stashed (gridImportLimit present; ratedGridHz 0).
+
+## Full suite
+681 passed in 36.62s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
