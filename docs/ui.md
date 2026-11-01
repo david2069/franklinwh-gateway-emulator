@@ -20,7 +20,9 @@ sent, and the emulator's answer (applied, or its error) stays in the form. The c
 runs on the same port, so `ctl` works unchanged.
 
 **Save and Restore.** Every action applied (page, `ctl`, API or restore) is logged (`GET /log`,
-the page's Activity panel). **Save** writes the successful ones, in order, plus each gateway's
+the page's Activity panel). Its `source` is `page` for the page's forms, `api` for `ctl` and other
+API clients, and `restore:<name>` for a restore. Form results and Activity show the gateway's
+local time, as its card and Events do (`site_time` in the log; `at` is UTC). **Save** writes the successful ones, in order, plus each gateway's
 SoC, to `emulator-workspace/sessions/<name>.yaml`; after a restart, **Restore** (or
 `franklinwh-emulator ui FLEET --restore NAME`) replays them, so the fleet is set up as before.
 The page notices a restart or a new version and offers to reload. Loopback only, no login, no

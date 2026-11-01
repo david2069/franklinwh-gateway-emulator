@@ -112,3 +112,13 @@ function modelTitle(g) {
   return 'aGate code ' + m.agate.code + ' (' + m.agate.skus.join(' / ') + ', ' + m.agate.status + '); aPower code ' +
          m.apower.code + ' (' + m.apower.skus.join(' / ') + ', ' + m.apower.status + '); region ' + m.region;
 }
+
+// -- action results and Activity (#167) -----------------------------------------------------------
+// One clock: the gateway's local time, as its card and Events show it (not the browser's, not UTC).
+function appliedText(state, body) {
+  return 'Applied to ' + state.id + ' at ' + (state.local_time || '').slice(11, 19) + ': ' + JSON.stringify(body);
+}
+function logLine(e) {
+  return (e.site_time || e.at).slice(11, 19) + ' · ' + e.gateway + ' · ' + e.action + ' ' + JSON.stringify(e.body) +
+         (e.source !== 'api' ? ' · ' + e.source : '') + (e.ok ? '' : ' · ' + e.error);
+}

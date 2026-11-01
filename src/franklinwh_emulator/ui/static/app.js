@@ -130,7 +130,7 @@ function running() {
       }
       this.busy = name;
       try {
-        const r = await fetch('/gateways/' + encodeURIComponent(gw) + '/' + name, {
+        const r = await fetch('/gateways/' + encodeURIComponent(gw) + '/' + name + '?source=page', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
         });
         const data = await r.json();
@@ -140,8 +140,7 @@ function running() {
         }
         const i = this.gateways.findIndex(g => g.id === gw);
         if (i >= 0) this.gateways[i] = data;
-        this.results[key] = { ok: true, text: 'Applied to ' + gw + ' at ' + new Date().toLocaleTimeString() +
-                                               ': ' + JSON.stringify(body) };
+        this.results[key] = { ok: true, text: appliedText(data, body) };
       } catch (e) {
         this.results[key] = { ok: false, text: 'Not sent: ' + e.message };
       } finally {
@@ -336,10 +335,6 @@ function running() {
       if (l.refused_1h) parts.push(l.refused_1h + ' refused, last ' + l.last_refused.peer + ' ' + Math.round(l.last_refused.ago_s) + ' s ago');
       if (l.requests_per_s) parts.push(l.requests_per_s + ' req/s');
       return parts.join(' · ');
-    },
-    logLine(e) {
-      return e.at.slice(11, 19) + ' · ' + e.gateway + ' · ' + e.action + ' ' + JSON.stringify(e.body) +
-             (e.source !== 'api' ? ' · ' + e.source : '') + (e.ok ? '' : ' · ' + e.error);
     },
 
     // The emulator restarted, or now runs other code: this page (and its state) is out of date.

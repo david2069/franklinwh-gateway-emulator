@@ -1,0 +1,18 @@
+# #167 Page: one clock, page source, no favicon 404 — 2026-11-01
+
+Branch ui-papercuts-167, base main e483775.
+
+## New tests
+34 passed in 0.17s
+
+## Break check
+with src stashed, test_page_actions_logged_as_page_in_gateway_time and test_result_and_activity_use_the_gateway_clock fail; headless Chrome: results read the card's local time, /log source page
+
+## Full suite
+617 passed in 32.67s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

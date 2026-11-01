@@ -496,3 +496,37 @@ def test_card_shows_the_model_sku(ui, tmp_path):
     assert r["au"].startswith("aGate X-01-AU (AGT-R1V1-AU) · ") and "aPower X-01-AU (APR-05K13V1-AU)" in r["au"]
     assert "(AGT-R1V3-US)" in r["us"] and "-US)" in r["us"].split("·")[1]
     assert "aPower X-02-AU (APR-05K15V1-AU) · " in r["x02"] and "APR-05K13V2-AU" not in r["x02"]
+
+
+# -- one clock, page source, no favicon request (#167) ---------------------------------------------
+def test_page_actions_logged_as_page_in_gateway_time(ui):
+    fleet, base = ui
+    def post(q):
+        req = urllib.request.Request(f"{base}/gateways/site/reserve{q}", method="POST",
+                                     data=json.dumps({"self": 25}).encode(),
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=3) as r:
+            return json.load(r)
+    post("?source=page")
+    post("")
+    post("?source=restore:x")                        # only the page can name itself
+    log = json.load(urllib.request.urlopen(f"{base}/log", timeout=3))[-3:]
+    assert [e["source"] for e in log] == ["page", "api", "api"]
+    assert all(e["site_time"].endswith(("+11:00", "+10:00")) for e in log)    # Australia/Sydney
+    _, _, html = get(base + "/")
+    assert b'<link rel="icon" href="data:,">' in html
+
+
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_result_and_activity_use_the_gateway_clock(tmp_path):
+    import subprocess
+    e = {"at": "2026-10-31T12:05:18+00:00", "site_time": "2026-10-31T23:05:18+11:00", "gateway": "site",
+         "action": "reserve", "body": {"self": 25}, "source": "page", "ok": True, "error": None}
+    st = {"id": "site", "local_time": "2026-10-31T23:05:18+11:00"}
+    harness = tmp_path / "clock.js"
+    harness.write_text((STATIC / "groups.js").read_text() +
+                       f"\nprint(JSON.stringify([logLine({json.dumps(e)}), appliedText({json.dumps(st)}, {{self: 25}})]));\n")
+    line, applied = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True,
+                                              check=True).stdout)
+    assert line == '23:05:18 · site · reserve {"self":25} · page'
+    assert applied == 'Applied to site at 23:05:18: {"self":25}'
