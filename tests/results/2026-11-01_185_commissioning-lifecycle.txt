@@ -1,0 +1,18 @@
+# #185 Commissioning lifecycle — 2026-11-01
+
+Branch commissioning-lifecycle, base main 6399324.
+
+## New tests
+2 passed in 0.43s
+
+## Break check
+the new tests fail with the src change stashed (commission action unknown).
+
+## Full suite
+660 passed in 35.78s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

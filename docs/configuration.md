@@ -76,7 +76,7 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 | `modbus` | object | — | shorthand for host/port: {port: 5020, host: ...} |
 | `dc_port` | integer | — | Direct Connect port; 0 = ephemeral. aGate profiles always run one (see directconnect) |
 | `directconnect` | object | — | Direct Connect (TCP 9000) frontend: {port: 9020}; 0 = ephemeral |
-| `setup` | string | `factory` | factory (default: Modbus TCP off until a Direct Connect 1205 write) or in-service (already set up: Modbus TCP on) |
+| `setup` | string | `factory` | factory (default: Modbus TCP off until a Direct Connect 1205 write), commissioning (as factory, the installer part-way through; the `commission` action) or in-service (already set up: Modbus TCP on) |
 | `modbus_enabled` | boolean | — | start with the Modbus TCP Server on or off, whatever the setup |
 | `events` | any | — | off \| normal (default) \| verbose, or {level, file}: what the gateway did (mode, battery status, trips, alarms, clients); file appends JSON lines |
 
@@ -160,6 +160,7 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 
 | Key | Type | Default | What it does |
 |---|---|---|---|
+| `pto_date` | string | — | the utility's permission to operate, YYYY-MM-DD (the app's PTO Date); recorded and shown only, as no behaviour before or after it is documented |
 | `commissioned` | string | — | commissioning date, YYYY-MM-DD (Direct Connect sno); default: the start day (factory) or the reference site's 2024-07-25 (in-service), so in-service gateways read the same sno unless each sets its own |
 | `history_days` | number | `0` | in-service: run the model over this many days before start (max 105) to fill the history, today's totals and the lifetime counters; ~0.2 s per day |
 | `grid_import_wh` | number | — | lifetime grid import counter at start, Wh; default 0 (factory) or the reference aGate's (in-service) |

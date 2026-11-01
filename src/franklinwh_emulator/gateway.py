@@ -21,7 +21,7 @@ from __future__ import annotations
 import asyncio
 import random
 import threading
-from dataclasses import dataclass, field, fields
+from dataclasses import asdict, dataclass, field, fields
 from typing import Any
 
 from .clock import Clock, ScaledClock, SystemClock
@@ -51,6 +51,14 @@ def fix_bool_keys(obj: Any) -> Any:
     return obj
 
 
+def _iso_date(name: str, v: Any) -> str:
+    import datetime as _dt
+    try:
+        return _dt.date.fromisoformat(str(v)).isoformat()
+    except ValueError:
+        raise ValueError(f"{name} must be YYYY-MM-DD, not {v!r}") from None
+
+
 def mock_serial(seed: int) -> str:
     """20-char serial in the real IBG_SN shape (same scheme as the Direct Connect emulator's
     ``SyntheticSite``, so one seed means one serial: two gateways on one seed share it, which
@@ -64,7 +72,7 @@ def mock_serial(seed: int) -> str:
     return f"MOCK{seed % 10000:04d}" + "".join(rng.choice(_HEX) for _ in range(12))
 
 
-SETUPS = ("factory", "in-service")
+SETUPS = ("factory", "commissioning", "in-service")
 # The reference site read 1304 sno = 804 on 2026-10-07.
 REFERENCE_COMMISSIONED = "2024-07-25"
 
@@ -84,12 +92,16 @@ class GatewayConfig:
     dc_port: int | None = None
     # How the aGate starts. "factory": as an installer finds it, Modbus TCP off until a Direct
     # Connect 1205 sunsMdEn write enables it (owner, 2026-10-30, #40). "in-service": already
-    # set up, Modbus TCP on. ``modbus_enabled`` overrides either.
+    # set up, Modbus TCP on. "commissioning": as factory, with the installer part-way through
+    # (#185). ``modbus_enabled`` overrides any of them.
     setup: str = "factory"
     modbus_enabled: bool | None = None
     # When it was commissioned (local date, YYYY-MM-DD): Direct Connect 1304 sno counts days
     # since. Default: the day it starts (factory), or the reference site's date (in-service).
     commissioned: str | None = None
+    # The utility's permission to operate (local date, YYYY-MM-DD; the app's PTO Date, #185).
+    # Recorded and shown only: no behaviour before or after it is documented.
+    pto_date: str | None = None
     # In-service only: run the site model over this many days before start-up, so history,
     # today's totals and the lifetime counters are as if it had been running (max 105).
     history_days: float = 0
@@ -117,7 +129,7 @@ class GatewayConfig:
         if cfg.setup not in SETUPS:
             raise ValueError(f"setup must be one of {list(SETUPS)}, not {cfg.setup!r}")
         if cfg.history_days and cfg.setup != "in-service":
-            raise ValueError("history_days needs setup: in-service (a factory aGate has no past)")
+            raise ValueError(f"history_days needs setup: in-service (a {cfg.setup} aGate has no past)")
         if not 0 <= float(cfg.history_days) <= 105:
             raise ValueError("history_days must be 0-105 (the aGate keeps about 105 days)")
         if cfg.commissioned is not None:
@@ -127,6 +139,8 @@ class GatewayConfig:
             except ValueError:
                 raise ValueError(f"commissioned must be YYYY-MM-DD, not {cfg.commissioned!r}") from None
             cfg.commissioned = str(cfg.commissioned)
+        if cfg.pto_date is not None:
+            cfg.pto_date = _iso_date("pto_date", cfg.pto_date)
         cfg.site = SiteConfig(seed=cfg.seed, **site)
         from . import models                           # check the hardware models now (#180)
         from .gridcodes import default_grid_code, get_grid_code
@@ -161,7 +175,7 @@ class Gateway:
         self.serial = cfg.serial or mock_serial(cfg.seed)
         if clock is None:
             clock = ScaledClock(cfg.time_scale) if cfg.time_scale != 1.0 else SystemClock()
-        if cfg.setup == "factory":                      # fresh from the installer: totals at 0
+        if cfg.setup != "in-service":                   # fresh from the box: totals at 0
             for k in REFERENCE_COUNTERS:
                 if getattr(cfg.site, k) is None:
                     setattr(cfg.site, k, 0.0)
@@ -170,7 +184,9 @@ class Gateway:
             self.site.backfill(float(cfg.history_days))
         # Commissioning day, for Direct Connect sno (days since).
         self.commissioned = cfg.commissioned or (
-            self.site.local_date(clock.now()) if cfg.setup == "factory" else REFERENCE_COMMISSIONED)
+            self.site.local_date(clock.now()) if cfg.setup != "in-service" else REFERENCE_COMMISSIONED)
+        self.lifecycle = cfg.setup                      # factory → commissioning → in-service (#185)
+        self.pto_date = cfg.pto_date
         self.site.serial = self.serial
         from .events import EventLog
         site = self.site
@@ -246,6 +262,54 @@ class Gateway:
         """Start on the caller's running event loop."""
         self._event_loop = asyncio.get_running_loop()
         return await self._start_all()
+
+    # App labels → settings for the commission action (FranklinWH Commissioning Guide, MAC 1 &
+    # aPower 2 & aPower S, System Parameters, pp. 18-24).
+    ENERGY_EXPORT = {"solar": ("allowed", False), "solar-apower": ("allowed", True),
+                     "none": ("prohibited", False)}
+
+    def commission(self, body: dict) -> None:
+        """The installer's commissioning (#185): ``start`` (factory → commissioning), the
+        System Parameters by their app names, ``pto_date``, ``complete`` (→ in-service, and the
+        commissioned date becomes today). Settings need commissioning started; they stay
+        changeable in service. What the aGate reports per state is not documented, so only
+        the state and the settings change."""
+        site = self.site
+        if body.get("start"):
+            if self.lifecycle != "factory":
+                raise ValueError(f"commission start: the gateway is {self.lifecycle}, not factory")
+            self.lifecycle = "commissioning"
+        settings = {k: body[k] for k in ("grid_import", "grid_import_limit_w", "energy_export",
+                                         "grid_export_limit_w", "pcs_derate_w") if k in body}
+        if settings and self.lifecycle == "factory":
+            raise ValueError("commission: start commissioning first (start: true)")
+        if settings:
+            u = asdict(site.utility_rules) if site.utility_rules is not None else {}
+            if "grid_import" in settings:
+                if settings["grid_import"] not in ("allowed", "not-allowed"):
+                    raise ValueError("commission grid_import: allowed or not-allowed")
+                u["grid_charge"] = settings["grid_import"] == "allowed"
+            if "grid_import_limit_w" in settings:
+                u["import_limit_w"] = settings["grid_import_limit_w"]
+            if "energy_export" in settings:
+                if settings["energy_export"] not in self.ENERGY_EXPORT:
+                    raise ValueError(f"commission energy_export: one of {list(self.ENERGY_EXPORT)}")
+                u["export"], u["battery_export"] = self.ENERGY_EXPORT[settings["energy_export"]]
+            if "grid_export_limit_w" in settings:
+                u["export_limit_w"] = settings["grid_export_limit_w"]
+            if u.get("export") != "prohibited":
+                u["export"] = "limited" if u.get("export_limit_w") is not None else "allowed"
+            site.set_utility(u)
+            if "pcs_derate_w" in settings:
+                site.set_pcs_derate(settings["pcs_derate_w"])
+        if "pto_date" in body:
+            self.pto_date = None if body["pto_date"] is None else _iso_date("pto_date", body["pto_date"])
+        if body.get("complete"):
+            if self.lifecycle != "commissioning":
+                raise ValueError(f"commission complete: the gateway is {self.lifecycle}, not commissioning")
+            self.lifecycle = "in-service"
+            self.commissioned = site.local_date(site.clock.now())
+        self.events.add("commission", f"commissioning: {self.lifecycle}")
 
     def set_debug_mode(self, on: bool) -> None:
         """Debug Mode, as Direct Connect 1821 ``enable``: on the reference aGate the battery

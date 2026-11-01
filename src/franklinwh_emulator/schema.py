@@ -188,6 +188,23 @@ ACTIONS: dict[str, dict[str, Any]] = {
                      {"export": "allowed", "battery_export": False, "export_rule_source": "scheme"},
                      {"clear": True}],
     },
+    "commission": {
+        "doc": "The installer's commissioning (#185): start (factory → commissioning), the app's "
+               "System Parameters, the PTO date, complete (→ in-service). FranklinWH Commissioning "
+               "Guide (MAC 1 & aPower 2 & aPower S); the state only changes the label and settings.",
+        "fields": {"start": _f("boolean", "factory → commissioning"),
+                   "grid_import": _f("string", "app Grid Import: charge from grid", enum=["allowed", "not-allowed"]),
+                   "grid_import_limit_w": _f("number", "app Grid Import Limit; null = No Limit", unit="W", nullable=True),
+                   "energy_export": _f("string", "app Energy Export: Only Solar / Solar + aPower / No Export",
+                                       enum=["solar", "solar-apower", "none"]),
+                   "grid_export_limit_w": _f("number", "app Grid Export Limit; null = No Limit", unit="W", nullable=True),
+                   "pcs_derate_w": _f("number", "app PCS Permanent Derate, per aPower; null = none", unit="W", nullable=True),
+                   "pto_date": _f("string", "app PTO Date, YYYY-MM-DD; recorded only", nullable=True),
+                   "complete": _f("boolean", "app Complete commissioning: → in-service")},
+        "examples": [{"start": True}, {"grid_import": "not-allowed", "energy_export": "solar",
+                                       "grid_export_limit_w": 5000, "pcs_derate_w": 5000},
+                     {"pto_date": "2026-12-15"}, {"complete": True}],
+    },
     "service": {
         "doc": "The main breaker: reset it after a trip.",
         "fields": {"reset": _f("boolean", "true = close the main breaker again")},
@@ -354,7 +371,7 @@ ACTIONS: dict[str, dict[str, Any]] = {
 
 # How the UI and docs group the actions, in display order.
 GROUPS: dict[str, list[str]] = {
-    "Grid and phases": ["grid", "offgrid", "utility", "service"],
+    "Grid and phases": ["grid", "offgrid", "utility", "service", "commission"],
     "Inputs": ["pv", "load", "ambient", "weather"],
     "Battery and modes": ["vpp", "release", "mode", "tou", "reserve", "soc", "apower"],
     "Loads": ["circuit", "appliance"],
