@@ -1,0 +1,18 @@
+# #234 Docs: aPower S MPPT fields from the cloud API — 2026-11-02
+
+Branch docs-mppt-cloud, base main 09d8b27.
+
+## New tests
+1 passed in 0.00s
+
+## Break check
+the new test fails with the docs change stashed (the old sentence is there).
+
+## Full suite
+690 passed in 36.62s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

@@ -71,7 +71,12 @@ not from a capture. DC PV follows the site's solar shape (weather, panel tempera
 charges the battery directly, and shares the inverter with battery discharge: DC PV beyond the
 inverter plus the battery's charging is curtailed, and discharge gives way to it. With
 `export: false` it only serves the house and the battery. It is counted in solar (1301 `p_sun`,
-502) and is not frequency-curtailed off-grid. How a real aPower S reports DC PV is not known.
+502) and is not frequency-curtailed off-grid. The FranklinWH cloud API reports MPPT values
+(franklinwh-cloud f18ff8a, `docs/franklinwh_openapi.json`, `models.py`): `getDeviceCompositeInfo`
+`runtimeData` `mpptSta`, `mpptAllPower`/`mpptActPower` (kW), `mPanPv1Power`/`mPanPv2Power` (kW),
+`mpanPv1Wh`/`mpanPv2Wh`; `solarHaveVo` `mpptEnFlag`, `mpanPv1En`/`mpanPv2En`, `mpptExportEn`;
+`getFhpElectricData` `mpptWhArray`; per aPower `mpptAppVer`. The emulator serves Modbus and
+Direct Connect, not the cloud API. No aPower S site has been captured on Direct Connect or Modbus.
 Not emulated yet: the aPower 2 / aPower X peak-charge window,
 MAC 1, aHub, and per-aPower SoC (backlog HARDWARE-TOPOLOGIES).
 

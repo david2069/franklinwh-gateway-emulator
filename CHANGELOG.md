@@ -55,6 +55,7 @@
 - **The default firmware profile is now `agate-v12r02b60d00-candidate`**, matching the reference aGate since its 2026-10-20 update: the 40000 mirror, 15509 = TOU reserve, 16001 = the active reserve, charge setpoints refused with exception 3, IBG V12R02B60D00 over Direct Connect. Set `profile: agate-v10r01b04d00` for the earlier behaviour ([#126](https://github.com/david2069/franklinwh-gateway-emulator/issues/126)).
 
 ### Fixed
+- Docs: aPower S MPPT reporting now cites the cloud API's fields (runtimeData mpptAllPower/mpptActPower/mPanPv1Power/mPanPv2Power, solarHaveVo mpptEnFlag/mpptExportEn, mpptWhArray) instead of calling it unknown.
 - Direct Connect 1702: `gridImportLimit` only on V12R02B60D00 profiles (absent on V12R02B30D06, as captured), and `ratedGridHz` reads 1.
 - Page: a forced solar value is "capped by the sun" only down to `solar_available_w`; curtailment below that gets its own tag and diagram note with the cause (off-grid with nowhere to put it, the full-battery 62.2 Hz cut-off, or an export limit/grid support). State adds `pv_cutoff` (#176).
 - Stopping a gateway cancels a running episode, reboot or Modbus on/off change instead of leaving its task pending ("Task was destroyed but it is pending!") (#21).
