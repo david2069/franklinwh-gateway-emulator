@@ -1,0 +1,18 @@
+# #136 Adopt the shared issue policy: PR template, CLAUDE.md, changelog — 2026-11-01
+
+Branch issue-policy-136, base main e896f27.
+
+## New tests
+3 passed in 0.01s
+
+## Break check
+with the old CHANGELOG, test_changelog_unreleased_uses_each_category_once fails
+
+## Full suite
+639 passed in 35.91s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
