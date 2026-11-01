@@ -1,8 +1,10 @@
 """Quirk profiles: how faithfully to copy the real aGate's Modbus behaviour.
 
-``agate-v10r01b04d00`` reproduces what franklinwh-modbus documents for firmware
-V10R01B04D00 (FRANKLINWH_SUNSPEC_QUIRKS.md, modbus_capability.json, the PICS
-cross-reference). ``spec`` is a well-behaved SunSpec DER for comparison testing.
+``agate-v12r02b60d00-candidate`` (the default) is the firmware the reference aGate runs
+since 2026-10-20, measured on one site. ``agate-v10r01b04d00`` reproduces what franklinwh-modbus
+documents for the earlier firmware V10R01B04D00 (FRANKLINWH_SUNSPEC_QUIRKS.md,
+modbus_capability.json, the PICS cross-reference). ``spec`` is a well-behaved SunSpec DER for
+comparison testing.
 Every field can also be overridden per gateway.
 """
 

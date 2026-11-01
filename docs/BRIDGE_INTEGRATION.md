@@ -41,8 +41,11 @@ Connect until a `1205` `sunsMdEn` write turns Modbus TCP on (about 3 s later).
    15507–15509 writes, as the aGate does (franklinwh-modbus firmware_quirks
    `ext_15507_15509_writes`), so the bridge must show the setting as not applied. To test a
    mode or reserve change, set it from the test side (`gw.site.set_native_mode`, `set_reserves`).
-2. Force Charge reaches −5 kW at max power (WSetPct −1000 → `714.DCW` −5000 → bridge
-   `battery_power_w` −5000).
+2. Force Charge depends on the profile. On the default profile (`agate-v12r02b60d00-candidate`)
+   the aGate refuses every charge setpoint with exception 3 (`refuse_charge`), so the bridge must
+   report the command as rejected and the battery carries on. On `agate-v10r01b04d00` (or with
+   `quirks: {refuse_charge: false, wsetpct_max_abs_raw: null}`) it reaches −5 kW at max power
+   (WSetPct −1000 → `714.DCW` −5000 → bridge `battery_power_w` −5000).
 3. Force Release results in no dispatch: WSetEna 0, and the battery returns to native behaviour.
 4. Discharge stops at the active mode's reserve, including under VPP.
 5. `loc_rem_ctl_name` reads Local.
