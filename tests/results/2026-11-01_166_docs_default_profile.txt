@@ -1,0 +1,18 @@
+# #166 Docs name the current default profile — 2026-11-01
+
+Branch docs-default-profile-166, base main c25bbb7.
+
+## New tests
+3 passed in 0.00s
+
+## Break check
+with the docs stashed, all 3 tests in tests/test_docs_default_profile.py fail
+
+## Full suite
+614 passed in 33.24s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

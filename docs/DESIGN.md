@@ -119,8 +119,10 @@ remains a *test* dependency for the client side.
 
 ### Quirk profiles
 
-`agate-v10r01b04d00` reproduces the documented firmware behaviour (see the README). `spec` is a
-well-behaved SunSpec DER, so clients can be tested against both. Every flag can be overridden per
+`agate-v12r02b60d00-candidate` (the default) is the firmware the reference aGate runs since
+2026-10-20, measured on one site ([emulated](emulated.md)). `agate-v10r01b04d00` reproduces the
+earlier, documented firmware (see the README). `spec` is a well-behaved SunSpec DER, so clients
+can be tested against all of them. Every flag can be overridden per
 gateway.
 
 ### Direct Connect frontend
