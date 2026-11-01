@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- `firmware` control action (and UI form): switch a gateway to another aGate profile while it runs, like an update. Both listeners cycle; the new profile's Modbus image, versions and Direct Connect behaviour apply; the site's state is kept; sessions save it.
 - Commissioning lifecycle: `setup: commissioning`, the `commission` action (start, the app's System Parameters, PTO date, complete) and the state's `lifecycle`; `pto_date` in the fleet file. Only the state and settings change (the guide documents no per-state protocol behaviour, nothing before/after PTO).
 - `pcs_derate_w`, the installer's PCS Permanent Derate (Commissioning Guide p. 24): caps each aPower's charge and discharge, on- and off-grid, and stacks with temperature derating; above the unit's rating it has no effect. The state shows it.
 - Direct Connect 1701 → 1702 install profile: the catalogue's key set from the site (`electricSupply` = service amps, `gridExportEnable`, `isPcsDischgEn`); the four −1 power-plane limits are stored by a full-block write with Debug Mode on, and not enforced.

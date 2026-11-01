@@ -258,6 +258,8 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
                 site.set_utility(None)
             else:
                 site.set_utility({k: v for k, v in body.items() if k != "clear"})
+        elif action == "firmware":
+            gw.set_firmware(str(body["profile"]), _num_or_none(body, "down_s") if "down_s" in body else None)
         elif action == "commission":
             gw.commission(body)
         elif action == "service":

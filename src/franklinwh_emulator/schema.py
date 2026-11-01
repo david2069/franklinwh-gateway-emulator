@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import fields
 from typing import Any
 
+from .profiles import PROFILES
 from .server import DC_UNSUPPORTED_FAULTS, Faults
 from .site import ALARMS, MODE_NAMES, PV_INPUTS
 from .weather import SKIES
@@ -350,6 +351,15 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "fields": {},
         "examples": [{}],
     },
+    "firmware": {
+        "doc": "Update the gateway's firmware (#130): switch to another aGate profile. Its Modbus "
+               "image, versions and Direct Connect behaviour apply; both listeners drop and come back "
+               "as on a reboot; the site's state is kept. spec is not aGate firmware.",
+        "fields": {"profile": _f("string", enum=sorted(p for p in PROFILES if p != "spec")),
+                   "down_s": _f("number", "listeners down for (default 20 s)", unit="s")},
+        "required": ["profile"],
+        "examples": [{"profile": "agate-v10r01b04d00"}],
+    },
     "csip": {
         "doc": "The CSIP-AUS utility server: registration, availability, events, default.",
         "fields": {
@@ -376,7 +386,7 @@ GROUPS: dict[str, list[str]] = {
     "Battery and modes": ["vpp", "release", "mode", "tou", "reserve", "soc", "apower"],
     "Loads": ["circuit", "appliance"],
     "Generator": ["generator"],
-    "CSIP and comms": ["csip", "der-comms", "dc-modbus", "dc-reboot", "export"],
+    "CSIP and comms": ["csip", "der-comms", "dc-modbus", "dc-reboot", "firmware", "export"],
     "Alarms and faults": ["alarms", "faults", "dc-faults", "range-fault", "write-reject",
                           "addressing", "episode", "debug-mode"],
 }
