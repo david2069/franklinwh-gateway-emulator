@@ -634,6 +634,33 @@ class Site:
         self._roll_day(self._t)
         self._last = self._instant(self._t)
 
+    def time_travel(self, seconds: float | None) -> None:
+        """The time machine (#116): move the site's clock ``seconds`` ahead without simulating
+        the time between (components age: SoH and PV follow the new date; SoC, counters and
+        settings stay as they are). ``None`` returns to the real time. History starts a new day
+        at the destination."""
+        from .clock import OffsetClock
+        with self.lock:
+            self.step()
+            if seconds is None:
+                if isinstance(self.clock, OffsetClock):
+                    self.clock = self.clock.base
+            else:
+                if float(seconds) <= 0:
+                    raise ValueError("time-machine: only forward; reset: true returns to now")
+                if not isinstance(self.clock, OffsetClock):
+                    self.clock = OffsetClock(self.clock)
+                self.clock.offset += float(seconds)
+            self._t = self.clock.now()
+            self._age(self._t, force=True)
+            self._roll_day(self._t)
+            self._last = self._instant(self._t)
+
+    @property
+    def time_travelled_s(self) -> float:
+        from .clock import OffsetClock
+        return self.clock.offset if isinstance(self.clock, OffsetClock) else 0.0
+
     SNAPSHOT_VERSION = 1
     _SNAP_COUNTERS = ("grid_import_wh", "grid_export_wh", "pv_wh", "batt_discharge_wh",
                       "batt_charge_wh", "gen_wh", "load_wh")

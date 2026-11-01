@@ -351,6 +351,15 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "fields": {},
         "examples": [{}],
     },
+    "time-machine": {
+        "doc": "Jump the gateway ahead in time (#116): its clock moves without simulating the time "
+               "between; components age (SoH, PV, warranty), SoC and counters stay. reset returns to now.",
+        "fields": {"years": _f("number", "jump this many years ahead"),
+                   "days": _f("number", "jump this many days ahead"),
+                   "to": _f("string", "jump to this local date, YYYY-MM-DD (ahead only)"),
+                   "reset": _f("boolean", "true = back to the real time")},
+        "examples": [{"years": 5}, {"to": "2034-07-01"}, {"reset": True}],
+    },
     "firmware": {
         "doc": "Update the gateway's firmware (#130): switch to another aGate profile. Its Modbus "
                "image, versions and Direct Connect behaviour apply; both listeners drop and come back "
@@ -383,7 +392,7 @@ ACTIONS: dict[str, dict[str, Any]] = {
 GROUPS: dict[str, list[str]] = {
     "Grid and phases": ["grid", "offgrid", "utility", "service", "commission"],
     "Inputs": ["pv", "load", "ambient", "weather"],
-    "Battery and modes": ["vpp", "release", "mode", "tou", "reserve", "soc", "apower"],
+    "Battery and modes": ["vpp", "release", "mode", "tou", "reserve", "soc", "apower", "time-machine"],
     "Loads": ["circuit", "appliance"],
     "Generator": ["generator"],
     "CSIP and comms": ["csip", "der-comms", "dc-modbus", "dc-reboot", "firmware", "export"],

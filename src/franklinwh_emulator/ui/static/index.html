@@ -118,6 +118,7 @@
           <span class="tag warn" x-show="g.battery_export === false"
                 :title="g.utility_rules && g.utility_rules.battery_export === false ? 'PCS setting' : 'factory setting for this model (ESS Import-Only Mode)'">no battery export</span>
           <span class="tag warn" x-show="g.debug_mode" title="Direct Connect 1821 enable 1: the battery is stopped">Debug Mode</span>
+          <span class="tag warn" x-show="g.time_travelled_days" title="Time machine (#116): the clock is ahead; time-machine reset returns to now" x-text="timeTravelText(g)"></span>
         </div>
       </button>
     </template>

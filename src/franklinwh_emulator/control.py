@@ -132,6 +132,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "apower_off": sorted(site.apower_off),                # switched off at the unit (#71)
         # Per aPower, from its model (#180).
         "apower_rating": {"wh": round(site.model.apower.kwh * 1000), "w": round(site.apower_w)},
+        "time_travelled_days": round(site.time_travelled_s / 86400, 2),   # time machine (#116)
         "pcs_derate_w": site.pcs_derate_w,                    # installer's derate (#185)
         # Age and warranty (#115): aPower SoH, PV ageing, each component's warranty.
         "components": {"soh": round(site.soh, 2), "pv_age_factor": round(site._pv_age, 4),
@@ -263,6 +264,16 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
                 site.set_utility(None)
             else:
                 site.set_utility({k: v for k, v in body.items() if k != "clear"})
+        elif action == "time-machine":
+            if body.get("reset"):
+                site.time_travel(None)
+            else:
+                secs = float(body.get("years", 0)) * 365.25 * 86400 + float(body.get("days", 0)) * 86400
+                if "to" in body:
+                    import datetime as _d
+                    target = _d.date.fromisoformat(str(body["to"]))
+                    secs += (target - _d.date.fromisoformat(site.local_date(site.clock.now()))).days * 86400
+                site.time_travel(secs)
         elif action == "firmware":
             gw.set_firmware(str(body["profile"]), _num_or_none(body, "down_s") if "down_s" in body else None)
         elif action == "commission":
