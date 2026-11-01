@@ -261,7 +261,7 @@ def test_model1_says_emulator(clock):
     from franklinwh_emulator import __version__
     gw = make_gateway(clock, seed=7)
     im = gw.device.image
-    assert im.get(1, "Opt") == f"Emulator {__version__}"
+    assert im.get(1, "Opt") == f"Emulator {__version__}"[:16]          # Opt holds 16 characters
     assert (im.get(1, "Md"), im.get(1, "Vr")) == ("aGate X", gw.profile.firmware)
     assert im.get(1, "SN").startswith("MOCK")
 

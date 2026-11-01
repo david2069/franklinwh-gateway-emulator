@@ -1,0 +1,18 @@
+# #163 Main reports a development version between releases — 2026-11-01
+
+Branch dev-version-163, base main ddd92a4.
+
+## New tests
+24 passed in 0.11s
+
+## Break check
+with the version reverted to 0.2.1, test_unreleased_changes_mean_a_dev_version fails
+
+## Full suite
+638 passed in 34.74s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
