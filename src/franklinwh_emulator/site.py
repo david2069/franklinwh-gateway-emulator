@@ -65,6 +65,12 @@ PV_RESUME_SOC = 97.0
 DROOP_DB_HZ = 0.036
 DROOP_K = 0.05
 DROOP_RAMP_HZ_S = 0.2
+# Off-grid PV relay rules (same paper): inverters that don't follow IEEE 1547-2018 don't droop,
+# so the aGate opens their relay instead; and it opens the PV relays when PV exceeds the
+# aPowers' charging capacity, whatever the frequency (here: a surplus more than droop can
+# remove before 62.2 Hz). How long a relay stays open is not
+# documented: 300 s here (IEEE 1547's default reconnect delay), so a lasting surplus toggles it.
+PV_RELAY_HOLD_S = 300.0
 VA_PER_APOWER = 5_800           # 702.VAMaxRtg (S rated for volt-var)
 # Battery losses against the SoC scale, fitted on 30 days of the reference aGate (one aPower,
 # 10 s samples, Sep–Oct 2026; docs/CALIBRATION.md): discharging 12.45 kWh moves SoC by 100 %,
@@ -223,6 +229,9 @@ class SiteConfig:
     circuits: dict | None = None
     # Share of the solar curve on each PV input (aGate built-in vs aPbox remote).
     pv_inputs: dict[str, float] = field(default_factory=lambda: {"proximal": 1.0})
+    # PV inputs whose inverters don't follow IEEE 1547-2018 (no Freq/Watt droop): off-grid, a
+    # North American aGate opens their relay instead (#178).
+    pv_non_1547: list[str] = field(default_factory=list)
     offgrid_floor_soc: float = 5.0         # islanded discharge floor (1723 offgridSoc)
     # TOU mode: the schedule (franklinwh-cloud block format, tou.py) and prices per tariff
     # period ({waveType: {buy, sell}}, display only). None → tou.DEFAULT_SCHEDULE.
@@ -472,6 +481,11 @@ class Site:
         self.soc = cfg.initial_soc if cfg.initial_soc is not None else default_soc
         # Off-grid full-battery PV cut-off (North America, #178): set at 100 %, cleared below 97 %.
         self.pv_cutoff = False
+        bad = set(cfg.pv_non_1547) - set(PV_INPUTS)
+        if bad:
+            raise ValueError(f"pv_non_1547: unknown PV inputs {sorted(bad)}; choose from {PV_INPUTS}")
+        # PV relays the aGate opened itself (#178): {input: (reason, since)}.
+        self.pv_auto_open: dict[str, tuple[str, float]] = {}
         self.droop_hz: float | None = None        # formed frequency while drooping PV (#178)
         if cfg.native_mode not in MODE_NAMES:
             raise ValueError(f"native_mode must be one of {sorted(MODE_NAMES)}")
@@ -752,13 +766,46 @@ class Site:
         jitter = 1.0 + 0.04 * math.sin(ts / 4.0 + self.config.seed * 1.3)
         return max(0.0, (self.home_base_w + morning + evening) * jitter)
 
+    def pv_relays_closed(self) -> dict[str, bool]:
+        """Each PV relay as it is: closed unless opened by request or by the aGate (#178)."""
+        return {n: self.pv_relays[n] and n not in self.pv_auto_open for n in PV_INPUTS}
+
     def _pv_inputs(self, ts: float) -> dict[str, float]:
         """Solar available on each PV input, after its relay."""
         total = self.solar_w(ts)
         shares = self.config.pv_inputs
         norm = sum(shares.values()) or 1.0
-        return {name: (total * shares.get(name, 0.0) / norm if self.pv_relays[name] else 0.0)
+        closed = self.pv_relays_closed()
+        return {name: (total * shares.get(name, 0.0) / norm if closed[name] else 0.0)
                 for name in PV_INPUTS}
+
+    def _pv_relay_rules(self, snap: "Snapshot", ts: float) -> None:
+        """North America off-grid (#178): on a surplus, open the relays of inputs whose
+        inverters don't follow IEEE 1547 (they can't droop); open every producing input when
+        the surplus is more than droop can take away (the formed frequency tops out at
+        62.2 Hz). Each closes again after PV_RELAY_HOLD_S. Elsewhere they stay closed."""
+        if snap.grid_connected or self.model.region != models.NA or snap.hz <= 0:
+            self.pv_auto_open.clear()
+            return
+        for n, (_, since) in list(self.pv_auto_open.items()):
+            if ts - since >= PV_RELAY_HOLD_S:
+                del self.pv_auto_open[n]
+        if snap.solar_clipped_w <= 1 or self.pv_cutoff:
+            return
+        shares = self.config.pv_inputs
+        producing = [n for n in PV_INPUTS if shares.get(n, 0) > 0
+                     and self.pv_relays[n] and n not in self.pv_auto_open]
+        g = self.grid
+        rated = max(self.solar_peak_w, snap.solar_available_w)
+        drooping = sum(shares.get(n, 0) for n in producing if n not in self.config.pv_non_1547)
+        reach = (PV_CUTOFF_HZ - g.nominal_hz - DROOP_DB_HZ) / (DROOP_K * g.nominal_hz)
+        if snap.solar_clipped_w > reach * rated * drooping / (sum(shares.values()) or 1.0):
+            for n in producing:
+                self.pv_auto_open[n] = ("above charge capacity", ts)
+        else:
+            for n in producing:
+                if n in self.config.pv_non_1547:
+                    self.pv_auto_open[n] = ("not IEEE 1547", ts)
 
     # -- grid ----------------------------------------------------------------------
     def _droop(self, clipped_w: float, solar_avail_w: float, dt: float) -> float:
@@ -1580,6 +1627,7 @@ class Site:
             if rec and rec.get("soc") is not None and rec["soc"] >= 99.5:
                 self.soc = 100.0
         self.soc = max(0.0, min(100.0, self.soc))
+        self._pv_relay_rules(snap, ts)              # against the cut-off this step ran with
         if snap.grid_connected or self.model.region != models.NA:
             self.pv_cutoff = False
         elif self.soc >= 99.95:
