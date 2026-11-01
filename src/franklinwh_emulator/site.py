@@ -290,6 +290,10 @@ class SiteConfig:
     # the user's power-rating setting in some US areas (owner's statement); which regions, and
     # what a client sees, are not evidenced, so it is a setting, never derived from the region.
     power_limits: str = "settable"
+    # aPower S DC PV on its MPPT inputs (#180): {rated_w, export: true}. The app's MPPT page:
+    # "DC PV connected to MPPT", "Solar Rated Power", "Allow DC PV export to the grid"
+    # (Commissioning Guide p. 22). None = no DC PV.
+    dc_pv: dict | None = None
     # Component age and warranty (#115): {agate, apower, pv_inverter, pv_panels}, each
     # {installed, warranty_years, ...}; installed defaults to the commissioned date.
     components: dict | None = None
@@ -542,6 +546,7 @@ class Site:
         self.unit_models = units                     # aPower n is unit_models[n - 1]
         self.apower_w = sum(u.kw for u in units) * 1000 / len(units)   # per aPower (mean if mixed)
         self.rated_capacity_wh = sum(u.kwh for u in units) * 1000
+        self.dc_pv = self._dc_pv_config(cfg.dc_pv, units)
         self.capacity_wh = self.rated_capacity_wh    # usable: scaled by SoH (_age, #115)
         from .components import Components
         self.components = Components(cfg.components, self.model.apower)
@@ -1299,6 +1304,52 @@ class Site:
             return tou.target_w(block["dispatchId"], net, self.rate_w)
         return net                                     # self-consumption
 
+    @staticmethod
+    def _dc_pv_config(d: dict | None, units) -> dict | None:
+        """Check ``dc_pv`` against the aPower S units: up to 15 kW of DC PV each (datasheet
+        MPPT limit, catalogued in models.py)."""
+        if d is None:
+            return None
+        d = dict(d)
+        bad = set(d) - {"rated_w", "export"}
+        if bad:
+            raise ValueError(f"dc_pv: unknown keys {sorted(bad)}; known ['export', 'rated_w']")
+        hybrids = [u for u in units if u.mppt_count]
+        if not hybrids:
+            raise ValueError("dc_pv: needs an aPower S (the only aPower with MPPT inputs)")
+        limit = sum((u.mppt_max_kw or 0) * 1000 for u in hybrids)
+        rated = float(d.get("rated_w", 0))
+        if not 0 < rated <= limit:
+            raise ValueError(f"dc_pv.rated_w: 0 < rated_w <= {limit:g} W "
+                             f"({len(hybrids)} aPower S × their MPPT limit)")
+        return {"rated_w": rated, "export": bool(d.get("export", True)),
+                "inverter_w": sum(u.kw * 1000 for u in hybrids)}
+
+    def _dc_pv_w(self, ts: float) -> float:
+        """DC PV available now: the site's solar shape (weather, temperature, age) at dc_pv's
+        rating."""
+        if self.dc_pv is None or not self.solar_peak_w:
+            return 0.0
+        return self.solar_model_w(ts) / self.solar_peak_w * self.dc_pv["rated_w"]
+
+    def _dc_pv_caps(self, pv: dict, load: float, max_dis: float, max_chg: float,
+                    islanded: bool) -> tuple[float, float]:
+        """The aPower S inverter carries DC PV and battery discharge together: DC PV beyond
+        what the inverter and the battery's charging can take is curtailed, and discharge gives
+        way to the DC PV. Without export, DC PV only serves the house and the battery.
+        Returns (DC PV curtailed W, max discharge W). Plausible, from the datasheet ratings."""
+        dc = pv.get("mppt", 0.0)
+        if not dc:
+            return 0.0, max_dis
+        inv = self.dc_pv["inverter_w"]
+        allowed = inv + max_chg
+        if not self.dc_pv["export"] and not islanded:
+            ac_pv = sum(v for k, v in pv.items() if k != "mppt")
+            allowed = min(allowed, max(0.0, load - ac_pv) + max_chg)
+        cut = max(0.0, dc - allowed)
+        pv["mppt"] = dc - cut
+        return cut, max(0.0, min(max_dis, inv - pv["mppt"]))
+
     def _unit_w(self) -> float:
         """One aPower's power after the installer's derate (the mean, with mixed models)."""
         return self.apower_w if self.pcs_derate_w is None else min(self.apower_w, self.pcs_derate_w)
@@ -1443,6 +1494,8 @@ class Site:
     def _instant(self, ts: float, dt: float = 0.0) -> Snapshot:
         hour = self.local_hour(ts)
         pv = self._pv_inputs(ts)
+        if self.dc_pv is not None:
+            pv["mppt"] = self._dc_pv_w(ts)           # aPower S DC PV (#180)
         solar_avail = sum(pv.values())
         islanded = not self.grid_relay_closed
         ambient = self.ambient_c(ts)
@@ -1465,10 +1518,13 @@ class Site:
             max_dis, max_chg = self._limits(self.config.offgrid_floor_soc, dt)
             if faulted:
                 max_dis = max_chg = 0.0
+            dc_cut, max_dis = self._dc_pv_caps(pv, load, max_dis, max_chg, True)
+            solar_avail -= dc_cut
             # North America: with the battery full the aGate raises its frequency to 62.2 Hz and
             # AC PV stops entirely until SoC is below 97 % (FranklinWH PV Curtailment White
             # Paper). Elsewhere PV is only clipped to what the house and battery take.
-            pv_in = 0.0 if self.pv_cutoff else solar_avail
+            # aPower S DC PV is the aPower's own, not frequency-curtailed: it stays (#180).
+            pv_in = pv.get("mppt", 0.0) if self.pv_cutoff else solar_avail
             gen_w = self.generator.output_w(load - pv_in, max_chg)
             net = load - pv_in - gen_w
             on_circuits = [n for n, c in comps.items() if c is not None and c.circuit and demand[n] > 0]
@@ -1515,6 +1571,8 @@ class Site:
             max_dis, max_chg = self._limits(floor, dt)
             if faulted or self.battery_held:
                 max_dis = max_chg = 0.0
+            dc_cut, max_dis = self._dc_pv_caps(pv, load, max_dis, max_chg, False)
+            solar_avail -= dc_cut
             replayed = dispatch = None
             if self.replay is not None:
                 replayed = self.replay.battery_w(ts)
@@ -1622,7 +1680,7 @@ class Site:
             grid_connected=not islanded, offgrid_requested=self.offgrid_requested,
             trip_reason=self.trip_reason, trip_stage=self.trip_stage,
             v_ln=sum(v_legs.values()) / len(v_legs), hz=hz, phases=phases,
-            solar_available_w=solar_avail, solar_clipped_w=clipped, load_shed_w=shed,
+            solar_available_w=solar_avail + dc_cut, solar_clipped_w=clipped + dc_cut, load_shed_w=shed,
             pv_by_input={k: v * scale for k, v in pv.items()},
             inverter_state=inv, run_status=run,
             alarms=self._alarm_bits(islanded), dc_alarms=self.dc_alarms,

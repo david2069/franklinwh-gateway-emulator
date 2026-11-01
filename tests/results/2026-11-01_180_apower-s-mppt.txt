@@ -1,0 +1,18 @@
+# #180 aPower S DC PV (MPPT) from the datasheet — 2026-11-01
+
+Branch apower-s-mppt, base main 57002be.
+
+## New tests
+3 passed in 0.03s
+
+## Break check
+the new tests fail with the src change stashed (dc_pv unknown).
+
+## Full suite
+689 passed in 37.76s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
