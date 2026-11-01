@@ -17,6 +17,9 @@ and *Max charge power* (FranklinWH PCS Technical Brief, "Grid Import Limitations
 ESS Import-Only Mode (no battery export; FranklinWH PCS Technical Brief), AU/NZ models export. These are the aGate's PCS settings, so they are enforced. Without a
 ``utility`` block the grid code's declared export limit is tracked as before.
 
+``service: {busbar_a}`` (North American models) sets the PCS export limit by the 120 % rule
+when ``utility`` sets none: ((busbar × 1.2) − main breaker) / 1.25 amps across the legs.
+
 The main breaker trips on grid import above its rating, after an inverse-time delay (plausible,
 not measured): ``120 / (r² − 1)`` seconds at ``r`` times the rating, at once from 5×. A tripped
 breaker takes the site off the grid until it is reset (``service`` action, ``reset: true``).
@@ -94,18 +97,30 @@ def pick_block(d: dict) -> dict | None:
 @dataclass
 class Service:
     main_breaker_a: float
+    busbar_a: float | None = None     # the panel busbar's rating, for the 120 % rule
 
     @classmethod
     def from_dict(cls, d: dict | None) -> "Service | None":
         if d is None:
             return None
         d = dict(d)
-        bad = set(d) - {"main_breaker_a"}
+        bad = set(d) - {"main_breaker_a", "busbar_a"}
         if bad:
-            raise ValueError(f"service: unknown keys {sorted(bad)}; known ['main_breaker_a']")
+            raise ValueError(f"service: unknown keys {sorted(bad)}; known ['busbar_a', 'main_breaker_a']")
         if "main_breaker_a" not in d or float(d["main_breaker_a"]) <= 0:
             raise ValueError("service.main_breaker_a: the main breaker's rating in amps (> 0)")
-        return cls(float(d["main_breaker_a"]))
+        busbar = d.get("busbar_a")
+        if busbar is not None and float(busbar) <= 0:
+            raise ValueError("service.busbar_a: the busbar's rating in amps (> 0)")
+        return cls(float(d["main_breaker_a"]), None if busbar is None else float(busbar))
+
+    def pel_a(self) -> float | None:
+        """NEC 705.12 120 % rule (FranklinWH PCS Technical Brief): the export current the
+        busbar allows, ((busbar × 1.2) − main breaker) / 1.25, at least 0; None without a
+        busbar rating. 200 A busbar, 200 A main → 32 A."""
+        if self.busbar_a is None:
+            return None
+        return max(0.0, (self.busbar_a * 1.2 - self.main_breaker_a) / 1.25)
 
     def rating_w(self, v_ln: float, legs: int) -> float:
         return self.main_breaker_a * v_ln * legs

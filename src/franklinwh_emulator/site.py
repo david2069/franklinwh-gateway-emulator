@@ -801,8 +801,7 @@ class Site:
         producing = [n for n in PV_INPUTS if shares.get(n, 0) > 0
                      and self.pv_relays[n] and n not in self.pv_auto_open]
         if snap.grid_connected:
-            pel = (None if self.utility_rules is None
-                   else self.utility_rules.export_limit(len(self.phases)))
+            pel = self.pcs_export_limit()
             if pel is not None and snap.export_limit_w == pel:
                 for n in producing:
                     self.pv_auto_open[n] = (PEL_REASON, ts)
@@ -1536,15 +1535,27 @@ class Site:
             self.step()
             self.utility_rules = UtilityRules.from_dict(d)
 
+    def pcs_export_limit(self) -> float | None:
+        """The PCS export limit (PEL), W: the utility rules' limit; else, on North American
+        models, the 120 % busbar rule's (service.busbar_a; #123, #180); None = none."""
+        if self.utility_rules is not None:
+            ul = self.utility_rules.export_limit(len(self.phases))
+            if ul is not None:
+                return ul
+        if self.service is not None and self.model.region == models.NA:
+            a = self.service.pel_a()
+            if a is not None:
+                return a * self.grid.nominal_v_ln * len(self.phases)
+        return None
+
     def _enforced_export_limit(self, ctl: dict) -> float | None:
         limits = []
         declared = self.grid.export_limit_w(len(self.phases))
         if self.export_limit_enforced and declared is not None:
             limits.append(declared)
-        if self.utility_rules is not None:            # PCS settings: enforced
-            ul = self.utility_rules.export_limit(len(self.phases))
-            if ul is not None:
-                limits.append(ul)
+        pel = self.pcs_export_limit()                 # PCS settings: enforced
+        if pel is not None:
+            limits.append(pel)
         if ctl.get("opModExpLimW") is not None:
             limits.append(ctl["opModExpLimW"])
         return min(limits) if limits else None

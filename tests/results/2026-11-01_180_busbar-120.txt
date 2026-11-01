@@ -1,0 +1,18 @@
+# #180 120 % busbar rule sets the export limit (North America) — 2026-11-01
+
+Branch busbar-120, base main 6700f23.
+
+## New tests
+11 passed in 0.18s
+
+## Break check
+the new test fails with the src change stashed (busbar_a unknown).
+
+## Full suite
+652 passed in 35.53s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

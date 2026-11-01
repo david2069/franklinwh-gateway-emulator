@@ -128,7 +128,7 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 | `utility` | object | — | the grid operator's rules: {operator, export: allowed\|limited\|prohibited, export_limit_w, export_per_phase_w, import_limit_w, grid_charge, grid_charge_max_w, battery_export, export_rule_source}; enforced (PCS settings). Also accepted as dnsp (AU) or lines_company (NZ) |
 | `dnsp` | object | — | AU name for utility (the same block) |
 | `lines_company` | object | — | NZ name for utility (the same block) |
-| `service` | object | — | the main breaker: {main_breaker_a}; import above it trips the site off the grid (inverse-time) until reset; the site also holds grid import below it |
+| `service` | object | — | the main breaker and busbar: {main_breaker_a, busbar_a}; import above the breaker trips the site off the grid (inverse-time) until reset; the site also holds grid import below it. North American models: `busbar_a` sets the PCS export limit by the 120 % rule, ((busbar × 1.2) − main) / 1.25 A, when `utility` sets none |
 
 ### House load and smart circuits
 

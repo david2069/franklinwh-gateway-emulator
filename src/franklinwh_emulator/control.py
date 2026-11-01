@@ -103,6 +103,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "utility_rules": None if site.utility_rules is None else {
             **asdict(site.utility_rules),
             "export_limit_in_force_w": site.utility_rules.export_limit(len(site.phases))},
+        "pcs_export_limit_w": site.pcs_export_limit(),      # utility rules, else the 120 % rule (NA)
         "import_cap_w": site.import_cap_w(),
         "battery_export": site.battery_export(),            # PCS setting, else the model's default
         "pv_cutoff": site.pv_cutoff,         # NA off-grid full battery: 62.2 Hz, PV off (#178, #176)
@@ -110,6 +111,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "import_clipped_w": round(site.import_clipped_w, 1),
         "service": None if site.service is None else {
             "main_breaker_a": site.service.main_breaker_a,
+            "busbar_a": site.service.busbar_a,
             "rating_w": round(site.service.rating_w(site.grid.nominal_v_ln, len(site.phases))),
             "trip_progress": round(site.breaker_progress, 3), "open": site.main_breaker_open},
         # Placement and the temperature around the cabinet (#110); None = the original estimate.
