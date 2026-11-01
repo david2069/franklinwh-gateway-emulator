@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- `pv: {model: pvlib}` (optional extra `.[pvlib]`): pvlib computes the synthetic weather's array irradiance (Erbs split, Hay-Davies/Perez/isotropic transposition) and the cell temperature (SAPM, Faiman, PVsyst); the built-in model stays the default. pvlib joins the dev extras so CI tests it.
 - `time-machine` action (years, days or to a date; reset): moves a gateway's clock ahead without simulating the gap, so components age (SoH, PV, warranty) while SoC and counters stay; the card shows "time-travelled +N years".
 - Component age and warranty (`components:`): aPower SoH falls to 70 % over FranklinWH's warranty term (12 y / 43 MWh aPower X, 12 y / 60 MWh X-02-AU, 15 y / 60 MWh aPower 2 and S) by age or throughput; served in 713 SoH, 15036 and DC 1705 batSoh, and the usable capacity follows it (against the 94.8 % calibration). PV panels lose 0.5 %/year. The state shows each component's warranty. Behaviour change: SoH is no longer a fixed 95.6/94.8.
 - Force events (side panel, `POST /events`): ten presets (offline, slow, faulty responses, DC offline/slow, aPower failure, grid outage, brown-out, frequency drop/spike) on all or chosen gateways, with optional auto-clear; logged per gateway as `event:<name>`.

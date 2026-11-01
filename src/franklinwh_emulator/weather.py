@@ -218,6 +218,7 @@ class Weather:
         self.kwp = cfg.kwp or kwp
         self._days: dict[str, OpenMeteoDay] = {}
         self._window_means: dict[tuple, float] = {}
+        self.clear_sky = clear_sky_poa           # pvlib's when pv: {model: pvlib} (#112)
 
     # Open-Meteo radiation values are the mean over the *preceding* 15 minutes.
     def _day(self, ts: float) -> OpenMeteoDay:
@@ -279,7 +280,7 @@ class Weather:
         c = self.cfg
         if c.model == "synthetic":
             sky = SKIES[c.sky]
-            return (clear_sky_poa(ts, c.latitude, c.longitude, c.tilt, c.azimuth)
+            return (self.clear_sky(ts, c.latitude, c.longitude, c.tilt, c.azimuth)
                     * sky["haze"] * cloud_factor(self.seed, ts, sky["cover"], sky["opacity"]))
         gti, _, cloud = self._om_value(ts)
         return self._flickered(ts, gti, cloud)

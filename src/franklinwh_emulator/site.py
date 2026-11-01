@@ -245,6 +245,8 @@ class SiteConfig:
     # PV output falls as the panels heat up (#109): {"temp_coeff" (per °C), "noct" (°C),
     # "ref_cell_c" (°C)}; false turns it off. None = PV_TEMPERATURE.
     pv_temperature: dict | bool | None = None
+    # PV model (#112): {model: builtin|pvlib, transposition, temperature_model, wind_m_s}.
+    pv: dict | None = None
     # Where the aGate/aPower is installed (#110): {"indoor": heated|unheated|uninsulated} or
     # {"outdoor": {"sun": morning|afternoon|all-day|shade, "cover": none|roof|enclosure}}.
     # None = the original cabinet estimate (ambient + 8 °C + 1 °C per kW).
@@ -584,6 +586,10 @@ class Site:
         wcfg = WeatherConfig.from_dict(wdict)
         self.weather = None if wcfg.model == "bell" else Weather(
             wcfg, seed=cfg.seed, kwp=self.solar_peak_w / 1000.0 / wcfg.efficiency)
+        from .pvmodel import from_config as _pv_model
+        self.pvlib = _pv_model(cfg.pv)                       # None = the built-in PV model (#112)
+        if self.pvlib is not None and self.weather is not None:
+            self.weather.clear_sky = self.pvlib.clear_sky_poa
 
         # Grid, relays, alarms.
         self.utility = self._healthy_utility()
@@ -880,7 +886,8 @@ class Site:
             poa = self._solar_poa_w(ts)[0]
         if poa <= 0:
             return None, 1.0
-        cell = pv_cell_c(self.ambient_c(ts), poa, t["noct"])
+        cell = (self.pvlib.cell_c(poa, self.ambient_c(ts)) if self.pvlib is not None
+                else pv_cell_c(self.ambient_c(ts), poa, t["noct"]))
         return cell, max(0.0, 1.0 + t["temp_coeff"] * (cell - t["ref_cell_c"]))
 
     def load_w(self, ts: float) -> float:

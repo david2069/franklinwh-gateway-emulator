@@ -1,0 +1,18 @@
+# #112 pvlib as an optional PV model — 2026-11-01
+
+Branch pvlib-model, base main ae68a11.
+
+## New tests
+2 passed in 0.44s
+
+## Break check
+the site test fails with the src change stashed (pv key unknown); the pvmodel module's own test needs the new file, which stays in place.
+
+## Full suite
+680 passed in 36.24s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

@@ -21,8 +21,10 @@ keywords = ["franklinwh", "agate", "modbus", "sunspec", "emulator", "simulator"]
 [project.optional-dependencies]
 dc = ["franklinwh-direct-connect-api>=0.4.0"]
 docs = ["mkdocs-material"]
+pvlib = ["pvlib>=0.11"]
 dev = [
     "franklinwh-direct-connect-api>=0.4.0",
+    "pvlib>=0.11",
     "pytest>=7.0",
     "pymodbus>=3.6",
     "franklinwh-modbus @ git+https://github.com/david2069/franklinwh-modbus.git@38a80f8b3f24e573f5ee3c5c0bca3e0526d4566b",  # v0.11.0: ships firmware_quirks.json
