@@ -65,7 +65,14 @@ mixed models on one aGate (`model: {apower: [0, 3]}`, one per aPower, in unit or
 discharge and charge power add up per unit, Direct Connect 1102 `PE_HW_VER` lists each unit's
 code, and the counts above are checked. With mixed models the SoC is still one combined value,
 the warranty and SoH follow the first unit's model, and the WSetPct basis is the mean aPower.
-Not emulated yet: aPower S's DC PV inputs (MPPT), the aPower 2 / aPower X peak-charge window,
+**aPower S DC PV** (`dc_pv: {rated_w, export}`, the app's MPPT page): modelled from the
+datasheet ratings (4 MPPT inputs, up to 15 kW of DC PV and an 11.5 kW inverter per aPower S),
+not from a capture. DC PV follows the site's solar shape (weather, panel temperature, age),
+charges the battery directly, and shares the inverter with battery discharge: DC PV beyond the
+inverter plus the battery's charging is curtailed, and discharge gives way to it. With
+`export: false` it only serves the house and the battery. It is counted in solar (1301 `p_sun`,
+502) and is not frequency-curtailed off-grid. How a real aPower S reports DC PV is not known.
+Not emulated yet: the aPower 2 / aPower X peak-charge window,
 MAC 1, aHub, and per-aPower SoC (backlog HARDWARE-TOPOLOGIES).
 
 ## The influences
