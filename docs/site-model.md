@@ -74,6 +74,13 @@ or 60 MWh, whichever comes first, retaining at least 70 % of rated capacity; aGa
   per component, age, years left, expiry year and whether it is in warranty. The PV inverter
   (10 years) and panels (25 years) have no FranklinWH term: plausible defaults.
 
+**Time machine** (#116): `ctl <gw> time-machine '{"years": 8}'` (or `days`, or `to:
+YYYY-MM-DD`) moves the gateway's clock ahead without simulating the time between: components
+age (SoH, PV output, warranty status follow the new date), while SoC, counters and settings stay
+as they are, and the run continues from the new date (history starts a new day there). The card
+shows "time-travelled +8.0 years"; `{"reset": true}` returns to the real time. Ahead only.
+Simulating the years between (energy totals, throughput-driven SoH) is not built.
+
 ### Commissioning
 
 A gateway goes **factory → commissioning → in-service**, as in the installer's app (FranklinWH

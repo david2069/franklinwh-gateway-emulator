@@ -27,6 +27,17 @@ class ScaledClock:
         return self._sim0 + (time.time() - self._real0) * self.factor
 
 
+class OffsetClock:
+    """Another clock moved by ``offset`` seconds: the time machine (#116)."""
+
+    def __init__(self, base: "Clock", offset: float = 0.0):
+        self.base = base
+        self.offset = float(offset)
+
+    def now(self) -> float:
+        return self.base.now() + self.offset
+
+
 class ManualClock:
     """Only moves when told to — for deterministic tests."""
 

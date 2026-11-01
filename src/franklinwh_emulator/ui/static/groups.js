@@ -133,6 +133,12 @@ function forcedSolarText(g) {
   const capped = g.cap_forced_solar && g.solar_available_w < forced - 1;
   return 'solar forced ' + _kw(forced) + (capped ? ', capped at ' + _kw(g.solar_available_w) + ' by the sun' : '');
 }
+// The time machine's tag (#116): "time-travelled +2.5 years" or "+40 days".
+function timeTravelText(g) {
+  const d = g.time_travelled_days || 0;
+  return 'time-travelled +' + (d >= 365 ? (d / 365.25).toFixed(1) + ' years' : Math.round(d) + ' days');
+}
+
 function curtailText(g) {
   if (!(g.solar_clipped_w > 1)) return '';
   const why = !g.grid_connected
