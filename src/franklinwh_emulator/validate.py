@@ -15,7 +15,7 @@ import time
 from typing import Any
 
 from .clock import ManualClock
-from .gateway import Gateway, GatewayConfig, fix_bool_keys
+from .gateway import Gateway, GatewayConfig, fix_bool_keys, mock_serial
 from .schema import ACTIONS, check_body
 from .site import SiteConfig
 
@@ -156,6 +156,7 @@ def validate_fleet(d: Any, *, prefix: str = "", at: float | None = None) -> list
         return out + [_problem(f"{prefix}gateways", "needs a list of at least one gateway")]
     ids: dict[str, int] = {}
     ports: dict[tuple, str] = {}
+    serials: dict[str, int] = {}
     for i, g in enumerate(gws):
         path = f"{prefix}gateways[{i}]"
         if not isinstance(g, dict):
@@ -176,6 +177,15 @@ def validate_fleet(d: Any, *, prefix: str = "", at: float | None = None) -> list
         if cfg.id in ids:
             out.append(_problem(f"{path}.id", f"duplicate of gateways[{ids[cfg.id]}]"))
         ids.setdefault(cfg.id, i)
+        # #162: one seed, one serial. Only a seed or serial that is set counts: gateways that
+        # leave both out share seed 0, and refusing them would stop fleets that start today.
+        what = "serial" if cfg.serial else "seed" if "seed" in merged else None
+        if what:
+            serial = cfg.serial or mock_serial(cfg.seed)
+            if serial in serials:
+                out.append(_problem(f"{path}.{what}", f"gives serial {serial}, as gateways[{serials[serial]}]; "
+                                                      "clients keyed by serial would collide"))
+            serials.setdefault(serial, i)
         for kind, port in (("modbus", cfg.port), ("directconnect", cfg.dc_port)):
             if port:
                 key = (cfg.host, port)

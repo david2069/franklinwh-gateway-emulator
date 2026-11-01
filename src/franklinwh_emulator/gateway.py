@@ -52,8 +52,9 @@ def fix_bool_keys(obj: Any) -> Any:
 
 
 def mock_serial(seed: int) -> str:
-    """20-char, collision-free serial in the real IBG_SN shape (same scheme as the
-    Direct Connect emulator's ``SyntheticSite``, so one seed means one serial)."""
+    """20-char serial in the real IBG_SN shape (same scheme as the Direct Connect emulator's
+    ``SyntheticSite``, so one seed means one serial: two gateways on one seed share it, which
+    ``validate_fleet`` reports)."""
     rng = random.Random(seed)
     # SyntheticSite draws its site parameters first; mirror the draws so the serial
     # comes out identical: 4 × random() then randint(-11, 12).
