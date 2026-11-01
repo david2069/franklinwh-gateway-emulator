@@ -73,6 +73,10 @@ DROOP_RAMP_HZ_S = 0.2
 # documented: 300 s here (IEEE 1547's default reconnect delay), so a lasting surplus toggles it.
 PV_RELAY_HOLD_S = 300.0
 PEL_REASON = "export limit (PEL)"
+# aGate busbar (FranklinWH PCS Technical Brief, North America): aPower discharge + grid + solar
+# at most 280 A (grid + solar while charging). Over it the aGate opens the PV relay (#123, #180).
+AGATE_BUSBAR_A = 280.0
+BUSBAR_REASON = "aGate busbar 280 A"
 VA_PER_APOWER = 5_800           # 702.VAMaxRtg (S rated for volt-var)
 # Battery losses against the SoC scale, fitted on 30 days of the reference aGate (one aPower,
 # 10 s samples, Sep–Oct 2026; docs/CALIBRATION.md): discharging 12.45 kWh moves SoC by 100 %,
@@ -931,13 +935,17 @@ class Site:
             self.pv_auto_open.clear()
             return
         for n, (why, since) in list(self.pv_auto_open.items()):
-            if ts - since >= PV_RELAY_HOLD_S or (why == PEL_REASON) != snap.grid_connected:
+            if ts - since >= PV_RELAY_HOLD_S or (why in (PEL_REASON, BUSBAR_REASON)) != snap.grid_connected:
                 del self.pv_auto_open[n]
-        if snap.solar_clipped_w <= 1 or self.pv_cutoff:
-            return
         shares = self.config.pv_inputs
         producing = [n for n in PV_INPUTS if shares.get(n, 0) > 0
                      and self.pv_relays[n] and n not in self.pv_auto_open]
+        if snap.grid_connected and self.busbar_a(snap) > AGATE_BUSBAR_A:
+            for n in producing:
+                self.pv_auto_open[n] = (BUSBAR_REASON, ts)
+            return
+        if snap.solar_clipped_w <= 1 or self.pv_cutoff:
+            return
         if snap.grid_connected:
             pel = self.pcs_export_limit()
             if pel is not None and snap.export_limit_w == pel:
@@ -957,6 +965,12 @@ class Site:
                     self.pv_auto_open[n] = ("not IEEE 1547", ts)
 
     # -- grid ----------------------------------------------------------------------
+    def busbar_a(self, snap: "Snapshot") -> float:
+        """Current through the aGate busbar, per leg: aPower discharge + grid import + solar
+        (PCS Technical Brief's sum; grid + solar while charging)."""
+        v = self.grid.nominal_v_ln * len(self.phases)
+        return (max(0.0, snap.battery_w) + max(0.0, snap.grid_w) + snap.solar_w) / v if v else 0.0
+
     def _droop(self, clipped_w: float, solar_avail_w: float, dt: float) -> float:
         """North America off-grid: the frequency the aGate forms so IEEE 1547 inverters droop
         away ``clipped_w`` (Freq/Watt against rated PV), ramped at 0.2 Hz/s. PV is still

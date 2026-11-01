@@ -323,6 +323,10 @@ service: {main_breaker_a: 63}
   `service: {main_breaker_a, busbar_a}` and no `utility` export limit, the PCS export limit is
   ((busbar × 1.2) − main) / 1.25 A across the legs: 200 A / 200 A → 32 A = 7.68 kW. The
   state's `pcs_export_limit_w` shows the limit in force.
+- **aGate busbar** (North American models; same brief): aPower discharge + grid import + solar
+  is at most 280 A (grid + solar while charging), per leg. Over it the aGate opens the PV relay,
+  for 300 s as above (`pv_relays_auto_open`: `aGate busbar 280 A`). It takes more than 67 kW on a
+  240 V site. The breakers' own ratings (aPower 100 A, PV 80 A, grid 200 A) are not modelled.
   `battery_export: false` lets solar export but keeps the battery to the home load (often a
   scheme rule). Unset, the model's factory setting applies: North American models ship in ESS
   Import-Only Mode (no battery export; FranklinWH PCS Technical Brief), AU/NZ models export

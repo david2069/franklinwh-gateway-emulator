@@ -237,3 +237,24 @@ def test_pcs_permanent_derate_caps_each_apower(clock):
     assert make_gateway(clock, site={"pcs_derate_w": 7600}).site.rate_w == 5000
     with pytest.raises(ValueError, match="pcs_derate_w"):
         make_gateway(clock, site={"pcs_derate_w": 0})
+
+
+def test_na_agate_busbar_280_a_opens_the_pv_relay(clock):
+    """PCS Technical Brief (NA): aPower discharge + grid + solar at most 280 A on the aGate
+    busbar; over it the PV relay opens (#123, #180). 70 kW of PV on 240 V is 292 A."""
+    gw = make_gateway(clock, site={"ac_type": 1, "initial_soc": 100, "solar_peak_w": 70000,
+                                   "cap_forced_solar": False})
+    s = gw.site
+    s.solar_override_w, s.load_override_w = 70000, 0
+    clock.advance(1)
+    s.step()                                    # opens within the first step
+    assert s.pv_auto_open["proximal"][0] == "aGate busbar 280 A"
+    clock.advance(1)
+    snap = s.step()
+    assert snap.solar_w == 0 and s.busbar_a(snap) < 280
+    assert s.busbar_a(snap.__class__(**{**snap.__dict__, "solar_w": 70000.0})) > 280
+    s.solar_override_w = 30000                                       # 125 A: stays closed after
+    clock.advance(301)
+    s.step()
+    clock.advance(1)
+    assert s.pv_auto_open == {} and s.step().solar_w > 29000
