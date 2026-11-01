@@ -25,6 +25,13 @@ API clients, and `restore:<name>` for a restore. Form results and Activity show 
 local time, as its card and Events do (`site_time` in the log; `at` is UTC). **Save** writes the successful ones, in order, plus each gateway's
 SoC, to `emulator-workspace/sessions/<name>.yaml`; after a restart, **Restore** (or
 `franklinwh-emulator ui FLEET --restore NAME`) replays them, so the fleet is set up as before.
+**With state** (`POST /session/save {name, snapshot: true}`) also saves each site's running
+state (#88): its clock (UTC and local, timezone), SoC, lifetime and per-leg counters, today's
+totals, the quarter-hour history (1303), circuit and generator energy, appliance (EV) sessions,
+the sky and the cabinet temperature, under `snapshot:` (versioned, `version: 1`). Restore applies
+the actions, then puts the state back. A gateway on a manual or scaled clock moves to the saved
+time, so the run continues from there; on the real clock it resumes now with the saved state
+(the gap is not simulated).
 **Save as scenario** (or `POST /session/scenario {name}`) writes the run as a scenario,
 `emulator-workspace/scenarios/<name>.yaml`: `start` is the first gateway's site time when the run
 began, `fleet` is the fleet file (or, without one, each gateway's non-default settings), and the

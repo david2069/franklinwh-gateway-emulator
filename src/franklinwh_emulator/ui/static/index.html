@@ -22,6 +22,7 @@
   <form class="session" @submit.prevent="saveSession()" aria-label="Save or restore the setup">
     <label class="vh" for="save-name">Session name</label>
     <input id="save-name" type="text" x-model="saveName" placeholder="name (optional)" autocomplete="off">
+    <label title="Also save each site's running state: clock, energy totals, history (#88)"><input type="checkbox" x-model="saveSnapshot"> with state</label>
     <button type="submit">Save</button>
     <button type="button" class="secondary" @click="saveScenario()" title="Write this run as a scenario YAML (franklinwh-emulator scenario)">Save as scenario</button>
     <label class="vh" for="restore-name">Saved session</label>
