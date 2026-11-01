@@ -99,6 +99,10 @@ checks: [energy_balance, soc_bounds, export_limit, reserve_floor, islanded_no_fl
 - with `replay`: `rec_battery_w`, `rec_grid_w` and `rec_soc` (the recorded values at that
   moment). The report adds `replay_compare` (MAE and bias for battery, grid and SoC, plus grid
   import/export kWh, emulated against recorded).
+- then `cabinet_c` (the temperature around the battery), `sky` (with a weather model), and
+  the running lifetime counters `grid_import_wh`, `grid_export_wh`, `pv_wh`,
+  `batt_charge_wh`, `batt_discharge_wh` and `generator_wh`. These come last, so the earlier
+  columns keep their places.
 
 `--bridge-csv` (with `--out`) also writes `metrics_<gateway>.csv` in the Modbus bridge's export
 format.
