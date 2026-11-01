@@ -2,6 +2,7 @@
 cross-protocol consistency with the Modbus port (one Site behind both)."""
 
 import socket
+from pathlib import Path
 import struct
 import time
 
@@ -493,3 +494,31 @@ def test_1405_full_block_write_applies_bbbackupsoc(gw):
     assert all(after[k] == 0 for k in block if k != "BBBackupSoc")
     assert p.handlers[1405]({"opt": 1, "selfMinSoc": 30})["reason"] == -2
     assert p.handlers[1405]({"opt": 0})["BBBackupSoc"] == 55
+
+
+def test_error_rules_as_documented(gw):
+    """#152: odd unimplemented requests get reason 4; even (reply) codes get no reply; odd codes
+    outside 1101-1997 close; a read missing id/date keeps its keys, empty."""
+    from franklinwh_emulator.dc_payloads import DcPayloads
+
+    def send(code):
+        s = socket.create_connection(gw.dc_address, timeout=0.5)
+        s.sendall(protocol.encode_frame(code, gw.serial, {"opt": 0}))
+        try:
+            data = s.recv(4096)
+            return "closed" if data == b"" else "reply"
+        except TimeoutError:
+            return "no reply"
+        finally:
+            s.close()
+    assert {c: send(c) for c in (1099, 1100, 1993, 1996, 1997, 1998, 1999, 2000)} == {
+        1099: "closed", 1100: "no reply", 1993: "reply", 1996: "no reply", 1997: "reply",
+        1998: "no reply", 1999: "closed", 2000: "no reply"}
+    p = DcPayloads(gw)
+    for cmd, full in ((1303, {"opt": 0, "date": "2026-10-01"}), (1833, {"opt": 0, "id": 1})):
+        bare = p.handlers[cmd]({"opt": 0})
+        assert (bare["result"], bare["reason"]) == (1, -1)
+        assert set(p.handlers[cmd](full)) - set(bare) <= {"date", "dayType", "id"}, cmd   # keys kept, empty
+    text = (Path(__file__).resolve().parent.parent / "docs" / "DIRECT_CONNECT.md").read_text()
+    assert "odd codes, 1101–1997" in text and "Even codes are reply codes" in text
+    assert "the empty key set" not in text and "only on split/three phase" not in text

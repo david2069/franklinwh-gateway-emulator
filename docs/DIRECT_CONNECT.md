@@ -44,7 +44,7 @@ both emulators.
 | 1703 → 1704 | per aPower: `batVol` (16 × the cell voltage), `gridVol1/2` and `inverterVolt1/2` (**single phase: two half-voltage legs**, 121.2 + 121.2 on a 242 V supply), equal leg currents, `middleBusVolt` 342.7, `gridFreq`, `DCDCStatus` 4/6/7 | site |
 | 1705 → 1706 | per aPower: 16 `batVolt` cells (**integer mV on a flat LFP curve**, about 3,365 at full), `batTemp`, `batSoc`, `batSoh` 94.8, `currGrp` | site |
 | 1833 → 1834, 1835 → 1836 | per aPower firmware/serials; `bmsState` 5/6/7, `ibgMainState` = programme | site |
-| 1707 → 1708 ibg_run_status | programme, `name` "" and `electricity_type` 1 (**no `energyMode`** on this firmware), `dspRunstatus`, relays (`solarRelayStatus` = proximal PV relay, `pvRelay2` = remote1, `mainRelay1Status` and `gridRelay2` = grid relay, `mainRelay2Status` only on split/three phase, `blackStartRelay` 1, `smartRelay1–3`), `gridLineVol` (line V×10: on three phase line-to-line, √3 × line-to-neutral, modelled), `gridVol1/2` and `gridCurr1/2` (half-voltage legs on single phase), `gridFreq`, `dspSettingFreq`, `genVoltage`, `isTripPhs*En` | site |
+| 1707 → 1708 ibg_run_status | programme, `name` "" and `electricity_type` 1 (**no `energyMode`** on this firmware), `dspRunstatus`, relays (`solarRelayStatus` = proximal PV relay, `pvRelay2` = remote1, `mainRelay1Status` and `gridRelay2` = grid relay, `mainRelay2Status` = genset relay, on every phase configuration (single phase too, so its presence doesn't tell the phases apart; not checked against an aGate), `blackStartRelay` 1, `smartRelay1–3`), `gridLineVol` (line V×10: on three phase line-to-line, √3 × line-to-neutral, modelled), `gridVol1/2` and `gridCurr1/2` (half-voltage legs on single phase), `gridFreq`, `dspSettingFreq`, `genVoltage`, `isTripPhs*En` | site |
 | 1709 → 1710 relay_status | `gridRelayOpen` 1 when islanded; `genRelayOpen` 1 while a fitted generator is disconnected (0 with none, as on the reference site) | site protection, generator |
 | 1723 → 1724 offgrid | read `offgridSet` (requested) / `offgridState` (actual) / `offgridSoc`. Write `{opt:1, offgridSet, offgridSoc}` islands the site and sets the off-grid floor. | `request_offgrid` |
 | 1725 → 1726 mode_list | **answers only `opt:1`**; the reply has **no `reason`** (`current_id, result, opt, list`). Self 85232 / TOU 29287 / Backup 47522, `scheduling_type` 2/1/3, `electricity_type` 1, `reserved_soc` = site reserves (read-only: cloud-owned on real devices). The reference site's TOU programme is named by its owner ("Solar & Battery Plan"). | site |
@@ -71,14 +71,17 @@ reference aGate (1409, 1723, 1725, 1727 and the reads; one site); applied to eve
 ## Error behaviour (as on the real aGate)
 
 - 1725 with `opt` ≠ 1, and 1727 with `opt` ≠ 3: **no reply** (the client times out).
-- Reads needing `id` (1703/1705/1833/1835) or `date` (1303) without it: the empty key set
-  with `result:1, reason:-1`.
+- Reads needing `id` (1703/1705/1833/1835) or `date` (1303) without it: `result:1,
+  reason:-1` with the usual keys present but empty or zero (e.g. `devMap` is there, empty; only the echoed
+  `id`, or 1303's `date` and `dayType`, are left out), so test the value, not the key's presence.
 - Partial full-block writes (1205, 1405, 1721): `result:1, reason:-2`.
 - Normal replies carry `opt`, `result: 0` and `reason: 0` (except 1726 and 1728, which have no
   `reason`).
-- Other in-band cmdTypes (1101–1998) not implemented here: `result:1, reason:4`, with the
-  socket kept open.
-- Out-of-band codes (e.g. the cloud relay codes 203/211): **the connection is closed.**
+- Other request cmdTypes (odd codes, 1101–1997) not implemented here: `result:1, reason:4`,
+  with the socket kept open.
+- Even codes are reply codes, not requests: no reply, the socket stays open (the client times
+  out).
+- Odd codes outside 1101–1997 (e.g. the cloud relay codes 203/211, 1099, 1999): **the connection is closed.**
 
 ## Connections
 
