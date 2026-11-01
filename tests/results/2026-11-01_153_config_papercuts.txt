@@ -1,0 +1,18 @@
+# #153 Refuse single phase on 120 V codes; say sno is shared — 2026-11-01
+
+Branch config-papercuts-153, base main 8d7e6d4.
+
+## New tests
+92 passed in 3.51s
+
+## Break check
+with src stashed, test_single_phase_on_a_120v_code_is_refused fails; two grid tests that used single phase on ieee1547-cat2 now use split phase
+
+## Full suite
+632 passed in 34.55s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

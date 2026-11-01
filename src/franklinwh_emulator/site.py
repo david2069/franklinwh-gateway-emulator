@@ -452,6 +452,10 @@ class Site:
 
         self.grid: GridCode = get_grid_code(cfg.grid_code or default_grid_code(cfg.ac_type),
                                             **dict(cfg.grid_overrides))
+        if cfg.ac_type == 0 and self.grid.nominal_v_ln < 200:      # #153: 60 V half-legs
+            raise ValueError(f"ac_type 0 (single phase) with grid code {self.grid.name} "
+                             f"({self.grid.nominal_v_ln:g} V line-to-neutral, North American split "
+                             "phase) is not a real supply; use ac_type 1 (split phase, 120/240 V)")
         bad = set(cfg.pv_inputs) - set(PV_INPUTS)
         if bad:
             raise ValueError(f"unknown PV inputs {sorted(bad)}; choose from {PV_INPUTS}")

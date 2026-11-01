@@ -41,7 +41,8 @@ DOCS: dict[str, str] = {
     "modbus_enabled": "start with the Modbus TCP Server on or off, whatever the setup",
     "events": "off | normal (default) | verbose, or {level, file}: what the gateway did (mode, battery status, trips, alarms, clients); file appends JSON lines",
     "commissioned": "commissioning date, YYYY-MM-DD (Direct Connect sno); default: the start day "
-                    "(factory) or the reference site's 2024-07-25 (in-service)",
+                    "(factory) or the reference site's 2024-07-25 (in-service), so in-service "
+                    "gateways read the same sno unless each sets its own",
     "history_days": "in-service: run the model over this many days before start (max 105) to fill "
                     "the history, today's totals and the lifetime counters; ~0.2 s per day",
     "apower_units": "number of aPowers",
