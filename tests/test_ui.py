@@ -592,3 +592,39 @@ def test_curtailment_is_not_blamed_on_the_sun(tmp_path):
 def test_state_has_curtailment_fields(ui):
     s = gateway_state(ui[0]["site"])
     assert {"solar_available_w", "solar_clipped_w", "pv_cutoff", "droop_hz"} <= set(s)
+
+
+# -- a grouped site drawn as one (board E, #241) ---------------------------------------------------
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_group_diagram_draws_every_phase_with_home_loads(tmp_path):
+    import subprocess
+    from franklinwh_emulator.clock import ManualClock
+    from franklinwh_emulator.gateway import Fleet, load_yaml
+    f = Fleet.from_dict(load_yaml("examples/au-3phase-group.yaml"), clock=ManualClock(1_793_584_800))
+    states = [gateway_state(gw) for gw in f.gateways.values()]
+    harness = tmp_path / "group.js"
+    harness.write_text("const performance = {now: () => 0};\n" +
+                       (STATIC / "units.js").read_text() + (STATIC / "groups.js").read_text() +
+                       (STATIC / "diagram.js").read_text() +
+                       f"\nconst S = {json.dumps(states, default=str)};\n"
+                       "const h = renderDiagram(S[1], 'C', S), solo = renderDiagram(S[1]);\n"
+                       "print(JSON.stringify({\n"
+                       "  rows: (h.match(/aGate \\d · L\\d/g) || []),\n"
+                       "  homes: (h.match(/Home Loads · L\\d/g) || []),\n"
+                       "  total: h.includes('Home Loads, all phases'),\n"
+                       "  meter: /class=\"svc[^\"]*\"[^>]*>([^<]*)/.exec(h)[1],\n"
+                       "  solar: (h.match(/AC solar · [\\d.]+ kWp/g) || []),\n"
+                       "  circuits: (h.match(/>SC \\d · O/g) || []).length,\n"
+                       "  unused: h.includes('>Unused<'),\n"
+                       "  active: (h.match(/box agate active/g) || []).length,\n"
+                       "  model: /class=\"dt-model\">([^<]*)/.exec(h)[1],\n"
+                       "  solo: solo.includes('FranklinWH aGate') && !solo.includes('aGate 1 · L1') }));\n")
+    r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
+    assert r["rows"] == ["aGate 1 · L1", "aGate 2 · L2", "aGate 3 · L3"]
+    assert r["homes"] == ["Home Loads · L1", "Home Loads · L2", "Home Loads · L3"] and r["total"]
+    assert r["meter"] == "3 × 63 A · 400 V"
+    assert r["solar"] == ["AC solar · 6 kWp"]            # only L1 has PV
+    assert r["circuits"] == 4 and r["unused"]             # SC 1 + 2 on L2 and L3; L3's SC 2 is free
+    assert r["active"] == 1
+    assert r["model"] == "3× aGate X-01-AU (one per phase) · 3× aPower X-01-AU · 40.8 kWh · PV 6 kWp"
+    assert r["solo"]                                       # without the others: the single board

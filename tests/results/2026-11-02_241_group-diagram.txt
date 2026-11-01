@@ -1,0 +1,18 @@
+# #241 Draw a grouped site as one (board E) — 2026-11-02
+
+Branch feat/241-group-diagram, base main 046db9b.
+
+## New tests
+56 passed in 3.29s
+
+## Break check
+src stashed: test_group_diagram_draws_every_phase_with_home_loads fails
+
+## Full suite
+711 passed in 39.97s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
