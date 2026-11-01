@@ -604,7 +604,9 @@ class ControlApi:
             if parts[2:] == ["events"] and method == "GET":
                 return self.events(gw, path)
             if len(parts) == 3 and method == "POST":
-                self.apply_logged(gw, parts[2], body)
+                from urllib.parse import parse_qs, urlsplit
+                src = parse_qs(urlsplit(path).query).get("source", ["api"])[0]
+                self.apply_logged(gw, parts[2], body, source="page" if src == "page" else "api")
                 return gateway_state(gw)
         raise ApiError(404, f"{method} {path}: not found")
 
