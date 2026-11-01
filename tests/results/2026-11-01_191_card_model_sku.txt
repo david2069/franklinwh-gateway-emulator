@@ -1,0 +1,17 @@
+# #191 card shows model SKU — 2026-11-01
+
+Branch card-model-sku, base main 0be51ea.
+
+## New test
+1 passed, 31 deselected in 0.03s
+
+## Break check (_withSku returns the name only)
+FAILED tests/test_ui.py::test_card_shows_the_model_sku - AssertionError
+
+## Full suite
+611 passed in 32.56s
+
+## Headless Chrome, examples/fleet.yaml (cdp_models191.py)
+site → aGate X-01-AU (AGT-R1V1-AU) · 2× aPower X-01-AU (APR-05K13V1-AU) · 13.6 kWh, 5 kW
+us-split → aGate X 20 (US) (AGT-R1V3-US) · 1× aPower X-10 (APR-05K1V1-US) · 13.6 kWh, 5 kW
+au-3phase, au-2phase, tou-reserve, fresh → as site with 1×; spec → no model line

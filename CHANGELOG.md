@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Cards show each model's SKU beside its name, e.g. "aGate X-01-AU (AGT-R1V1-AU) · 2× aPower X-01-AU (APR-05K13V1-AU)": the SKU carries the country code and is what FranklinWH documents name; it was only in the tooltip (#191).
 - Model catalogue and Sources and regions follow the FranklinWH AU system datasheet (aPower X-02-AU: SKU APR-05K15V1-AU, 15 kWh, 5 kW, peak 10 kW for 10 s), the MAC 1 commissioning guide and the aHub manual; SKUs without a known code are listed (#180).
 - PCS grid-charge settings: `utility.grid_charge: false` keeps the battery to solar or generator charging, and `grid_charge_max_w` caps grid-sourced charging (the app's *Grid charge* and *Max charge power*, FranklinWH PCS Technical Brief) (#123).
 - Off-grid full-battery PV cut-off on North American models: at 100 % the aGate forms 62.2 Hz and AC PV stops until SoC is below 97 % (FranklinWH PV Curtailment White Paper); 701.Hz and 1707 `gridFreq` show it. AU/NZ models still only clip PV to the load (#178).

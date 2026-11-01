@@ -98,3 +98,17 @@ function cardHealth(g) {
   const state = off.length ? 'offline' : bad.length ? 'fault' : '';
   return { state, why: off.concat(bad).join(' · ') };
 }
+
+// -- hardware model (#180, #191) ------------------------------------------------------------------
+// "aGate X-01-AU (AGT-R1V1-AU) · 2× aPower X-01-AU (APR-05K13V1-AU) · 13.6 kWh, 5 kW". The SKU
+// carries the country code and is what FranklinWH documents name; the first one is the current.
+function _withSku(m) { return m.name + (m.skus && m.skus.length ? ' (' + m.skus[0] + ')' : ''); }
+function modelText(g) {
+  const m = g.model, p = m.apower;
+  return _withSku(m.agate) + ' · ' + p.units + '× ' + _withSku(p) + ' · ' + p.kwh + ' kWh, ' + p.kw + ' kW';
+}
+function modelTitle(g) {
+  const m = g.model;
+  return 'aGate code ' + m.agate.code + ' (' + m.agate.skus.join(' / ') + ', ' + m.agate.status + '); aPower code ' +
+         m.apower.code + ' (' + m.apower.skus.join(' / ') + ', ' + m.apower.status + '); region ' + m.region;
+}
