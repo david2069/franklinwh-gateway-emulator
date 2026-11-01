@@ -69,7 +69,7 @@ class AGateDevice:
         self.image = SunSpecImage(load_baseline(profile.baseline))
         self.ext = [0] * (max(EXT_END, profile.ext_read_end) - EXT_START)
         self.hires = [0] * (HIRES_END - HIRES_START)
-        for a, v in _DIAG_STATIC.items():
+        for a, v in {**_DIAG_STATIC, **dict(profile.ext_static)}.items():
             self.ext[a - EXT_START] = v
         self.lock = threading.RLock()
         self.write_log: list[tuple[int, list[int], str]] = []   # (addr, values, outcome)
@@ -79,6 +79,8 @@ class AGateDevice:
         img.set(1, "SN", serial)
         img.set(1, "Vr", profile.firmware)
         img.set(1, "Md", profile.model_name)
+        if profile.manufacturer is not None:
+            img.set(1, "Mn", profile.manufacturer)
         # Says it's an emulator (#106): Opt is free text ("Option Name" on the real aGate).
         from . import __version__
         img.set(1, "Opt", f"Emulator {__version__}"[:16])
