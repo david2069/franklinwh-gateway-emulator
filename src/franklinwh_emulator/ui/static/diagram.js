@@ -135,9 +135,9 @@ function weatherLine(g) {
     w && w.poa_w_m2 != null ? w.poa_w_m2 + ' W/m² on the array' : null,
     'ambient ' + temp(g.ambient_c) + (forced('ambient_c') ? ' (forced)' : ''),
     pvTempText(g.pv_temperature),
-    forced('solar_w') ? (g.cap_forced_solar
-      ? 'solar forced to ' + kwText(ov.solar_w) + (g.solar_w < ov.solar_w - 1 ? ', capped at ' + kwText(g.solar_w) + ' by the sun' : '')
-      : 'solar forced to ' + kwText(ov.solar_w) + ', not capped by the sun') : null,
+    forced('solar_w') ? (g.cap_forced_solar ? forcedSolarText(g)
+      : 'solar forced ' + kwText(ov.solar_w) + ', not capped by the sun') : null,
+    curtailText(g) || null,
     'cabinet ' + temp(g.cabinet_c) + ' (' + (g.install
       ? g.install.label + ', surroundings ' + temp(g.install.surroundings_c)
       : 'modelled') + ')',
