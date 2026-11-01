@@ -478,3 +478,21 @@ def test_card_health(tmp_path):
     assert r["dc_exc"] == {"state": "fault", "why": "Direct Connect fault exception"}
     assert r["reboot"] == {"state": "offline", "why": "rebooting · alarm OVER_TEMP"}
     assert r["episode"]["state"] == "offline" and r["mb_off"]["why"] == "Modbus TCP offline"
+
+
+# -- card model text with SKUs (#191) -------------------------------------------------------------
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_card_shows_the_model_sku(ui, tmp_path):
+    import subprocess
+    fleet, _ = ui
+    au, us = (gateway_state(fleet[i]) for i in ("site", "us-split"))
+    x02 = dict(au, model={**au["model"], "apower": {**au["model"]["apower"], "name": "aPower X-02-AU",
+                                                    "skus": ["APR-05K15V1-AU", "APR-05K13V2-AU"]}})
+    harness = tmp_path / "model.js"
+    harness.write_text((STATIC / "groups.js").read_text() +
+                       f"\nconst G = {json.dumps({'au': au, 'us': us, 'x02': x02}, default=str)};\n"
+                       "const r = {}; for (const k in G) r[k] = modelText(G[k]);\nprint(JSON.stringify(r));\n")
+    r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
+    assert r["au"].startswith("aGate X-01-AU (AGT-R1V1-AU) · ") and "aPower X-01-AU (APR-05K13V1-AU)" in r["au"]
+    assert "(AGT-R1V3-US)" in r["us"] and "-US)" in r["us"].split("·")[1]
+    assert "aPower X-02-AU (APR-05K15V1-AU) · " in r["x02"] and "APR-05K13V2-AU" not in r["x02"]
