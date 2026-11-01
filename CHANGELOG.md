@@ -20,6 +20,7 @@
 - Page: a °C / °F toggle; every shown temperature converts; °F by default for US-region browsers; the emulator stays metric ([#119](https://github.com/david2069/franklinwh-gateway-emulator/issues/119)).
 
 ### Fixed
+- `validate` (and `ui`) report two gateways that set the same `seed` or `serial`: they get the same Modbus serial, so serial-keyed clients would collide. Gateways that set neither still share seed 0 and are not refused (#162).
 - Page: form results and Activity show the gateway's local time, as its card and Events do (they showed the browser's zone and UTC); actions from the page are logged with source `page` (they read `api`); no favicon request, so no console 404 (#167).
 - Direct Connect 1405: a full-block write applies `BBBackupSoc` (the eight min/max fields stay 0), as franklinwh-direct-connect-api's catalogue records (proven 2026-09-14); it was acknowledged and discarded (#171).
 - Docs: BRIDGE_INTEGRATION check 2 expects the default profile's exception-3 refusal of Force Charge (−5 kW needs `agate-v10r01b04d00`); DIRECT_CONNECT, DESIGN and the profiles docstring name `agate-v12r02b60d00-candidate` and V12R02B60D00_260924 as the default (#166).

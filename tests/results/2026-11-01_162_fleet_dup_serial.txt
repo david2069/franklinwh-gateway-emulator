@@ -1,0 +1,18 @@
+# #162 Validation flags two gateways on one seed or serial — 2026-11-01
+
+Branch fleet-dup-serial-162, base main 3c31bc5.
+
+## New tests
+30 passed in 2.98s
+
+## Break check
+with src stashed, test_same_seed_or_serial_is_flagged fails
+
+## Full suite
+618 passed in 32.59s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

@@ -67,7 +67,7 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 | Key | Type | Default | What it does |
 |---|---|---|---|
 | `id` | string | `agate` | gateway id, unique in the fleet; the control API's <id> |
-| `seed` | integer | `0` | seeds the serial and the site's derived values |
+| `seed` | integer | `0` | seeds the serial and the site's derived values; give each gateway its own: `validate` and `ui` refuse two gateways that set the same seed (same serial) |
 | `serial` | string | — | 20-character serial; default derived from the seed |
 | `host` | string | `127.0.0.1` | address the Modbus TCP Server binds to |
 | `port` | integer | `0` | Modbus TCP Server port; 0 = ephemeral |

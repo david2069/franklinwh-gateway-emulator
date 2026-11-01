@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from franklinwh_emulator.gateway import Fleet, GatewayConfig, load_yaml
+from franklinwh_emulator.gateway import Fleet, Gateway, GatewayConfig, load_yaml
 from franklinwh_emulator.schema import schema
 from franklinwh_emulator.site import SiteConfig
 from franklinwh_emulator.validate import DOCS, config_schema, validate_fleet, validate_scenario
@@ -128,3 +128,14 @@ def test_default_profile_is_v12():
     assert gw.profile.name == "agate-v12r02b60d00-candidate"
     assert gw.device.image.get(1, "Vr") == "V12R02B60D00"
     assert config_schema()["profile"]["default"] == "agate-v12r02b60d00-candidate"
+
+
+def test_same_seed_or_serial_is_flagged():
+    """#162: one seed gives one serial, so two gateways on it collide for serial-keyed clients."""
+    same = validate_fleet({"gateways": [{"id": "a", "seed": 7}, {"id": "b", "seed": 7}]})
+    assert [(p["path"], p["error"].split(",")[0]) for p in same] == \
+        [("gateways[1].seed", "gives serial " + Gateway(GatewayConfig(id="x", seed=7)).serial)]
+    by_serial = validate_fleet({"gateways": [{"id": "a", "serial": "S1"}, {"id": "b", "serial": "S1", "seed": 2}]})
+    assert [p["path"] for p in by_serial] == ["gateways[1].serial"]
+    assert validate_fleet({"gateways": [{"id": "a", "seed": 7}, {"id": "b", "seed": 8}]}) == []
+    assert validate_fleet({"gateways": [{"id": "a"}, {"id": "b"}]}) == []      # unset: not refused
