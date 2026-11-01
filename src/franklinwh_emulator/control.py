@@ -426,6 +426,8 @@ class ControlApi:
         self.workspace = workspace
         self.fleet_file = fleet_file
         self.log: list[dict] = []
+        # When the run began, in each gateway's site time: a saved scenario starts there (#90).
+        self.began = {gid: gw.site.local_datetime(gw.site.clock.now()) for gid, gw in gateways.items()}
         self._server: asyncio.base_events.Server | None = None
         self._version: dict | None = None
         self.process = ProcessMonitor()
@@ -575,6 +577,62 @@ class ControlApi:
                         "`ui FLEET --restore NAME`.\n" + yaml.safe_dump(doc, sort_keys=False))
         return {"name": name, "path": str(path), "actions": len(actions)}
 
+    def _fleet_doc(self) -> dict:
+        """The fleet as a scenario's ``fleet:``: the fleet file, else each gateway's settings
+        that differ from the defaults."""
+        import yaml
+        from dataclasses import asdict
+        from .gateway import GatewayConfig, fix_bool_keys
+        from .site import SiteConfig
+        if self.fleet_file:
+            from pathlib import Path
+            return fix_bool_keys(yaml.safe_load(Path(self.fleet_file).read_text())) or {}
+        gws = []
+        for gw in self.gateways.values():
+            cfg, base = gw.config, GatewayConfig()
+            entry = {"id": cfg.id, "seed": cfg.seed}
+            for k in ("profile", "setup", "commissioned", "pto_date", "serial", "quirks"):
+                if getattr(cfg, k) != getattr(base, k):
+                    entry[k] = getattr(cfg, k)
+            site, default = asdict(cfg.site), asdict(SiteConfig(seed=cfg.seed))
+            entry.update({k: v for k, v in site.items() if k != "seed" and v != default[k]})
+            gws.append(entry)
+        return {"gateways": gws}
+
+    def save_scenario(self, name: str | None = None) -> dict:
+        """Write the run as a scenario (#90): ``start`` = the first gateway's site time when
+        the run began, the fleet, and the logged actions as timed steps, so it replays with
+        ``franklinwh-emulator scenario``. Like a session: successful actions only, no transient
+        ones (episode, reboot); Direct Connect writes are left out too (a scenario runs no
+        listeners)."""
+        import datetime as dt
+        import yaml
+        now = dt.datetime.now(dt.timezone.utc)
+        name = self._check_name(name or now.strftime("scenario-%Y%m%d-%H%M%S"))
+        first = next(iter(self.gateways))
+        start = self.began[first]
+        steps = []
+        for e in self.log:
+            if not e["ok"] or e["action"] in TRANSIENT | DC_ACTIONS or e["gateway"] not in self.began:
+                continue
+            at = (dt.datetime.fromisoformat(e["site_time"]) - self.began[e["gateway"]]).total_seconds()
+            steps.append({"at": f"{max(0, round(at))}s", "gateway": e["gateway"], "do": e["action"],
+                          "with": e["body"]})
+        gw0 = self.gateways[first]
+        elapsed = (gw0.site.local_datetime(gw0.site.clock.now()) - start).total_seconds()
+        doc = {"name": name,
+               "description": f"saved from a run on {now.isoformat(timespec='seconds')}",
+               "start": start.replace(tzinfo=None).isoformat(timespec="seconds"),
+               "duration": f"{max(60, round(elapsed))}s", "record_every": "10s",
+               "fleet": self._fleet_doc(), "steps": steps}
+        d = self._sessions_dir().parent / "scenarios"
+        d.mkdir(parents=True, exist_ok=True)
+        path = d / f"{name}.yaml"
+        path.write_text("# franklinwh-emulator scenario saved from a run (the logged actions as "
+                        "timed steps).\n# Run with `franklinwh-emulator scenario " + str(path) + "`.\n"
+                        + yaml.safe_dump(doc, sort_keys=False))
+        return {"name": name, "path": str(path), "steps": len(steps)}
+
     def restore_session(self, name: str) -> dict:
         """Replay a saved session's actions in order; returns each one's result."""
         import yaml
@@ -611,6 +669,8 @@ class ControlApi:
             return self.sessions()
         if parts == ["session", "save"] and method == "POST":
             return self.save_session(body.get("name"))
+        if parts == ["session", "scenario"] and method == "POST":
+            return self.save_scenario(body.get("name"))
         if parts == ["session", "restore"] and method == "POST":
             if "name" not in body:
                 raise ApiError(400, "restore: needs a session name")

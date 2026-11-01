@@ -23,6 +23,7 @@
     <label class="vh" for="save-name">Session name</label>
     <input id="save-name" type="text" x-model="saveName" placeholder="name (optional)" autocomplete="off">
     <button type="submit">Save</button>
+    <button type="button" class="secondary" @click="saveScenario()" title="Write this run as a scenario YAML (franklinwh-emulator scenario)">Save as scenario</button>
     <label class="vh" for="restore-name">Saved session</label>
     <select id="restore-name" x-model="restoreName" :disabled="!sessionsList.length">
       <option value="" x-show="!sessionsList.length">no saved sessions</option>

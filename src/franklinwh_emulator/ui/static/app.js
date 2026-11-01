@@ -267,6 +267,15 @@ function running() {
         this.sessionMsg = { ok: false, text: 'Not saved: ' + e.message, details: [] };
       }
     },
+    async saveScenario() {
+      try {
+        const r = await this._post('/session/scenario', this.saveName.trim() ? { name: this.saveName.trim() } : {});
+        this.sessionMsg = { ok: true, text: 'Saved scenario "' + r.name + '": ' + r.steps + ' steps to ' + r.path, details: [] };
+        this.saveName = '';
+      } catch (e) {
+        this.sessionMsg = { ok: false, text: 'Scenario not saved: ' + e.message, details: [] };
+      }
+    },
     async restoreSession() {
       if (!this.restoreName) return;
       try {
