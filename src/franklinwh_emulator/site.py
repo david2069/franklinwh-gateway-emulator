@@ -275,6 +275,10 @@ class SiteConfig:
     # Accessory modules fitted (#189): {smart_circuits, generator_module, apbox}, each true or
     # false; left out = fitted. None = all fitted.
     accessories: dict | None = None
+    # PCS Permanent Derate (#185): the installer's cap on each aPower's charge and discharge,
+    # on- and off-grid (FranklinWH Commissioning Guide, MAC 1 & aPower 2 & aPower S, p. 24).
+    # Above the unit's rating it has no effect. None = not derated.
+    pcs_derate_w: float | None = None
     # Starting values for the lifetime counters (Wh). None → the reference scan's
     # (REFERENCE_COUNTERS); a factory gateway sets them to 0 (gateway.py).
     grid_import_wh: float | None = None
@@ -516,7 +520,10 @@ class Site:
                                     hz=self.grid.nominal_hz)
         self.apower_w = self.model.apower.kw * 1000
         self.capacity_wh = self.model.apower.kwh * 1000 * max(1, cfg.apower_units)
-        self.rate_w = self.apower_w * max(1, cfg.apower_units)
+        if cfg.pcs_derate_w is not None and float(cfg.pcs_derate_w) <= 0:
+            raise ValueError("pcs_derate_w: the derated power per aPower in W (> 0), or null")
+        self.pcs_derate_w = None if cfg.pcs_derate_w is None else float(cfg.pcs_derate_w)
+        self.rate_w = self._unit_w() * max(1, cfg.apower_units)
         if self.location.timezone:
             self.tz: tzinfo | None = ZoneInfo(self.location.timezone)
         elif cfg.tz_offset_hours is not None:
@@ -1139,10 +1146,17 @@ class Site:
             return tou.target_w(block["dispatchId"], net, self.rate_w)
         return net                                     # self-consumption
 
+    def _unit_w(self) -> float:
+        """One aPower's power after the installer's derate."""
+        return self.apower_w if self.pcs_derate_w is None else min(self.apower_w, self.pcs_derate_w)
+
     def _limits(self, floor: float, dt: float) -> tuple[float, float]:
         """(max discharge W, max charge W) given rate, SoC, floor and step length."""
         max_dis = float(self.rate_w)
-        max_chg = self.model.apower.charge_w * self.apower_units_on()   # aPower 2: 8 kW of 10
+        charge_w = self.model.apower.charge_w                           # aPower 2: 8 kW of 10
+        if self.pcs_derate_w is not None:
+            charge_w = min(charge_w, self.pcs_derate_w)
+        max_chg = charge_w * self.apower_units_on()
         if dt > 0:
             hours = dt / 3600
             bm = self.battery_model
@@ -1874,7 +1888,7 @@ class Site:
         with self.lock:
             self.step()
             (self.apower_off.discard if on else self.apower_off.add)(n)
-            self.rate_w = self.apower_w * self.apower_units_on()
+            self.rate_w = self._unit_w() * self.apower_units_on()
 
     def set_circuit(self, n: int, on: bool) -> None:
         with self.lock:
