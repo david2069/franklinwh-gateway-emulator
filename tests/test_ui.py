@@ -557,8 +557,9 @@ def test_diagram_follows_the_design(ui, tmp_path):
                        "print(JSON.stringify(r));\n")
     r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
     au, us = r["site"], r["us-split"]
-    # grid, meter, panel, home, PV, aGate, generator, 3 switches, 3 loads
-    assert au["icons"] == us["icons"] == 13
+    # grid, meter, panel, home, PV, aGate, generator, then a switch and a load per circuit:
+    # AU aGates have 2 smart circuits, North American 3 (#189)
+    assert (au["icons"], us["icons"]) == (11, 13)
     assert (au["grid"], us["grid"]) == (1, 2)                   # one line per phase
     assert (au["cards"], us["cards"]) == (states["site"]["apower_units"], 1)
     assert au["site"] == "site" and au["place"].endswith(" · Australia/Sydney")    # no city set here

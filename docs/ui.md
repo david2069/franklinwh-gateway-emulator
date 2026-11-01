@@ -45,7 +45,7 @@ gateway**; the actions column works on it.
 The diagram follows the owner's design (boards A and B of the "Battery Flow Diagram" canvas):
 the grid (one line per phase) through the service meter to the aGate; the main panel and home
 loads above; PV on the aGate's AC port, or remote PV through an aPbox, top right; one card per
-aPower on the right; the generator, smart circuits 1–3 and the loads on them below. Each element
+aPower on the right; the generator, the smart circuits (two on AU aGates, three on North American) and the loads on them below. Each element
 has the design's icon. Lines move in the direction power flows; idle lines are grey. The aGate's
 dot is green, red when faulted and orange when offline, as the card border.
 

@@ -79,6 +79,9 @@ class DcPayloads:
         self.flag_1207 = dict(self._UNCONFIRMED[1207])
         self.network = {"ethernet0NetSwitch": 1, "ethernet1NetSwitch": 0,
                         "wifiNetSwitch": 1, "4GNetSwitch": 1}
+        self.sw3_slot = {"Name": "Circuit 3", "Mode": 0, "ProLoad": 0, "SocLowSet": 20, "AtuoEn": 0,
+                         "TimeEn": [0, 0, 0, 0], "TimeSet": [0, 0, 0, 0], "Time": ["", "", "", ""],
+                         "MsgType": 0, "Freq": 0}
         self.soc_block = {"selfMinSoc": 0, "selfMaxSoc": 0, "touMinSoc": 0, "touMaxSoc": 0,
                           "backupMinSoc": 0, "backupMaxSoc": 0, "genStartSoc": 0,
                           "genStopSoc": 0, "BBBackupSoc": 20}
@@ -359,7 +362,8 @@ class DcPayloads:
                    loadRelay1Stat=0, loadRelay2Stat=0,
                    smartRelay1Status=int(circuits[1].on and not s.circuits_shed),
                    smartRelay2Status=int(circuits[2].on and not s.circuits_shed),
-                   smartRelay3Status=int(circuits[3].on and not s.circuits_shed),
+                   # Relay 3 on an aGate with two circuits: unknown (not in any capture); 0.
+                   smartRelay3Status=int(3 in circuits and circuits[3].on and not s.circuits_shed),
                    # The app's EMS page lists, in 1708 order: Mains relay, Genset relay,
                    # Photovoltaic relay, Load relay 1/2, EV relay, Mains relay 2 (AU quick
                    # install guide screenshot), so mainRelay2Status is the genset relay and
@@ -413,6 +417,9 @@ class DcPayloads:
         discarded, as on the real device."""
         site = self.site
         if req.get("opt") == 1:
+            for k in self.sw3_slot:                  # the inert third slot on a two-circuit aGate
+                if f"Sw3{k}" in req and 3 not in site.circuits:
+                    self.sw3_slot[k] = req[f"Sw3{k}"]
             for n, circ in site.circuits.items():
                 if f"Sw{n}Mode" in req:
                     site.set_circuit(n, bool(int(req[f"Sw{n}Mode"])))
@@ -429,24 +436,32 @@ class DcPayloads:
                         f"Sw{n}AtuoEn": 0, f"Sw{n}TimeEn": [0, 0, 0, 0],
                         f"Sw{n}TimeSet": [0, 0, 0, 0], f"Sw{n}Time": ["", "", "", ""],
                         f"Sw{n}MsgType": 0, f"Sw{n}Freq": 0})
+        if 3 not in site.circuits:
+            # The AU aGate (two circuits) still sends a full, inert Sw3 slot in 1410: default-
+            # populated, Mode 0, SocLowSet 20 (fwh-local capture, V12R02B30D06, one site) (#189).
+            out.update({f"Sw3{k}": (list(v) if isinstance(v, list) else v) for k, v in self.sw3_slot.items()})
         return out
 
     def smart_circuit_meter(self, req: dict) -> dict:
-        """1411: live power/energy on smart circuit 1 (Sw1/SW1 casing as on the device) and
-        the car switch (circuit 2 here)."""
+        """1411: live power/energy on smart circuits 1 and 2 (Sw1/SW1 casing as on the device)
+        and the car switch: circuit 3 where the aGate has one (North America), else 0. The AU
+        aGate's 1412 meters SW1 and SW2 only (#189)."""
         s = self.site.step()
         v = s.v_ln or self.site.grid.nominal_v_ln
         c1, c2 = self.site.circuits[1], self.site.circuits[2]
+        c3 = self.site.circuits.get(3)
         p1, p2 = s.circuit_w.get(1, 0.0), s.circuit_w.get(2, 0.0)
+        p3 = s.circuit_w.get(3, 0.0) if c3 else 0.0
         # Units follow the reference capture: volts and Hz ×10 as integers (it read
         # Sw1Volt 1014, freq 500). Energies are kWh here; the device's integer encoding
         # (CarSWExpEnergy 10150, CarSWImpEnergy 16384) is not decoded yet.
-        return _ok(Sw1Volt=int(round(v * 10)), Sw2Volt=0,
-                   SW1Curr=round(p1 / v, 2) if v else 0.0, SW2Curr=0,
-                   SW1ExpPower=round(p1, 1), SW2ExpPower=0,
-                   SW1ExpEnergy=round(c1.energy_wh / 1000.0, 3), SW2ExpEnergy=0,
-                   CarSWCurr=round(p2 / v, 2) if v else 0.0, CarSWPower=round(p2, 1),
-                   CarSWExpEnergy=round(c2.energy_wh / 1000.0, 3), CarSWImpEnergy=0.0,
+        return _ok(Sw1Volt=int(round(v * 10)), Sw2Volt=int(round(v * 10)),
+                   SW1Curr=round(p1 / v, 2) if v else 0.0, SW2Curr=round(p2 / v, 2) if v else 0.0,
+                   SW1ExpPower=round(p1, 1), SW2ExpPower=round(p2, 1),
+                   SW1ExpEnergy=round(c1.energy_wh / 1000.0, 3),
+                   SW2ExpEnergy=round(c2.energy_wh / 1000.0, 3),
+                   CarSWCurr=round(p3 / v, 2) if v else 0.0, CarSWPower=round(p3, 1),
+                   CarSWExpEnergy=round(c3.energy_wh / 1000.0, 3) if c3 else 0.0, CarSWImpEnergy=0.0,
                    CarSwConsSupExpEnerge=0, power=0, curr=0, volt=2,
                    genpowerGen=int(round(s.generator_w)),
                    freq=int(round(s.hz * 10)))

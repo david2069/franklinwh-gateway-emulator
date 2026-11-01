@@ -522,3 +522,28 @@ def test_error_rules_as_documented(gw):
     text = (Path(__file__).resolve().parent.parent / "docs" / "DIRECT_CONNECT.md").read_text()
     assert "odd codes, 1101–1997" in text and "Even codes are reply codes" in text
     assert "the empty key set" not in text and "only on split/three phase" not in text
+
+
+def test_smart_circuits_per_model(clock):
+    """#189: AU aGate X-01-AU has smart circuits 1-2 (datasheet; its 1412 meters SW1/SW2 only),
+    yet 1410 sends a full inert Sw3 slot (Mode 0, SocLowSet 20), as the reference capture did.
+    North American models keep 1-3, with circuit 3 metered as the car switch."""
+    from franklinwh_emulator.dc_payloads import DcPayloads
+    au = make_gateway(clock, seed=7)
+    us = make_gateway(clock, seed=8, site={"ac_type": 1})
+    assert sorted(au.site.circuits) == [1, 2] and sorted(us.site.circuits) == [1, 2, 3]
+    with pytest.raises(ValueError, match="smart circuits 1–2"):
+        au.site.set_circuit(3, True)
+    with pytest.raises(ValueError, match="aircon: circuit 3: aGate X-01-AU has smart circuits 1–2"):
+        make_gateway(clock, seed=9, site={"loads": [{"name": "aircon", "type": "base", "w": 1, "circuit": 3}]})
+    p = DcPayloads(au)
+    cfg = p.handlers[1409]({"opt": 0})
+    assert {k for k in cfg if k.startswith("Sw3")} == {f"Sw3{k}" for k in (
+        "Name", "Mode", "AtuoEn", "Freq", "MsgType", "ProLoad", "SocLowSet", "Time", "TimeEn", "TimeSet")}
+    assert (cfg["Sw3Mode"], cfg["Sw3SocLowSet"], cfg["Sw3ProLoad"]) == (0, 20, 0)
+    assert not any(k.startswith(("SW3", "Sw3")) for k in p.handlers[1411]({"opt": 0}))
+    au.site.circuits[2].on = True
+    with au.site.lock:
+        au.site.loads = None
+    m = p.handlers[1411]({"opt": 0})
+    assert m["Sw2Volt"] > 0 and m["CarSWPower"] == 0          # SW2 is metered; no car switch here

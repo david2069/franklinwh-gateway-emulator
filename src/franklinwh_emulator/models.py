@@ -44,6 +44,10 @@ class AGateModel:
     generation: int | None
     status: str                   # "measured" | "inferred"
     note: str = ""
+    # Smart circuits with a relay and a meter (#189). AU: 2, per the AU system datasheet and the
+    # reference aGate's 1412 meter block (SW1, SW2 only; fwh-local capture, V12R02B30D06). NA: 3,
+    # unchanged (no evidence either way).
+    smart_circuits: int = 3
 
 
 @dataclass(frozen=True)
@@ -76,7 +80,7 @@ AGATES: dict[int, AGateModel] = {m.code: m for m in (
     AGateModel(101, ("AGT-R1V2-US",), "aGate X-20", "aGate X 1.3", NA, 60, 200, 2, "inferred",
                "discontinued; supports aPower S"),
     AGateModel(102, ("AGT-R1V1-AU",), "aGate X-01-AU", "aGate X", AUNZ, 50, 100, 1, "measured",
-               "the reference aGate (realSysHdVersion FHP1.2)"),
+               "the reference aGate (realSysHdVersion FHP1.2)", smart_circuits=2),
     AGateModel(103, ("AGT-R1V3-US",), "aGate X 20 (US)", "aGate X 1.3.1", NA, 60, 200, 2, "inferred"),
     AGateModel(104, ("AGT-R1V3-US",), "aGate X 20 (US)", "aGate X 1.3.1", NA, 60, 200, 2, "inferred",
                "a hardware revision of 103"),
@@ -171,7 +175,7 @@ def describe(m: Model, units: int) -> dict:
     a, p = m.agate, m.apower
     return {"region": m.region,
             "agate": {"code": a.code, "name": a.name, "family": a.family, "skus": list(a.skus),
-                      "status": a.status},
+                      "status": a.status, "smart_circuits": a.smart_circuits},
             "apower": {"code": p.code, "name": p.name, "family": p.family, "skus": list(p.skus),
                        "status": p.status, "units": units, "kwh": p.kwh, "kw": p.kw,
                        "peak_kw": p.peak_kw, "charge_kw": p.charge_kw, "mppt_count": p.mppt_count}}

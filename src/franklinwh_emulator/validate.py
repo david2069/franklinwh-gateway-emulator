@@ -65,7 +65,7 @@ DOCS: dict[str, str] = {
     "weather": "{model: bell|synthetic|open-meteo, kwp, tilt, azimuth, sky}; inherits lat/lon",
     "loads": "house load: a preset name, a list of components, or {preset, add, remove, set}",
     "replay": "recorded solar/load to replay: a path, or {source, use, align, loop}",
-    "circuits": "smart circuits 1-3: {1: {name, on, soc_low_cutoff}}",
+    "circuits": "smart circuits: 1–2 on AU aGates, 1–3 on North American: {1: {name, on, soc_low_cutoff}}",
     "pv_inputs": "share of solar per PV input: proximal (aGate), remote1/remote2 (aPbox)",
     "offgrid_floor_soc": "islanded discharge floor, %",
     "tou_schedule": "TOU blocks (franklinwh-cloud format): name, startHourTime, endHourTime, "

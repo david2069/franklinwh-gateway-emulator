@@ -1,0 +1,18 @@
+# #189 AU aGates have two smart circuits — 2026-11-01
+
+Branch au-two-circuits-189, base main 0cbc326.
+
+## New tests
+103 passed in 5.99s
+
+## Break check
+with smart_circuits back to 3 on aGate 102, test_smart_circuits_per_model fails
+
+## Full suite
+640 passed in 35.10s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
