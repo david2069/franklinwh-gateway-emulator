@@ -3,16 +3,20 @@
 `serve` and `fleet` start an HTTP control API on `127.0.0.1:8502` (`--control-port`,
 `--no-control`). It is unauthenticated, so keep it on loopback.
 
-```bash
-franklinwh-emulator ctl site status
-franklinwh-emulator ctl site outage
-franklinwh-emulator ctl site restore
-franklinwh-emulator ctl site solar 6000          # or: solar auto
-franklinwh-emulator ctl site fault session_held=true
-franklinwh-emulator ctl --json site status       # full state
+Commands name a gateway by its id. `serve` names its one gateway `agate` (`--id`); a fleet uses
+each entry's `id`. The examples below use `agate`, as `serve` starts it; with
+`examples/fleet.yaml`, use `site` (or any id from `GET /gateways`).
 
-curl -s -X POST localhost:8502/gateways/site/grid -d '{"hz": 51.3}'
-curl -s -X POST localhost:8502/gateways/site/grid -d '{"voltage": 170, "phase": "L3"}'
+```bash
+franklinwh-emulator ctl agate status
+franklinwh-emulator ctl agate outage
+franklinwh-emulator ctl agate restore
+franklinwh-emulator ctl agate solar 6000          # or: solar auto
+franklinwh-emulator ctl agate fault session_held=true
+franklinwh-emulator ctl --json agate status       # full state
+
+curl -s -X POST localhost:8502/gateways/agate/grid -d '{"hz": 51.3}'
+curl -s -X POST localhost:8502/gateways/agate/grid -d '{"voltage": 170, "phase": "L3"}'
 ```
 
 Every action, with its fields, units, allowed values and examples, is in

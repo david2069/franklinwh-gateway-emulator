@@ -1,0 +1,18 @@
+# #165 Control API examples use serve's gateway id — 2026-11-01
+
+Branch docs-ctl-examples-165, base main 29fe94c.
+
+## New tests
+1 passed in 0.00s
+
+## Break check
+with docs stashed, tests/test_docs_ctl_examples.py fails; curl POST /gateways/agate/grid {hz 51.3} against serve on free ports returns the state
+
+## Full suite
+621 passed in 32.67s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
