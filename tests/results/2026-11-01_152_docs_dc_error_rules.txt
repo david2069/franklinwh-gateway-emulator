@@ -1,0 +1,18 @@
+# #152 DIRECT_CONNECT.md error rules match the listener — 2026-11-01
+
+Branch docs-dc-errors-152, base main 859cc88.
+
+## New tests
+1 passed, 50 deselected in 2.03s
+
+## Break check
+with docs stashed, test_error_rules_as_documented fails
+
+## Full suite
+631 passed in 34.82s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

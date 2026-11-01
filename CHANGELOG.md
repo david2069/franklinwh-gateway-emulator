@@ -21,6 +21,7 @@
 - Page: a °C / °F toggle; every shown temperature converts; °F by default for US-region browsers; the emulator stays metric ([#119](https://github.com/david2069/franklinwh-gateway-emulator/issues/119)).
 
 ### Fixed
+- Docs: Direct Connect error rules say what the listener does: odd request codes 1101–1997 get `reason:4`, even (reply) codes get no reply, other odd codes close; a read missing `id`/`date` keeps its keys, empty; `mainRelay2Status` (genset relay) is present on single phase too (#152).
 - Docs: the Control API page's `ctl` and `curl` examples use `agate`, the gateway `serve` starts (`--id`), and say to use `site` with examples/fleet.yaml; they failed with `serve` (#165).
 - Docs: README and Getting started clone the repo first and create the venv with `python3` (3.10 or later); `python3.12` failed on Debian 12 (#164).
 - The V12 profile serves the values read on V12R02B60D00 (franklinwh-modbus SUNSPEC_SNAPSHOT of 2026-10-20, one site): M1 `Mn` "FranklinWH", 15018 = 15019 = 5000, 15500 PVUse 1 and 15501 0; it served the V10 dump's (#161).
