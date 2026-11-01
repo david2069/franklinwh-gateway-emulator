@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- North American aGates off-grid droop surplus PV by frequency (PV Curtailment White Paper): 60 Hz + 0.036 Hz + 3 Hz per rated PV curtailed, ramped at 0.2 Hz/s, shown on 701.Hz, 1707 `gridFreq`, the state's `droop_hz` and the card's curtailment line.
 - AU/NZ aGates limit the generator to the Generator Module's 80 A continuous rating (18.4 kW at 230 V): a fleet file or control API `rated_w` above it is refused; a Direct Connect 1901 write above it is capped at output.
 - `franklinwh-emulator validate FILE...` checks fleet, scenario, session and recording (replay CSV/SQLite) files without starting anything and prints every problem as `file: path: what is wrong` with what is allowed (closest key for a typo, YAML line and column); a clean recording reports rows, span, the largest gap and its columns, and a fleet's `replay:` recordings are checked too. `fleet` now checks its file first, as `ui` does (it stopped at the first problem with a traceback). New page: Checking files and startup output, which explains every startup line (#200).
 - Cards show each model's SKU beside its name, e.g. "aGate X-01-AU (AGT-R1V1-AU) · 2× aPower X-01-AU (APR-05K13V1-AU)": the SKU carries the country code and is what FranklinWH documents name; it was only in the tooltip (#191).

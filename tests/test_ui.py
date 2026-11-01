@@ -575,7 +575,8 @@ def test_curtailment_is_not_blamed_on_the_sun(tmp_path):
     base = {"overrides": {"solar_w": 18000}, "cap_forced_solar": True, "solar_available_w": 3916,
             "solar_clipped_w": 1916, "solar_w": 2000, "grid_connected": False, "pv_cutoff": False}
     cases = {"islanded": base, "cutoff": {**base, "pv_cutoff": True, "solar_clipped_w": 3916, "solar_w": 0},
-             "ongrid": {**base, "grid_connected": True}, "none": {**base, "solar_clipped_w": 0}}
+             "ongrid": {**base, "grid_connected": True}, "none": {**base, "solar_clipped_w": 0},
+             "droop": {**base, "droop_hz": 60.674}}
     harness = tmp_path / "solar.js"
     harness.write_text((STATIC / "groups.js").read_text() + f"\nconst C = {json.dumps(cases)};\nconst r = {{}};\n"
                        "for (const k in C) r[k] = [forcedSolarText(C[k]), curtailText(C[k])];\nprint(JSON.stringify(r));\n")
@@ -583,10 +584,11 @@ def test_curtailment_is_not_blamed_on_the_sun(tmp_path):
     assert r["islanded"] == ["solar forced 18.00 kW, capped at 3.92 kW by the sun",
                              "PV curtailed 1.92 kW: off-grid, nowhere to put it"]
     assert r["cutoff"][1] == "PV curtailed 3.92 kW: off-grid, battery full: 62.2 Hz cut-off"
+    assert r["droop"][1] == "PV curtailed 1.92 kW: off-grid, frequency droop at 60.67 Hz"
     assert r["ongrid"][1] == "PV curtailed 1.92 kW: export limit or grid support"
     assert r["none"][1] == ""
 
 
 def test_state_has_curtailment_fields(ui):
     s = gateway_state(ui[0]["site"])
-    assert {"solar_available_w", "solar_clipped_w", "pv_cutoff"} <= set(s)
+    assert {"solar_available_w", "solar_clipped_w", "pv_cutoff", "droop_hz"} <= set(s)
