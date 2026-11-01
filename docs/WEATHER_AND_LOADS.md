@@ -34,6 +34,15 @@ about 5 % less, a cool sunny morning a little more. Typical crystalline-silicon 
 rather than measured. `pv_temperature: false` turns it off; recorded (replayed) solar is used as
 measured.
 
+**pvlib (optional)**: `pv: {model: pvlib}`, after `pip install '.[pvlib]'`, hands two steps to
+[pvlib-python](https://github.com/pvlib/pvlib-python) (BSD). For synthetic weather, the
+clear-sky irradiance on the array: Erbs splits GHI into beam and diffuse, then `transposition`
+(`haydavies` default, `perez`, `isotropic`) replaces the fixed 15 % diffuse share and isotropic
+sky. And the cell temperature: `temperature_model` `sapm` (default, open rack glass/glass),
+`faiman` or `pvsyst` at `wind_m_s` (1 m/s; there is no wind data) replaces NOCT, still applied
+through `temp_coeff` and `ref_cell_c`. The sun position stays the emulator's own, and Open-Meteo's
+array irradiance is used as it is. The built-in model stays the default.
+
 ### Open-Meteo
 
 - **Endpoints:** `api.open-meteo.com/v1/forecast` serves about 92 days back to 16 days ahead.
