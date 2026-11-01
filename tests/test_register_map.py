@@ -264,3 +264,16 @@ def test_model1_says_emulator(clock):
     assert im.get(1, "Opt") == f"Emulator {__version__}"
     assert (im.get(1, "Md"), im.get(1, "Vr")) == ("aGate X", gw.profile.firmware)
     assert im.get(1, "SN").startswith("MOCK")
+
+
+def test_v12_static_values_are_v12s(clock):
+    """#161: V12R02B60D00 read on 2026-10-20 (franklinwh-modbus SUNSPEC_SNAPSHOT): M1 Mn
+    "FranklinWH", 15018 = 15019 = 5000, 15500 PVUse 1, 15501 0. V10 keeps its dump."""
+    from conftest import make_gateway
+    for profile, mn, r15018, r15500 in (("agate-v12r02b60d00-candidate", "FranklinWH", 5000, 1),
+                                        ("agate-v10r01b04d00", "FranklinWH Technologies Co., Ltd", 0xFFFF, 0)):
+        gw = make_gateway(clock, profile=profile)
+        d = gw.device
+        assert d.image.get(1, "Mn") == mn, profile
+        assert d.read(15018, 2) == [r15018, r15018], profile
+        assert d.read(15500, 2) == [r15500, 0], profile

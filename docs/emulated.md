@@ -119,7 +119,8 @@ refreshing (stale `check_blocking_alarms()`) and `ac_type` being guessed from vo
 ## Telling the emulator from a real aGate
 
 - Modbus TCP: SunSpec Model 1 `Opt` reads `Emulator <version>` (the real aGate reads
-  "Option Name"). `Mn`, `Md` and `Vr` are the aGate's, so model and firmware detection work as
+  "Option Name"). `Mn`, `Md` and `Vr` are the aGate's for the profile's firmware (V12: `Mn`
+  "FranklinWH"; V10: "FranklinWH Technologies Co., Ltd"), so model and firmware detection work as
   on hardware.
 - Serials (Model 1 `SN`, Direct Connect `IBG_SN`) start with `MOCK`.
 - Direct Connect has no free-text identity field yet; the serial is the marker there.

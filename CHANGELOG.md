@@ -20,6 +20,7 @@
 - Page: a °C / °F toggle; every shown temperature converts; °F by default for US-region browsers; the emulator stays metric ([#119](https://github.com/david2069/franklinwh-gateway-emulator/issues/119)).
 
 ### Fixed
+- The V12 profile serves the values read on V12R02B60D00 (franklinwh-modbus SUNSPEC_SNAPSHOT of 2026-10-20, one site): M1 `Mn` "FranklinWH", 15018 = 15019 = 5000, 15500 PVUse 1 and 15501 0; it served the V10 dump's (#161).
 - `validate` (and `ui`) report two gateways that set the same `seed` or `serial`: they get the same Modbus serial, so serial-keyed clients would collide. Gateways that set neither still share seed 0 and are not refused (#162).
 - Page: form results and Activity show the gateway's local time, as its card and Events do (they showed the browser's zone and UTC); actions from the page are logged with source `page` (they read `api`); no favicon request, so no console 404 (#167).
 - Direct Connect 1405: a full-block write applies `BBBackupSoc` (the eight min/max fields stay 0), as franklinwh-direct-connect-api's catalogue records (proven 2026-09-14); it was acknowledged and discarded (#171).

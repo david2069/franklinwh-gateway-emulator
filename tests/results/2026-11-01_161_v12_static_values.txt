@@ -1,0 +1,18 @@
+# #161 V12 profile serves V12's static values — 2026-11-01
+
+Branch v12-static-161, base main dd452d2.
+
+## New tests
+27 passed in 0.12s
+
+## Break check
+with src stashed, test_v12_static_values_are_v12s fails; tests/test_quirks_drift.py passes with ext_static backed by ext_15000_15043_block and ext_15500_15501_pv_installed (measured)
+
+## Full suite
+619 passed in 32.83s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

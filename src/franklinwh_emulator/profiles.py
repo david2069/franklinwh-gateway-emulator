@@ -19,6 +19,9 @@ class Profile:
     baseline: str = "agate_v10r01b04d00"
     firmware: str = "V10R01B04D00"
     model_name: str = "aGate X"
+    manufacturer: str | None = None          # M1 Mn; None = the baseline's
+    # Static extension values that differ from the V10 dump (device._DIAG_STATIC): (address, value).
+    ext_static: tuple[tuple[int, int], ...] = ()
     # The aGate (IBG) firmware Direct Connect reports: picks the 1102/1834 versions (DC_FIRMWARE).
     dc_firmware: str = "V12R02B30D06_260304"
 
@@ -96,6 +99,12 @@ PROFILES: dict[str, Profile] = {
         refuse_charge=True,              # m704_wset_negative_refused, m704_wsetpct_accepted_range
         ext_read_end=15600,              # ext_unpopulated_ranges: 15514-15599 read 0, no exception
         reversion_inverted=True,         # m704_wsetrvrttms_reversion (2026-10-22, 3 of 3 runs)
+        # Read on V12R02B60D00 on 2026-10-20 (franklinwh-modbus
+        # docs/SUNSPEC_SNAPSHOT_2026-10-20_V12R02B60D00.md), one site (#161): M1 Mn "FranklinWH";
+        # 15018 = 15019 = 5000 (ext_15000_15043_block); 15500 PVUse 1, 15501 0
+        # (ext_15500_15501_pv_installed).
+        manufacturer="FranklinWH",
+        ext_static=((15018, 5000), (15019, 5000), (15500, 1), (15501, 0)),
     ),
     "spec": Profile(
         name="spec",
@@ -170,6 +179,7 @@ QUIRK_BASIS: dict[str, tuple[object, tuple[str, ...]]] = {
     "ext_read_end": (15517, ("ext_unpopulated_ranges",)),
     "reversion_inverted": (False, ("m704_wsetrvrttms_reversion",)),
     "refuse_charge": (False, ("m704_wset_negative_refused", "m704_wsetpct_accepted_range")),
+    "ext_static": ((), ("ext_15000_15043_block", "ext_15500_15501_pv_installed")),
 }
 
 # Settings a profile asserts without a measurement in the file, and why.
