@@ -159,7 +159,7 @@ class DcPayloads:
         sns = [self.fhp_sn(i + 1) for i in range(n)]
         hw = {k: v * n for k, v in extra.items() if isinstance(v, list)}     # one per aPower
         if "PE_HW_VER" in hw:              # on firmware that has it: the aPower model's code (#180)
-            hw["PE_HW_VER"] = [self.site.model.apower.code] * n
+            hw["PE_HW_VER"] = [m.code for m in self.site.unit_models][:n]
         return _ok(IBG_SN=self.gw.serial,
                    **({"deviceType": extra["deviceType"]} if "deviceType" in extra else {}),
                    protocolVer=fw["protocolVer"], IBG_VER=ibg, AWS_VER=fw["AWS_VER"],
