@@ -1,0 +1,18 @@
+# #189 Fitted accessories are a gateway setting — 2026-11-01
+
+Branch accessories-config, base main 5dc2e5c.
+
+## New tests
+5 passed in 0.02s
+
+## Break check
+the new tests fail with the src change stashed (accessories key unknown).
+
+## Full suite
+647 passed in 34.56s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

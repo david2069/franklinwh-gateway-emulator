@@ -262,6 +262,9 @@ class SiteConfig:
     # Hardware models (#180): {agate: code|SKU|name, apower: …}; None → the region's defaults.
     # The aPower model sets capacity and power per unit (models.py).
     model: dict | None = None
+    # Accessory modules fitted (#189): {smart_circuits, generator_module, apbox}, each true or
+    # false; left out = fitted. None = all fitted.
+    accessories: dict | None = None
     # Starting values for the lifetime counters (Wh). None → the reference scan's
     # (REFERENCE_COUNTERS); a factory gateway sets them to 0 (gateway.py).
     grid_import_wh: float | None = None
@@ -506,7 +509,13 @@ class Site:
         else:
             self.tz = None                                    # the host's local zone
         self.loads = LoadModel(cfg.loads, seed=cfg.seed, legs=self.phases) if cfg.loads else None
-        # Smart circuits per aGate model (#189): AU 1–2, North America 1–3.
+        self.accessories = models.accessories(cfg.accessories)
+        if self.generator.hw.installed and not self.accessories["generator_module"]:
+            raise ValueError("generator: installed, but accessories.generator_module is false")
+        remote = sorted(set(cfg.pv_inputs) & {"remote1", "remote2"})
+        if remote and not self.accessories["apbox"]:
+            raise ValueError(f"pv_inputs {remote}: remote PV inputs need an aPbox "
+                             "(accessories.apbox is false)")
         max_a = self.model.agate.gen_module_max_a      # #189: AU Generator Module, 80 A
         if max_a:
             self.generator.max_w = max_a * self.grid.nominal_v_ln
@@ -515,9 +524,10 @@ class Site:
             except ValueError as e:
                 raise ValueError(f"{e} ({max_a} A at {self.grid.nominal_v_ln:g} V, "
                                  f"{self.model.agate.name})") from None
-        k = self.model.agate.smart_circuits
+        # Smart circuits per aGate model (#189): AU 1–2, North America 1–3; none without the module.
+        k = self.model.agate.smart_circuits if self.accessories["smart_circuits"] else 0
         self.circuits: dict[int, Circuit] = {n: Circuit(DEFAULT_CIRCUITS[n]) for n in range(1, k + 1)}
-        self.circuit_range = f"1–{k}"
+        self.circuit_range = f"1–{k}" if k else "none (accessories.smart_circuits is false)"
         for n, c in (cfg.circuits or {}).items():
             n = int(n)
             if n not in self.circuits:
