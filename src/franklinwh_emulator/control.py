@@ -106,6 +106,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "import_cap_w": site.import_cap_w(),
         "battery_export": site.battery_export(),            # PCS setting, else the model's default
         "pv_cutoff": site.pv_cutoff,         # NA off-grid full battery: 62.2 Hz, PV off (#178, #176)
+        "droop_hz": site.droop_hz,           # NA off-grid: the frequency drooping PV (#178); else null
         "import_clipped_w": round(site.import_clipped_w, 1),
         "service": None if site.service is None else {
             "main_breaker_a": site.service.main_breaker_a,

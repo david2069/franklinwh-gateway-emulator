@@ -102,6 +102,28 @@ def test_na_full_battery_cuts_pv_at_62_2_hz_until_97(clock):
     assert not s.pv_cutoff
 
 
+def test_na_offgrid_surplus_droops_pv_by_frequency(clock):
+    """PV Curtailment White Paper (NA): above 60 Hz + 0.036 Hz the inverters droop 33.33 % of
+    rated PV per Hz (kOF 0.05); the aGate moves its frequency at 0.2 Hz/s (#178)."""
+    gw = make_gateway(clock, site={"ac_type": 1, "initial_soc": 50, "solar_peak_w": 6000,
+                                   "cap_forced_solar": False})
+    s = gw.site
+    s.solar_override_w, s.load_override_w = 6000, 500
+    s.set_grid(available=False)
+    clock.advance(1)
+    snap = s.step()
+    assert snap.solar_clipped_w > 100 and 60.036 + snap.solar_clipped_w / 6000 * 3.0 > 60.2
+    assert snap.hz == pytest.approx(60.2)                            # 1 s at 0.2 Hz/s
+    clock.advance(60)
+    snap = s.step()
+    assert snap.hz == pytest.approx(60.036 + snap.solar_clipped_w / 6000 * 3.0)
+    gw.device.refresh(snap)
+    assert gw.device.image.get(701, "Hz") == round(snap.hz * 1000)
+    s.load_override_w = 6000                                          # the house takes it all
+    clock.advance(60)
+    assert s.step().hz == 60.0 and s.droop_hz is None
+
+
 def test_au_full_battery_only_clips_pv_to_the_house(clock):
     gw, s, snap = _offgrid_full(clock)
     assert not s.pv_cutoff and snap.solar_w == pytest.approx(2000, abs=50) and snap.hz == 50.0

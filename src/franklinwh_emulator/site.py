@@ -59,6 +59,12 @@ from .utility import Service, Utility as UtilityRules, trip_seconds
 # Off-grid full-battery PV cut-off, North American models (PV Curtailment White Paper, #178).
 PV_CUTOFF_HZ = 62.2
 PV_RESUME_SOC = 97.0
+# Off-grid Freq/Watt droop, North American models (same paper): output falls from 60 Hz + dbOF
+# by kOF (5 % of nominal = 3 Hz for full curtailment, 33.33 % of rated PV per Hz), and the aGate
+# moves its frequency at most 0.2 Hz/s.
+DROOP_DB_HZ = 0.036
+DROOP_K = 0.05
+DROOP_RAMP_HZ_S = 0.2
 VA_PER_APOWER = 5_800           # 702.VAMaxRtg (S rated for volt-var)
 # Battery losses against the SoC scale, fitted on 30 days of the reference aGate (one aPower,
 # 10 s samples, Sep–Oct 2026; docs/CALIBRATION.md): discharging 12.45 kWh moves SoC by 100 %,
@@ -463,6 +469,7 @@ class Site:
         self.soc = cfg.initial_soc if cfg.initial_soc is not None else default_soc
         # Off-grid full-battery PV cut-off (North America, #178): set at 100 %, cleared below 97 %.
         self.pv_cutoff = False
+        self.droop_hz: float | None = None        # formed frequency while drooping PV (#178)
         if cfg.native_mode not in MODE_NAMES:
             raise ValueError(f"native_mode must be one of {sorted(MODE_NAMES)}")
         self.native_mode = cfg.native_mode
@@ -744,6 +751,24 @@ class Site:
                 for name in PV_INPUTS}
 
     # -- grid ----------------------------------------------------------------------
+    def _droop(self, clipped_w: float, solar_avail_w: float, dt: float) -> float:
+        """North America off-grid: the frequency the aGate forms so IEEE 1547 inverters droop
+        away ``clipped_w`` (Freq/Watt against rated PV), ramped at 0.2 Hz/s. PV is still
+        balanced at once; only the frequency shows the ramp. Elsewhere: nominal."""
+        g = self.grid
+        if self.model.region != models.NA:
+            return g.nominal_hz
+        if clipped_w > 1 and solar_avail_w > 0:
+            frac = min(1.0, clipped_w / max(self.solar_peak_w, solar_avail_w))
+            target = min(PV_CUTOFF_HZ, g.nominal_hz + DROOP_DB_HZ + frac * DROOP_K * g.nominal_hz)
+        else:
+            target = g.nominal_hz
+        cur = g.nominal_hz if self.droop_hz is None else self.droop_hz
+        step = DROOP_RAMP_HZ_S * max(dt, 0.0)
+        cur = target if abs(target - cur) <= step else cur + step * (1 if target > cur else -1)
+        self.droop_hz = None if cur == g.nominal_hz else cur
+        return cur
+
     def nominal_v_ln(self) -> float:
         return self.grid.nominal_v_ln
 
@@ -1192,6 +1217,8 @@ class Site:
         enforced_limit = None
         der_on = True
 
+        if not islanded:
+            self.droop_hz = None
         if islanded:
             # The battery forms the grid: it must balance the house on its own.
             max_dis, max_chg = self._limits(self.config.offgrid_floor_soc, dt)
@@ -1232,7 +1259,7 @@ class Site:
                 gen_w = 0.0
             else:
                 v_legs = {ph: g.nominal_v_ln for ph in self.phases}
-                hz = PV_CUTOFF_HZ if self.pv_cutoff else g.nominal_hz
+                hz = PV_CUTOFF_HZ if self.pv_cutoff else self._droop(clipped, solar_avail, dt)
                 inv = INV_RUNNING
             if batt < -50:
                 run = RUN_OFFGRID_CHARGING

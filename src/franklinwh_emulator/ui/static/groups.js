@@ -136,7 +136,9 @@ function forcedSolarText(g) {
 function curtailText(g) {
   if (!(g.solar_clipped_w > 1)) return '';
   const why = !g.grid_connected
-    ? (g.pv_cutoff ? 'off-grid, battery full: 62.2 Hz cut-off' : 'off-grid, nowhere to put it')
+    ? (g.pv_cutoff ? 'off-grid, battery full: 62.2 Hz cut-off'
+      : g.droop_hz ? 'off-grid, frequency droop at ' + g.droop_hz.toFixed(2) + ' Hz'
+      : 'off-grid, nowhere to put it')
     : 'export limit or grid support';
   return 'PV curtailed ' + _kw(g.solar_clipped_w) + ': ' + why;
 }
