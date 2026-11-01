@@ -1,0 +1,18 @@
+# #200 validate command for fleet, scenario, session and recording files — 2026-11-01
+
+Branch validate-command-200, base main 2d331fd.
+
+## New tests
+39 passed in 3.05s
+
+## Break check
+removing the fleet's recording check fails test_fleet_reports_its_recording; restoring the old fleet path fails test_fleet_command_checks_the_file_first
+
+## Full suite
+630 passed in 32.81s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

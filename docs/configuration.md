@@ -22,6 +22,8 @@ file to make them permanent.
 2. Start it: `franklinwh-emulator ui my-fleet.yaml` (web UI on http://127.0.0.1:8502/) or
    `franklinwh-emulator fleet my-fleet.yaml` (no UI). It checks the file first and prints every
    problem with its path (e.g. `gateways[1].modbus: port 5020 already used`), then exits.
+   `franklinwh-emulator validate my-fleet.yaml` checks it without starting anything; see
+   [Checking files and startup output](validate.md), which also explains what is printed at start.
 3. Point your client at each gateway's Modbus TCP and Direct Connect ports.
 
 From Python: `validate_fleet(load_yaml("my-fleet.yaml"))` returns the same problems. Every key,

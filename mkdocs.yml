@@ -50,6 +50,7 @@ nav:
   - Home: index.md
   - Getting started: getting-started.md
   - Configuration: configuration.md
+  - Checking files and startup output: validate.md
   - Model baseline: model-baseline.md
   - Sources and regions: sources-and-regions.md
   - Web UI: ui.md
