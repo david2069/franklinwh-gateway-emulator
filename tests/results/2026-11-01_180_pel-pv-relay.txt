@@ -1,0 +1,18 @@
+# #180 North American aGates open the PV relay at the export limit — 2026-11-01
+
+Branch pel-pv-relay, base main c8a2aad.
+
+## New tests
+15 passed in 0.12s
+
+## Break check
+the new test fails with the src change stashed (no auto-open).
+
+## Full suite
+651 passed in 35.44s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

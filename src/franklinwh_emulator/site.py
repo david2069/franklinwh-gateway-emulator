@@ -71,6 +71,7 @@ DROOP_RAMP_HZ_S = 0.2
 # remove before 62.2 Hz). How long a relay stays open is not
 # documented: 300 s here (IEEE 1547's default reconnect delay), so a lasting surplus toggles it.
 PV_RELAY_HOLD_S = 300.0
+PEL_REASON = "export limit (PEL)"
 VA_PER_APOWER = 5_800           # 702.VAMaxRtg (S rated for volt-var)
 # Battery losses against the SoC scale, fitted on 30 days of the reference aGate (one aPower,
 # 10 s samples, Sep–Oct 2026; docs/CALIBRATION.md): discharging 12.45 kWh moves SoC by 100 %,
@@ -783,18 +784,29 @@ class Site:
         """North America off-grid (#178): on a surplus, open the relays of inputs whose
         inverters don't follow IEEE 1547 (they can't droop); open every producing input when
         the surplus is more than droop can take away (the formed frequency tops out at
-        62.2 Hz). Each closes again after PV_RELAY_HOLD_S. Elsewhere they stay closed."""
-        if snap.grid_connected or self.model.region != models.NA or snap.hz <= 0:
+        62.2 Hz). On the grid (#180): open every producing input when PV is curtailed to hold
+        the PCS export limit (PEL), which the battery could not absorb (FranklinWH PCS
+        Technical Brief: "cut off the PV system by opening the PV relay"; reclose interval not
+        given). Each closes again after PV_RELAY_HOLD_S, and on a change between on- and
+        off-grid. Elsewhere they stay closed."""
+        if self.model.region != models.NA or snap.hz <= 0:
             self.pv_auto_open.clear()
             return
-        for n, (_, since) in list(self.pv_auto_open.items()):
-            if ts - since >= PV_RELAY_HOLD_S:
+        for n, (why, since) in list(self.pv_auto_open.items()):
+            if ts - since >= PV_RELAY_HOLD_S or (why == PEL_REASON) != snap.grid_connected:
                 del self.pv_auto_open[n]
         if snap.solar_clipped_w <= 1 or self.pv_cutoff:
             return
         shares = self.config.pv_inputs
         producing = [n for n in PV_INPUTS if shares.get(n, 0) > 0
                      and self.pv_relays[n] and n not in self.pv_auto_open]
+        if snap.grid_connected:
+            pel = (None if self.utility_rules is None
+                   else self.utility_rules.export_limit(len(self.phases)))
+            if pel is not None and snap.export_limit_w == pel:
+                for n in producing:
+                    self.pv_auto_open[n] = (PEL_REASON, ts)
+            return
         g = self.grid
         rated = max(self.solar_peak_w, snap.solar_available_w)
         drooping = sum(shares.get(n, 0) for n in producing if n not in self.config.pv_non_1547)
