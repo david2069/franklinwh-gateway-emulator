@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.2 (2026-11-02)
+
 ### Added
 - aPower S DC PV (`dc_pv: {rated_w, export}`), from the datasheet ratings: up to 15 kW per aPower S, sharing its 11.5 kW inverter with battery discharge, charging the battery directly, curtailed beyond inverter + charging; `export: false` serves only house and battery. Counted in solar.
 - Mixed aPower models: `model: {apower: [0, 3]}` gives one model per aPower; capacity, discharge and charge power add up per unit, DC 1102 `PE_HW_VER` lists each unit, and counts follow the Backwards Compatibility Statement (15 max; X + 2 on aGate X 1.1, 8; up to 8 aPower S).
