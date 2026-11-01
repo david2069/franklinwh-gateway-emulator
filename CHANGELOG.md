@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Force events (side panel, `POST /events`): ten presets (offline, slow, faulty responses, DC offline/slow, aPower failure, grid outage, brown-out, frequency drop/spike) on all or chosen gateways, with optional auto-clear; logged per gateway as `event:<name>`.
 - Session snapshots (UI "with state", `POST /session/save {snapshot: true}`): each site's clock, SoC, counters, today's totals, 1303 history, circuit/generator energy, EV sessions, sky and cabinet temperature, versioned; restore puts them back after the actions (manual/scaled clocks move to the saved time).
 - Save as scenario (UI button, `POST /session/scenario`): writes the run as `scenarios/<name>.yaml` with `start`, the fleet and the logged actions as timed steps, replayable with `franklinwh-emulator scenario`.
 - timeseries.csv appends `cabinet_c`, `sky` (with a weather model) and the running lifetime counters (`grid_import_wh`, `grid_export_wh`, `pv_wh`, `batt_charge_wh`, `batt_discharge_wh`, `generator_wh`); existing columns are unchanged.

@@ -318,6 +318,27 @@
       </select>
     </div>
     <p class="sub">Each form sends only the fields you fill. The emulator checks them; its answer stays in the form.</p>
+    <details class="group force" @toggle="$event.target.open && loadForceEvents()">
+      <summary>Force events (many gateways)</summary>
+      <form class="force-form" @submit.prevent="fireEvent()">
+        <label for="force-event">Event</label>
+        <select id="force-event" x-model="force.event">
+          <template x-for="(p, name) in forceEvents" :key="name"><option :value="name" x-text="name + ' (' + p.action + ' ' + JSON.stringify(p.with) + ')'"></option></template>
+        </select>
+        <fieldset>
+          <legend>Gateways</legend>
+          <label><input type="checkbox" x-model="force.all"> all</label>
+          <template x-for="g in gateways" :key="g.id"><label x-show="!force.all"><input type="checkbox" :value="g.id" x-model="force.ids"> <span x-text="g.id"></span></label></template>
+        </fieldset>
+        <label for="force-dur">Clear after (s, optional)</label>
+        <input id="force-dur" type="number" min="1" step="1" x-model="force.duration" placeholder="stays until cleared">
+        <button type="submit" :disabled="!force.event || (!force.all && !force.ids.length)">Fire</button>
+      </form>
+      <p x-show="force.msg" :class="{ bad: force.msg && !force.msg.ok }" x-text="force.msg && force.msg.text"></p>
+      <ul class="log" x-show="force.msg && force.msg.results">
+        <template x-for="r in (force.msg && force.msg.results) || []" :key="r.gateway"><li :class="{ bad: !r.ok }" x-text="r.gateway + ': ' + (r.ok ? 'applied' : r.error)"></li></template>
+      </ul>
+    </details>
     <details class="group activity">
       <summary x-text="'Activity (' + log.length + ' actions this run)'"></summary>
       <p class="empty" x-show="!log.length">Nothing yet. Every action from this page, ctl, the API or a restore shows here.</p>
