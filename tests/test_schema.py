@@ -33,7 +33,7 @@ def fleet():
                                          for b in spec["examples"]])
 def test_every_example_runs(fleet, action, body):
     body = dict(body)
-    if action == "episode":       # same shape, short enough to finish before the fleet stops
+    if action == "episode":       # same shape, short enough to finish before the next test's DC write
         body = {k: 0.05 for k in body}
     fleet.control.apply_logged(fleet["site"], action, body)   # as the API does (dc-modbus too)
     if action == "episode":

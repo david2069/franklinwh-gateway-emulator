@@ -250,3 +250,19 @@ def test_write_reject_over_control_api():
             post({"model": 704, "point": "WSetPct", "bogus": 1})
     finally:
         fleet.stop()
+
+
+def test_stop_during_an_episode_cancels_it(clock):
+    """#21: stopping mid-episode left its task pending ("Task was destroyed but it is pending")."""
+    from conftest import make_gateway
+    gw = make_gateway(clock, seed=7)
+    gw.start()
+    gw.episode(60, 120)
+    end = time.monotonic() + 2
+    while gw.episode_phase != "down" and time.monotonic() < end:
+        time.sleep(0.01)
+    assert gw.episode_phase == "down"
+    tasks = list(gw._background)
+    assert len(tasks) == 1
+    gw.stop()
+    assert all(t.cancelled() for t in tasks) and not gw._background
