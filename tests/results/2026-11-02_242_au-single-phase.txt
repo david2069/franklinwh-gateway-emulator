@@ -1,0 +1,19 @@
+# #242 AU/NZ aGate is single phase only — 2026-11-02
+
+Branch fix/242-au-single-phase, base main 74b6538.
+
+## New tests
+212 passed in 13.61s
+
+## Break check
+src stashed: the 4 test_au_nz_agate_refuses_more_than_one_phase cases fail (no refusal)
+
+## Full suite
+714 passed in 39.85s
+(first run: the changelog's new Changed heading sat above Added; reordered)
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

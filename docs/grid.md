@@ -7,7 +7,7 @@ The site has a utility you can break, plus the aGate's protection around it:
 | Scenario | How | What the aGate does |
 |---|---|---|
 | Black-out | `ctl <gw> outage` / `site.set_grid(available=False)` | Grid relay opens at once (`701.ConnSt` 0, `DERMode` grid-forming, `GRID_DISCONNECT`). The battery carries the house down to the off-grid floor (5 %), ignoring VPP and the mode reserve. It sheds the load it can't carry and curtails the PV it can't absorb (`PV_CLIPPED`). At the floor the house goes dark (`InvSt` STANDBY, 0 V). |
-| Loss of one phase | `ctl <gw> outage L2` | The relay opens at once (`trip_reason` phase-loss). Islanded, each leg's output follows its own load. |
+| Loss of one phase | `ctl <gw> outage L2` | A multi-leg site: the relay opens at once (`trip_reason` phase-loss); islanded, each leg's output follows its own load. A grouped AU site: the aGate on L2 islands and the others stay on the grid. |
 | Brown-out / swell | `ctl <gw> voltage 195 [L3]` or `0.85pu` | `701.LNV`/`V<leg>` sag. Each trip stage of the grid code fires after its own delay, with `AC_UNDER/OVER_VOLT` raised while the condition lasts. Shorter excursions ride through. |
 | Frequency excursion | `ctl <gw> hz 51.3` | Frequency-watt: over-frequency curtails generation and moves storage towards charging, and under-frequency does the reverse (`ThrotPct`, `InvSt` THROTTLED). It trips per the grid code's frequency stages. |
 | Restore | `ctl <gw> restore` | The relay recloses only after the grid has spent the code's enter-service delay inside its window. |
@@ -129,6 +129,11 @@ closes or reopens about 3 s later (delayed-apply in both directions on FW V12R02
 | Split phase (US) | `ac_type: 1` → L1 + L2, 180° | `VL1L2` = 240 V |
 | Two-phase | `ac_type: 2, phases: [L1, L2]` | `VL1L2` = √3 × V, L3 points unused |
 | Three phase | `ac_type: 2` → L1 + L2 + L3, 120° | `VL1L2/VL2L3/VL3L1` from the phasors |
+
+AU/NZ aGates are single phase (owner, 2026-11-02; #242): an AU/NZ model is refused with more
+than one leg. A two- or three-phase AU/NZ home is one aGate per phase in a fleet group
+(`groups:`, [Configuration](configuration.md)). The multi-leg layouts above remain for North
+American grid codes and the `spec` profile.
 
 Unwired legs read 0, as on the single-phase scan, or the SunSpec unimplemented value with
 `quirks: {unused_phase_registers: unimplemented}` (the `spec` profile's default).

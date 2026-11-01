@@ -125,7 +125,7 @@ format.
 | `latent-export-breach` | 5.7 kW PV plus 5 kW VPP = 10.7 kW against the unenforced 10 kW Ausgrid limit. |
 | `brownout-ride-through` | V< 175 V: 8 s rides through, 12 s trips; reconnect at 60 s. |
 | `over-frequency-event` | Australia A freq-watt: discharge stops at 50.75 Hz, storage charges by 51.5 Hz, F> trips at 52.5 Hz. |
-| `phase-loss-3ph` | Losing L2 on a three-phase site; legs carry their own load; reconnect. |
+| `phase-loss-3ph` | Losing L2 on a three-phase AU home with one aGate per phase: L2's aGate islands on its battery, L1 and L3 stay on the grid; reconnect. |
 | `us-over-frequency-ride-through` | IEEE 1547 Cat II OF1 61.5 Hz: rides through 300 s, trips, 300 s reconnect. |
 | `sydney-dst-end` | DST ends on 5 Apr 2026: offset 11→10, a 25-hour day, daily reset at local midnight, and the TOU peak at the right wall-clock hours. It fails with a fixed offset. |
 | `sydney-family-day` | The `sydney-family` preset: overnight EV session to 18 kWh, hot water on circuit 1 at noon, switching circuit 1 off removes 3.6 kW, EV at 7 kW from 22:00. |

@@ -141,7 +141,7 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 
 | Key | Type | Default | What it does |
 |---|---|---|---|
-| `ac_type` | integer | `0` | 0 single phase, 1 split phase, 2 three phase |
+| `ac_type` | integer | `0` | 0 single phase, 1 split phase, 2 three phase; AU/NZ aGates are single phase only (a multi-phase AU/NZ home: one aGate per phase in a fleet group) |
 | `phases` | array | — | legs wired, e.g. [L1, L2]; default from ac_type |
 | `grid_code` | string | — | as4777-au-a, ieee1547-cat2, ieee1547-cat3, ausgrid; default from ac_type |
 | `grid_overrides` | object | `{}` | grid-code values to change, e.g. {es_delay_s: 5} |

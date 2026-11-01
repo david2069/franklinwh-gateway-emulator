@@ -439,7 +439,8 @@ def test_703_reflects_grid_code(clock):
 
 
 def test_two_phase_registers(clock):
-    gw = make_gateway(clock, site={"ac_type": 2, "phases": ["L1", "L2"]})
+    gw = make_gateway(clock, profile="spec", quirks={"unused_phase_registers": "zero"},   # AU aGates: one phase (#242)
+                      site={"ac_type": 2, "phases": ["L1", "L2"]})
     with gw:
         c = RawClient(*gw.address)
         assert c.read(addr(gw, "ACType"), 1) == [2]
@@ -463,7 +464,7 @@ def test_single_leg_on_l2_and_unimplemented_unused(clock):
 
 
 def test_per_phase_registers_unbalanced(clock):
-    gw = make_gateway(clock, site={"ac_type": 2, "load_split": {"L1": 2, "L2": 1, "L3": 1},
+    gw = make_gateway(clock, profile="spec", site={"ac_type": 2, "load_split": {"L1": 2, "L2": 1, "L3": 1},
                                    "initial_soc": 20})
     with gw:
         c = RawClient(*gw.address)
@@ -496,7 +497,7 @@ def _post(base, path, body):
 
 def test_control_api_round_trip():
     fleet = Fleet.from_dict({"gateways": [
-        {"id": "site", "seed": 7, "setup": "in-service", "tz_offset_hours": 0, "ac_type": 2}]})
+        {"id": "site", "seed": 7, "setup": "in-service", "tz_offset_hours": 0, "ac_type": 2, "profile": "spec"}]})
     fleet.start(control_port=0)
     try:
         base = f"http://127.0.0.1:{fleet.control.port}"

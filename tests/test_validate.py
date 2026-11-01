@@ -23,8 +23,9 @@ def test_example_fleet_is_clean_and_starts():
 
 def test_example_gateways_have_a_service_rating():
     """Each example shows its service rating on the diagram's Meter box (#156)."""
-    d = load_yaml(str(ROOT / "examples/fleet.yaml"))
-    assert [g["id"] for g in d["gateways"] if not (g.get("service") or {}).get("main_breaker_a")] == []
+    from franklinwh_emulator.gateway import expand_groups
+    entries, _ = expand_groups(load_yaml(str(ROOT / "examples/fleet.yaml")))   # grouped: the group's (#241)
+    assert [g["id"] for g in entries if not (g.get("service") or {}).get("main_breaker_a")] == []
 
 
 @pytest.mark.parametrize("path", BUILTINS, ids=lambda p: p.stem)

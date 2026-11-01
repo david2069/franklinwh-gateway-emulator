@@ -459,9 +459,10 @@ def test_dc_range_fault_is_refused(gw):
 
 
 @pytest.mark.parametrize("grid_code, ac_type, phases, line_v", [
-    ("as4777-au-a", 0, None, 241.8), ("as4777-au-a", 1, None, 483.6),
-    ("as4777-au-a", 2, None, 418.8), ("as4777-au-a", 2, ["L1", "L2"], 418.8),
+    # AU/NZ aGates are single phase (#242): their multi-leg cases left with that change.
+    ("as4777-au-a", 0, None, 241.8),
     ("ieee1547-cat2", 1, None, 240.0), ("ieee1547-cat2", 2, None, 207.8),
+    ("ieee1547-cat2", 2, ["L1", "L2"], 207.8),
 ])
 def test_grid_line_vol_is_line_to_line(clock, grid_code, ac_type, phases, line_v):
     """#151: three phase gives √3 × line-to-neutral, as the key's "line V" says and as split

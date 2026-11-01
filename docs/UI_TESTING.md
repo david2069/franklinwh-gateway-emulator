@@ -21,7 +21,8 @@ package isn't installed in it: `pip install -e .` once).
 
 ## 2. Cards
 
-- There are 7 cards: `site`, `us-split`, `au-3phase`, `au-2phase`, `tou-reserve`, `fresh`, `spec`.
+- There are 10 cards: `site`, `us-split`, `au-3phase-l1`/`-l2`/`-l3` (one aGate per phase, group
+  `au-3phase`), `au-2phase-l1`/`-l2` (group `au-2phase`), `tou-reserve`, `fresh`, `spec`.
 - `fresh` is a factory aGate: its card says **Modbus TCP off**. Like a real one, it serves only
   Direct Connect until a Direct Connect `1205` `sunsMdEn` write turns Modbus TCP on. Select it
   and press **Enable Modbus TCP via Direct Connect** (under its name): the emulator sends that
@@ -43,7 +44,9 @@ package isn't installed in it: `pip install -e .` once).
 
 ## 3. Energy diagram
 
-- Select `au-3phase`: it has remote PV, so an **aPbox** joins Remote PV 1 to the aGate.
+- Select `au-3phase-l1`: the diagram shows the whole `au-3phase` site (board E), one row per
+  phase; L1 has remote PV through an aPbox. Select `site` for the single board with its aPbox-free
+  AC-port PV.
 - Dashed lines move in the direction power flows; idle lines are grey and still.
 - Solar follows the site's local time (the diagram's header shows the weather). At night it is 0;
   step 4 overrides it.
