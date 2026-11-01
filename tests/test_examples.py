@@ -29,7 +29,7 @@ def test_single_gateway_example():
 
 def test_fleet_with_control_example():
     out = _load("fleet_with_control").main()
-    assert "site" in out["gateways"] and len(out["gateways"]) == 7       # incl. the factory `fresh`
+    assert "site" in out["gateways"] and len(out["gateways"]) == 10      # incl. the factory `fresh`; AU 3- and 2-phase homes are 3 + 2 aGates (#242)
     assert out["before"] is True and out["after"] is False
 
 

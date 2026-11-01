@@ -49,7 +49,7 @@ DOCS: dict[str, str] = {
     "history_days": "in-service: run the model over this many days before start (max 105) to fill "
                     "the history, today's totals and the lifetime counters; ~0.2 s per day",
     "apower_units": "number of aPowers",
-    "ac_type": "0 single phase, 1 split phase, 2 three phase",
+    "ac_type": "0 single phase, 1 split phase, 2 three phase; AU/NZ aGates are single phase only (a multi-phase AU/NZ home: one aGate per phase in a fleet group)",
     "phases": "legs wired, e.g. [L1, L2]; default from ac_type",
     "load_split": "share of home load per leg, e.g. {L1: 2, L2: 1}; default even",
     "gen_split": "share of aGate generation per leg; default even",

@@ -184,6 +184,14 @@ class Gateway:
                 if getattr(cfg.site, k) is None:
                     setattr(cfg.site, k, 0.0)
         self.site = Site(cfg.site, clock)
+        # #242: the AU/NZ aGate is single phase (owner, 2026-11-02); a two- or three-phase home
+        # has one aGate per phase, grouped in the fleet (`groups:`, #241).
+        from .models import AUNZ
+        if self.profile.name != "spec" and self.site.model.region == AUNZ and len(self.site.phases) > 1:
+            raise ValueError(f"{self.site.model.agate.name} is single phase, not {len(self.site.phases)} "
+                             f"legs ({', '.join(self.site.phases)}): for a {len(self.site.phases)}-phase "
+                             "AU/NZ home, put one aGate per phase in a fleet group (groups:, "
+                             "phases: [L1], …)")
         # Commissioning day, for Direct Connect sno (days since), and the components' install
         # date unless they set their own (#115).
         self.commissioned = cfg.commissioned or (

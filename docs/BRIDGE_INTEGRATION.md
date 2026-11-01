@@ -62,7 +62,8 @@ Connect until a `1205` `sunsMdEn` write turns Modbus TCP on (about 3 s later).
   `WSetRvrtTms=0`, `WSetEnaRvrt=0`.
 - Native modes: 1 Emergency Backup, 2 Self-Consumption, 3 TOU. No other 15507 value has been read (franklinwh-modbus#75).
 - Bridge sample convention: `battery_power_w` negative = charging.
-- `ac_type`: 0 single (230 V / 50 Hz), 1 split L1+L2 (240 V / 60 Hz, US aGate), 2 three phase.
+- `ac_type`: 0 single (230 V / 50 Hz), 1 split L1+L2 (240 V / 60 Hz, US aGate), 2 three phase
+  (not on AU/NZ aGates, which are single phase: one aGate per phase, #242).
 - The bridge's planned LAN setup wizard should probe PDU 0, then 40000, then 50000, and cope
   with "port open but session held". The emulator's `quirks={"busy_behaviour": "hang"}` plus
   `faults.session_held` reproduces that.

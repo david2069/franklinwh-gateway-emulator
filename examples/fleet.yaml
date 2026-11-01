@@ -6,7 +6,8 @@
 #   1205 write enables it; in-service: Modbus TCP on), modbus_enabled, commissioned (YYYY-MM-DD),
 #   history_days (in-service: run the model over N days before start; ~0.2 s/day), profile, quirks,
 #   time_scale, and any site setting:
-#     apower_units, ac_type (0 single, 1 split, 2 three), phases ([L1, L2, ...]),
+#     group (a `groups:` site, one aGate per phase), apower_units, ac_type (0 single,
+#     1 split, 2 three: not on AU/NZ aGates, which are single phase), phases ([L1, L2, ...]),
 #     load_split / gen_split ({L1: 2, L2: 1}), grid_code (as4777-au-a, ieee1547-cat2,
 #     ieee1547-cat3, ausgrid), grid_overrides ({es_delay_s: 5, ...}),
 #     location ({latitude, longitude, timezone: <IANA, DST-aware>, postcode}), weather
@@ -19,6 +20,19 @@
 defaults:
   host: 127.0.0.1
   setup: in-service          # already set up, Modbus TCP on; `fresh` below is a factory aGate
+
+# Sites with one aGate per phase (#241): what the aGates share, per group.
+groups:
+  au-3phase:
+    seed: 11
+    location: {latitude: -37.81, longitude: 144.96, timezone: Australia/Melbourne,
+               country: AU, state: VIC, city: Melbourne}
+    service: {main_breaker_a: 63}   # per phase
+  au-2phase:
+    seed: 12
+    location: {latitude: -34.93, longitude: 138.60, timezone: Australia/Adelaide,
+               country: AU, state: SA, city: Adelaide}
+    service: {main_breaker_a: 63}
 
 gateways:
   # Sydney single-phase home on Ausgrid (the reference aGate): Australia A + 10 kW export.
@@ -46,29 +60,50 @@ gateways:
     modbus: {port: 5021}
     directconnect: {port: 9021}
 
-  # Melbourne three-phase supply with an unbalanced house, remote PV on an aPbox.
-  - id: au-3phase
+  # Melbourne three-phase home: the AU aGate is single phase, so one aGate per phase in the
+  # au-3phase group (#241, #242); remote PV through an aPbox on L1, most of the house on L1.
+  - id: au-3phase-l1
+    group: au-3phase
+    phases: [L1]
     seed: 11
-    ac_type: 2
-    location: {latitude: -37.81, longitude: 144.96, timezone: Australia/Melbourne,
-               country: AU, state: VIC, city: Melbourne}
     install: {indoor: unheated}   # a garage: lags the outside air
-    load_split: {L1: 3, L2: 1, L3: 1}
+    home_base_w: 600
     pv_inputs: {proximal: 0.6, remote1: 0.4}
-    service: {main_breaker_a: 63}   # per phase: 43.5 kW over three
     modbus: {port: 5022}
     directconnect: {port: 9022}
+  - id: au-3phase-l2
+    group: au-3phase
+    phases: [L2]
+    seed: 111
+    install: {indoor: unheated}
+    home_base_w: 200
+    solar_peak_w: 0
+    modbus: {port: 5030}
+    directconnect: {port: 9030}
+  - id: au-3phase-l3
+    group: au-3phase
+    phases: [L3]
+    seed: 112
+    install: {indoor: unheated}
+    home_base_w: 200
+    solar_peak_w: 0
+    modbus: {port: 5031}
+    directconnect: {port: 9031}
 
-  # Two legs of a three-phase supply, in Adelaide (UTC+9:30/+10:30).
-  - id: au-2phase
+  # Two legs of a three-phase supply in Adelaide (UTC+9:30/+10:30): one aGate on each.
+  - id: au-2phase-l1
+    group: au-2phase
+    phases: [L1]
     seed: 12
-    ac_type: 2
-    location: {latitude: -34.93, longitude: 138.60, timezone: Australia/Adelaide,
-               country: AU, state: SA, city: Adelaide}
-    phases: [L1, L2]
-    service: {main_breaker_a: 63}
     modbus: {port: 5023}
     directconnect: {port: 9023}
+  - id: au-2phase-l2
+    group: au-2phase
+    phases: [L2]
+    seed: 121
+    solar_peak_w: 0
+    modbus: {port: 5032}
+    directconnect: {port: 9032}
 
   # 15509 holds the TOU reserve instead of repeating 15508.
   - id: tou-reserve

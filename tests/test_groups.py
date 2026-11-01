@@ -75,8 +75,9 @@ def test_example_three_phase_home(clock):
 
 def test_ungrouped_fleet_unchanged(clock):
     f = Fleet.from_dict(load_yaml("examples/fleet.yaml"), clock=clock)
-    assert all(gw.site.config.group is None and gw.site.sky_seed == gw.config.seed
-               for gw in f.gateways.values())
+    alone = [gw for gw in f.gateways.values() if gw.site.config.group is None]
+    assert len(alone) == 5 and all(gw.site.sky_seed == gw.config.seed and gw.group_members == [gw]
+                                   for gw in alone)
 
 
 # --- step 2: one grid connection (#241) ----------------------------------------------------
@@ -106,7 +107,7 @@ def test_ungrouped_grid_event_stays_on_its_gateway(clock):
     f = Fleet.from_dict(load_yaml("examples/fleet.yaml"), clock=clock)
     apply(f["site"], "grid", {"available": False})
     assert not any(f["site"].site.utility.available.values())
-    assert all(f[g].site.utility.available["L1"] for g in ("au-3phase", "us-split", "fresh"))
+    assert all(all(f[g].site.utility.available.values()) for g in ("au-3phase-l1", "us-split", "fresh"))
 
 
 def test_group_state_sums_the_phases(clock):
@@ -146,3 +147,23 @@ def test_groups_endpoint():
             urllib.request.urlopen(f"{base}/groups/nope")
     finally:
         f.stop()
+
+
+# --- #242: the AU/NZ aGate is single phase ---------------------------------------------------
+
+@pytest.mark.parametrize("site", [{"ac_type": 2}, {"ac_type": 2, "phases": ["L1", "L2"]},
+                                  {"ac_type": 1, "grid_code": "as4777-au-a"},
+                                  {"ac_type": 2, "location": {"country": "NZ"}}])
+def test_au_nz_agate_refuses_more_than_one_phase(clock, site):
+    from conftest import make_gateway
+    with pytest.raises(ValueError, match="single phase.*one aGate per phase in a fleet group"):
+        make_gateway(clock, site=site)
+    problems = validate_fleet({"gateways": [{"id": "a", **site}]})
+    assert len(problems) == 1 and "fleet group" in problems[0]["error"]
+
+
+def test_single_phase_au_na_multi_leg_and_spec_still_allowed(clock):
+    from conftest import make_gateway
+    make_gateway(clock, site={"phases": ["L3"]})                              # AU, one leg
+    make_gateway(clock, site={"ac_type": 1})                                  # US split phase
+    make_gateway(clock, profile="spec", site={"ac_type": 2})                  # not an aGate

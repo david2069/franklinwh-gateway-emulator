@@ -14,11 +14,14 @@ from franklinwh_emulator.control import ApiError, apply
 from franklinwh_emulator.gateway import Fleet
 from franklinwh_emulator.schema import ACTIONS
 
-FLEET = {"gateways": [{
-    "id": "site", "seed": 7, "ac_type": 2, "loads": "sydney-family",
+# A three-phase AU home: one aGate per phase (#242), so examples naming a phase find one.
+FLEET = {"groups": {"home": {
     "location": {"latitude": -33.87, "longitude": 151.21, "timezone": "Australia/Sydney"},
-    "weather": {"model": "synthetic", "kwp": 6.6, "sky": "broken"},
-    "generator": {"installed": True, "rated_w": 6000}, "directconnect": {"port": 0}}]}
+    "weather": {"model": "synthetic", "kwp": 6.6, "sky": "broken"}}},
+    "gateways": [{"id": "site", "seed": 7, "group": "home", "phases": ["L1"], "loads": "sydney-family",
+                  "generator": {"installed": True, "rated_w": 6000}, "directconnect": {"port": 0}},
+                 {"id": "site-l2", "seed": 8, "group": "home", "phases": ["L2"], "directconnect": {"port": 0}},
+                 {"id": "site-l3", "seed": 9, "group": "home", "phases": ["L3"], "directconnect": {"port": 0}}]}
 
 
 @pytest.fixture(scope="module")

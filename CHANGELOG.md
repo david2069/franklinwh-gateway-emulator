@@ -7,6 +7,9 @@
 - Grouped aGates share one grid connection (#241): a `grid` action on any member (outage, voltage, frequency, restore) reaches the whole group, `phase` picks the member on that leg, frequency is common; each member's state has `group`; `GET /groups` reports each phase (aGate, grid, load, solar, battery, SoC) and the service meter's totals (`3 × 63 A · 400 V`).
 - Fleet `groups:` (#241): aGates at one site and grid connection, one per phase (`group:` + `phases: [L1]`), share the group's location, weather, grid code, utility, service (per phase), clock and sky; `validate` refuses a member that sets a group setting, a shared phase or more than one leg. Example: `examples/au-3phase-group.yaml` (solar on L1, air conditioning and hot water on L2, EV on L3). Grid events and the combined meter are not shared yet.
 
+### Changed
+- **AU/NZ aGates are single phase** (owner, 2026-11-02): an AU/NZ model with more than one leg (`ac_type` 1 or 2, or `phases` with two or three legs) is refused, naming the fix: one aGate per phase in a fleet group. `examples/fleet.yaml`'s `au-3phase` and `au-2phase` are now groups of 3 and 2 aGates (`au-3phase-l1`…), and the `phase-loss-3ph` scenario islands only L2's aGate while L1 and L3 stay on the grid. Multi-leg layouts remain for North American grid codes and the `spec` profile ([#242](https://github.com/david2069/franklinwh-gateway-emulator/issues/242)).
+
 ### Fixed
 - `solar_peak_w: 0` is a site without solar; it was ignored and the seed picked 3.5–6 kW of PV ([#238](https://github.com/david2069/franklinwh-gateway-emulator/issues/238)).
 
