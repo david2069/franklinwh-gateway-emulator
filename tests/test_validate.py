@@ -255,3 +255,12 @@ def test_startup_fields_are_documented():
     doc = (Path(__file__).resolve().parent.parent / "docs/validate.md").read_text()
     assert keys >= {"serial", "profile", "grid", "legs", "modbus_max_connections", "dc_max_connections"}
     assert [k for k in sorted(keys) if f"`{k}=`" not in doc] == []
+
+
+def test_single_phase_on_a_120v_code_is_refused():
+    """#153: ac_type 0 with a North American code gave 60 V half-legs; split and three phase stay."""
+    problems = validate_fleet({"gateways": [{"id": "a", "ac_type": 0, "grid_code": "ieee1547-cat2"}]})
+    assert len(problems) == 1 and "use ac_type 1 (split phase, 120/240 V)" in problems[0]["error"]
+    for ac in (1, 2):
+        assert validate_fleet({"gateways": [{"id": "a", "ac_type": ac, "grid_code": "ieee1547-cat2"}]}) == []
+    assert validate_fleet({"gateways": [{"id": "a", "ac_type": 0}]}) == []          # AU single phase

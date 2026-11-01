@@ -157,7 +157,7 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 
 | Key | Type | Default | What it does |
 |---|---|---|---|
-| `commissioned` | string | — | commissioning date, YYYY-MM-DD (Direct Connect sno); default: the start day (factory) or the reference site's 2024-07-25 (in-service) |
+| `commissioned` | string | — | commissioning date, YYYY-MM-DD (Direct Connect sno); default: the start day (factory) or the reference site's 2024-07-25 (in-service), so in-service gateways read the same sno unless each sets its own |
 | `history_days` | number | `0` | in-service: run the model over this many days before start (max 105) to fill the history, today's totals and the lifetime counters; ~0.2 s per day |
 | `grid_import_wh` | number | — | lifetime grid import counter at start, Wh; default 0 (factory) or the reference aGate's (in-service) |
 | `grid_export_wh` | number | — | lifetime grid export counter at start, Wh; default 0 (factory) or the reference aGate's (in-service) |

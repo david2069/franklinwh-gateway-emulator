@@ -431,7 +431,7 @@ def test_single_phase_registers_match_scan_shape(clock):
 def test_703_reflects_grid_code(clock):
     for code, expected in (("as4777-au-a", [2530, 2050, 0, 5015, 0, 4750, 0, 60]),
                            ("ieee1547-cat2", [1260, 1100, 0, 6010, 0, 5950, 0, 300])):
-        gw = make_gateway(clock, site={"grid_code": code})
+        gw = make_gateway(clock, site={"grid_code": code, "ac_type": 1 if code.startswith("ieee") else 0})
         with gw:
             c = RawClient(*gw.address)
             assert c.read(280, 8) == expected, code    # ESVHi..ESDlyTms
@@ -605,7 +605,7 @@ def test_instant_responses_when_timing_disabled():
 
 
 def test_ieee_timing_is_faster_for_frequency():
-    s, clock = site(grid_code="ieee1547-cat2", initial_soc=100)
+    s, clock = site(grid_code="ieee1547-cat2", ac_type=1, initial_soc=100)
     s.solar_override_w, s.load_override_w = 4000, 0
     after(s, clock, 5)
     s.set_grid(hz=61.536)                               # PV droop: 4 kW → 3 kW
