@@ -216,6 +216,11 @@ class SiteConfig:
     # reports them. Timezone precedence: location.timezone > tz_offset_hours > host local.
     location: dict | None = None
     tz_offset_hours: float | None = None   # fixed UTC offset (no DST); None → host's local time
+    # Grouped site (#241): the fleet's `groups:` entry this aGate shares a grid connection with,
+    # and that group's seed for the sky (clouds, synthetic weather, ambient), so every aGate
+    # at the site sees the same weather. Set by the fleet; None = a site of its own.
+    group: str | None = None
+    sky_seed: int | None = None
     native_mode: int = MODE_SELF
     self_reserve: int = 20
     tou_reserve: int = 20
@@ -437,6 +442,7 @@ class Site:
         self.lock = threading.RLock()
         self.events = None                 # the gateway's EventLog (#140), set after backfill
         rng = random.Random(cfg.seed)
+        self.sky_seed = cfg.seed if cfg.sky_seed is None else int(cfg.sky_seed)
         self.solar_peak_w = (cfg.solar_peak_w if cfg.solar_peak_w is not None
                              else 3500 + 2500 * rng.random())   # 0 = no solar (#238)
         self.home_base_w = cfg.home_base_w or (400 + 400 * rng.random())
@@ -609,7 +615,7 @@ class Site:
             wdict.setdefault("longitude", self.location.longitude)
         wcfg = WeatherConfig.from_dict(wdict)
         self.weather = None if wcfg.model == "bell" else Weather(
-            wcfg, seed=cfg.seed, kwp=self.solar_peak_w / 1000.0 / wcfg.efficiency)
+            wcfg, seed=self.sky_seed, kwp=self.solar_peak_w / 1000.0 / wcfg.efficiency)
         from .pvmodel import from_config as _pv_model
         self.pvlib = _pv_model(cfg.pv)                       # None = the built-in PV model (#112)
         if self.pvlib is not None and self.weather is not None:
@@ -884,7 +890,7 @@ class Site:
             return poa, max(0.0, poa / 1000.0 * self.weather.kwp * self.weather.cfg.efficiency * 1000.0)
         hour = self.local_hour(ts)
         factor = max(0.0, math.sin((hour - 6.0) * math.pi / 14.0)) if 6.0 <= hour <= 20.0 else 0.0
-        cloud = 0.88 + 0.12 * math.sin(ts / 15.0 + self.config.seed * 0.7)
+        cloud = 0.88 + 0.12 * math.sin(ts / 15.0 + self.sky_seed * 0.7)
         base = max(0.0, self.solar_peak_w * factor ** 1.3 * cloud)
         return base / self.solar_peak_w * 1000.0 if self.solar_peak_w else 0.0, base   # peak ≈ 1000 W/m²
 
@@ -1440,7 +1446,7 @@ class Site:
             return measured
         hour = self.local_hour(ts)
         sun = max(0.0, math.sin((hour - 6.0) * math.pi / 14.0)) if 6.0 <= hour <= 20.0 else 0.0
-        return 18.0 + (self.config.seed % 8) + 4.0 * sun
+        return 18.0 + (self.sky_seed % 8) + 4.0 * sun
 
     def _load_breakdown(self, ts: float, solar_avail: float, islanded: bool,
                         ambient: float) -> tuple[dict[str, float], dict[str, Component | None]]:

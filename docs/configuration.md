@@ -31,6 +31,27 @@ with type, default and meaning, is also served at `GET /schema` under `gateway_c
 
 `defaults:` applies keys to every gateway; a gateway's own keys win.
 
+`groups:` puts several aGates at one site and grid connection (#241). The AU aGate is single
+phase, so an AU three-phase home has one aGate per phase. A group holds what they share:
+`location`, `weather`, `grid_code`, `grid_overrides`, `utility`, `service` (per phase),
+`tz_offset_hours`, `time_scale`, and a `seed` for the sky (clouds, synthetic weather, ambient).
+Each member names it with `group:` and its phase with `phases: [L1]`, and keeps its own aPowers,
+PV, loads and accessories. A member may not set a group setting itself, and two members may not
+share a phase. [`examples/au-3phase-group.yaml`](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/examples/au-3phase-group.yaml)
+is a three-phase home: solar on L1, air conditioning and hot water on L2, the EV on L3.
+
+```text
+groups:
+  au-3phase-home: {seed: 30, location: {...}, weather: {...}, service: {main_breaker_a: 63}}
+gateways:
+  - {id: agate-l1, group: au-3phase-home, phases: [L1], solar_peak_w: 6000}
+  - {id: agate-l2, group: au-3phase-home, phases: [L2], solar_peak_w: 0}
+  - {id: agate-l3, group: au-3phase-home, phases: [L3], solar_peak_w: 0}
+```
+
+So far the group shares settings, sky and clock; a grid event on one member and the combined
+three-phase meter are not shared yet (#241).
+
 ## A complete example
 
 ```yaml
@@ -157,6 +178,8 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 |---|---|---|---|
 | `location` | object | — | {latitude, longitude, timezone (IANA, DST-aware), postcode, name, country (ISO alpha-2), state, city, site_id}; country/state/city/site_id only group gateways in the UI |
 | `tz_offset_hours` | number | — | fixed UTC offset, no DST; location.timezone wins |
+| `group` | string | — | the fleet `groups:` entry this aGate shares a site and grid connection with (#241): one single-phase aGate per phase (phases: [L1]); it takes the group's location, weather, grid code, utility, service (per phase), clock and sky |
+| `sky_seed` | integer | — | seed for the sky (clouds, synthetic weather, ambient); set by the group, default the gateway's seed |
 | `install` | object | — | where the aGate/aPower sits: {indoor: heated\|unheated\|uninsulated} or {outdoor: {sun: morning\|afternoon\|all-day\|shade, cover: none\|roof\|enclosure}}, plus cabinet_lag_h, self_heat_c_per_kw, room_c; drives the cabinet temperature. Default: ambient + 8 °C |
 | `time_scale` | number | `1.0` | site clock speed; > 1 fast-forwards |
 
