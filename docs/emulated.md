@@ -118,7 +118,8 @@ refreshing (stale `check_blocking_alarms()`) and `ac_type` being guessed from vo
 
 ## Telling the emulator from a real aGate
 
-- Modbus TCP: SunSpec Model 1 `Opt` reads `Emulator <version>` (the real aGate reads
+- Modbus TCP: SunSpec Model 1 `Opt` reads `Emulator <version>`, cut to its 16 characters (a
+  development build's full version, e.g. 0.2.2.dev0, and commit are at `GET /version`) (the real aGate reads
   "Option Name"). `Mn`, `Md` and `Vr` are the aGate's for the profile's firmware (V12: `Mn`
   "FranklinWH"; V10: "FranklinWH Technologies Co., Ltd"), so model and firmware detection work as
   on hardware.
