@@ -1,0 +1,18 @@
+# #205 Energy diagram follows the owner's design — 2026-11-01
+
+Branch diagram-icons-205, base main 07bb56b.
+
+## New tests
+35 passed in 0.18s
+
+## Break check
+with src stashed, test_diagram_follows_the_design fails; headless Chrome renders site (AU, 1 phase) and us-split (2 phase) as the design (docs/assets/ui/energy-diagram.png)
+
+## Full suite
+634 passed in 35.07s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
