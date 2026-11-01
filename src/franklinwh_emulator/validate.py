@@ -63,7 +63,7 @@ DOCS: dict[str, str] = {
     "self_reserve": "Self-Consumption reserve, %",
     "tou_reserve": "TOU reserve, %",
     "initial_soc": "starting state of charge, %; default derived from the seed",
-    "solar_peak_w": "bell-curve solar peak, W; default derived from the seed",
+    "solar_peak_w": "bell-curve solar peak, W; 0 = no solar; default derived from the seed",
     "home_base_w": "base house load, W; default derived from the seed",
     "weather": "{model: bell|synthetic|open-meteo, kwp, tilt, azimuth, sky}; inherits lat/lon",
     "loads": "house load: a preset name, a list of components, or {preset, add, remove, set}",

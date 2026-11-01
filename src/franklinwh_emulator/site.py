@@ -437,7 +437,8 @@ class Site:
         self.lock = threading.RLock()
         self.events = None                 # the gateway's EventLog (#140), set after backfill
         rng = random.Random(cfg.seed)
-        self.solar_peak_w = cfg.solar_peak_w or (3500 + 2500 * rng.random())
+        self.solar_peak_w = (cfg.solar_peak_w if cfg.solar_peak_w is not None
+                             else 3500 + 2500 * rng.random())   # 0 = no solar (#238)
         self.home_base_w = cfg.home_base_w or (400 + 400 * rng.random())
         default_soc = 25 + 20 * rng.random()
         self.battery_model = _battery_model(cfg.battery)
