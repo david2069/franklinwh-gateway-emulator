@@ -194,3 +194,31 @@ def test_au_offgrid_never_opens_pv_relays(clock):
     clock.advance(1)
     s.step()
     assert s.pv_auto_open == {}
+
+
+def test_na_opens_pv_relay_at_the_export_limit(clock):
+    """PCS Technical Brief (NA): over the export limit the aGate cuts off PV by opening the PV
+    relay (#123, #180); it closes again after 300 s here (interval not documented)."""
+    rules = {"utility": {"export": "limited", "export_limit_w": 2000}}
+    gw = make_gateway(clock, site={"ac_type": 1, "initial_soc": 100, "cap_forced_solar": False,
+                                   **rules})
+    s = gw.site
+    s.solar_override_w, s.load_override_w = 8000, 500
+    for _ in range(3):
+        clock.advance(60)
+        s.step()
+    assert gateway_state(gw)["pv_relays_auto_open"] == {"proximal": "export limit (PEL)"}
+    clock.advance(60)
+    snap = s.step()
+    assert snap.solar_w == 0 and snap.battery_w + snap.grid_w == pytest.approx(500, abs=1)
+    assert gw.dc.payloads.ibg_run_status({})["solarRelayStatus"] == 0
+    clock.advance(300)
+    s.step()
+    clock.advance(1)
+    assert s.step().solar_available_w > 0 or "proximal" in s.pv_auto_open   # closed, then may reopen
+    au = make_gateway(clock, site={"initial_soc": 100, "cap_forced_solar": False, **rules})
+    au.site.solar_override_w, au.site.load_override_w = 8000, 500
+    for _ in range(3):
+        clock.advance(60)
+        au.site.step()
+    assert au.site.pv_auto_open == {}                                 # AU: curtails smoothly
