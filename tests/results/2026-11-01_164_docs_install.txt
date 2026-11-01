@@ -1,0 +1,18 @@
+# #164 Install steps: clone first, any Python 3.10+ — 2026-11-01
+
+Branch docs-install-164, base main f87bcf3.
+
+## New tests
+1 passed in 0.01s
+
+## Break check
+with README.md and docs stashed, tests/test_docs_install.py fails
+
+## Full suite
+620 passed in 32.94s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

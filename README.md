@@ -57,7 +57,9 @@ unmodified `FranklinWHController` connects, scans, reads and dispatches against 
 ## Quick start
 
 ```bash
-python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev]"
+git clone https://github.com/david2069/franklinwh-gateway-emulator.git
+cd franklinwh-gateway-emulator
+python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # Python 3.10 or later
 .venv/bin/franklinwh-emulator ui examples/fleet.yaml      # web UI: open http://127.0.0.1:8502/
 .venv/bin/franklinwh-emulator serve --port 5020 --dc-port 9000 --setup in-service   # one gateway
 .venv/bin/python -m pytest

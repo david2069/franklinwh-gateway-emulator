@@ -3,7 +3,9 @@
 Install, run one gateway or a fleet, and use the emulator from Python.
 
 ```bash
-python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev]"
+git clone https://github.com/david2069/franklinwh-gateway-emulator.git
+cd franklinwh-gateway-emulator
+python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # Python 3.10 or later
 .venv/bin/franklinwh-emulator serve --port 5020 --dc-port 9000 --seed 7   # factory: Modbus off until 1205
 .venv/bin/franklinwh-emulator serve --port 5020 --dc-port 9000 --setup in-service --grid-code ausgrid
 .venv/bin/franklinwh-emulator fleet examples/fleet.yaml
