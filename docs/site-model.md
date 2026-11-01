@@ -119,6 +119,11 @@ loads:
 | `ev` | charger with arrive/depart, kWh per session, mode `immediate`, `offpeak` (from `start`) or `solar` (PV surplus only, 6–32 A, ahead of the battery) |
 
 - **Smart circuits.** Any component can be bound to a smart circuit (`circuit: 1–2` on an AU aGate, `1–3` on a North American one).
+  Without the Smart Circuits module (`accessories: {smart_circuits: false}`) there are none;
+  `1410` still sends each slot, inert, and `1708`/`1412` read 0, because Direct Connect keeps a
+  missing module's keys and zeroes them (measured for the generator on the reference aGate).
+  `accessories` also sets whether a Generator Module and an aPbox are fitted
+  ([Configuration](configuration.md)).
   Switching the circuit off really removes its load, whether by `ctl <gw> circuit 2 off`, a
   scenario step, or a Direct Connect `1409` write. `1410` and `1708` report the state, and the
   new `1411` meter reports circuit power and energy.

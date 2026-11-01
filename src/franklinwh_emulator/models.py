@@ -150,6 +150,24 @@ class Model:
         return self.agate.region
 
 
+# Accessory modules a gateway has fitted (#189). Direct Connect does not report them: a missing
+# module's keys are still sent, zeroed (fwh-local capture, V12R02B30D06), so they are set here.
+# Default: all fitted, as before #189.
+ACCESSORIES = ("smart_circuits", "generator_module", "apbox")
+
+
+def accessories(cfg: dict | None) -> dict[str, bool]:
+    """``accessories:`` → {name: fitted}; a name left out is fitted."""
+    cfg = dict(cfg or {})
+    bad = set(cfg) - set(ACCESSORIES)
+    if bad:
+        raise ValueError(f"accessories: unknown keys {sorted(bad)}; known {list(ACCESSORIES)}")
+    for k, v in cfg.items():
+        if not isinstance(v, bool):
+            raise ValueError(f"accessories.{k}: true or false, not {v!r}")
+    return {k: cfg.get(k, True) for k in ACCESSORIES}
+
+
 def resolve(cfg: dict | None, *, country: str = "", hz: float = 50.0) -> Model:
     """The gateway's models from ``model:`` (codes, SKUs or names), else its region's defaults."""
     cfg = dict(cfg or {})

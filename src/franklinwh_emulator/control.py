@@ -130,6 +130,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "apower_rating": {"wh": round(site.model.apower.kwh * 1000), "w": round(site.apower_w)},
         "model": (None if gw.profile.name == "spec"           # not an aGate: no FranklinWH model
                   else models.describe(site.model, max(1, site.config.apower_units))),
+        "accessories": dict(site.accessories),                # fitted modules (#189)
         "forced_alarms": dict(site.forced_alarms),
         "remote_control": asdict(site.remote),
         # FORCE = an M704 setpoint is active (#91). Direct Connect then reports 1707 programme 9,
@@ -346,6 +347,8 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
                     raise ApiError(400, str(e)) from None
                 gen.block["genRatedPower"] = int(body["rated_w"])
             if "installed" in body:
+                if body["installed"] and not site.accessories["generator_module"]:
+                    raise ApiError(400, "generator: no Generator Module (accessories.generator_module is false)")
                 if body["installed"]:
                     gen.fit()                     # as installed: true in a fleet file
                 else:

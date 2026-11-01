@@ -92,6 +92,7 @@ DOCS: dict[str, str] = {
     "battery": "loss model: agate-measured, ideal, legacy, or {preset, ...}",
     "generator": "{installed, rated_w, ...} plus 1901 fields; null = none fitted",
     "model": "hardware models (#180): {agate, apower}, each a code, SKU or name, e.g. {agate: 102, apower: 2}; the aPower model sets kWh, kW and charge kW per unit, Direct Connect 1102 serves the codes; default by region: AU/NZ 102 + 2, North America 103 + 0 (docs/sources-and-regions.md)",
+    "accessories": "accessory modules fitted (#189): {smart_circuits, generator_module, apbox}, each true or false; left out = fitted. Without smart_circuits there are no circuits (Direct Connect keeps the keys, zeroed); generator.installed needs generator_module; remote1/remote2 PV inputs need apbox",
     "grid_import_wh": "lifetime grid import counter at start, Wh; default 0 (factory) or the reference aGate's (in-service)",
     "grid_export_wh": "lifetime grid export counter at start, Wh; default 0 (factory) or the reference aGate's (in-service)",
     "pv_wh": "lifetime PV counter at start, Wh; default 0 (factory) or the reference aGate's (in-service)",
