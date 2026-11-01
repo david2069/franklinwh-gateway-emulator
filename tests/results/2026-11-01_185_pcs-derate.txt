@@ -1,0 +1,18 @@
+# #185 PCS Permanent Derate — 2026-11-01
+
+Branch pcs-derate, base main 8a0dae4.
+
+## New tests
+16 passed in 0.14s
+
+## Break check
+the new test fails with the src change stashed (pcs_derate_w unknown).
+
+## Full suite
+654 passed in 35.58s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

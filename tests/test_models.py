@@ -222,3 +222,18 @@ def test_na_opens_pv_relay_at_the_export_limit(clock):
         clock.advance(60)
         au.site.step()
     assert au.site.pv_auto_open == {}                                 # AU: curtails smoothly
+
+
+def test_pcs_permanent_derate_caps_each_apower(clock):
+    """Commissioning Guide (MAC 1 & aPower 2 & aPower S) p. 24: PCS Permanent Derate sets the
+    aPowers' rated power, charge and discharge, on- and off-grid; above the rating it does
+    nothing (#185)."""
+    gw = make_gateway(clock, site={"pcs_derate_w": 3000, "apower_units": 2, "initial_soc": 50})
+    s = gw.site
+    assert s.rate_w == 6000 and s._limits(5, 0) == (6000, 6000)
+    assert gateway_state(gw)["pcs_derate_w"] == 3000
+    s.set_apower(2, False)
+    assert s.rate_w == 3000
+    assert make_gateway(clock, site={"pcs_derate_w": 7600}).site.rate_w == 5000
+    with pytest.raises(ValueError, match="pcs_derate_w"):
+        make_gateway(clock, site={"pcs_derate_w": 0})

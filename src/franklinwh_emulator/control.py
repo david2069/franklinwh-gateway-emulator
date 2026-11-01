@@ -132,6 +132,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "apower_off": sorted(site.apower_off),                # switched off at the unit (#71)
         # Per aPower, from its model (#180).
         "apower_rating": {"wh": round(site.model.apower.kwh * 1000), "w": round(site.apower_w)},
+        "pcs_derate_w": site.pcs_derate_w,                    # installer's derate (#185)
         "model": (None if gw.profile.name == "spec"           # not an aGate: no FranklinWH model
                   else models.describe(site.model, max(1, site.config.apower_units))),
         "accessories": dict(site.accessories),                # fitted modules (#189)

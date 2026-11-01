@@ -235,6 +235,11 @@ as LFP batteries are limited. Defaults are plausible, not measured; each is set 
 The state's `battery_temperature` shows the factors, heater and fan; cards show
 "derated: cold/hot". Region-locked power ratings (#113) are separate: policy, not physics.
 
+**PCS Permanent Derate** (`pcs_derate_w`, the installer's setting; FranklinWH Commissioning
+Guide, MAC 1 & aPower 2 & aPower S, p. 24) caps each aPower's charge and discharge, on- and
+off-grid, before the temperature taper above. The app offers 5.0, 7.6, 9.6, 10.0 and 11.5 kW;
+a value above the unit's rating has no effect (an aPower 2 stays at 10 kW at 11.5).
+
 ## Grid operator rules and the main breaker
 
 The grid operator is the **utility** (US/CA), **DNSP** (AU) or **lines company** (NZ); the fleet
