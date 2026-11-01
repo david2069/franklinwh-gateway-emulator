@@ -477,3 +477,19 @@ def test_grid_line_vol_is_line_to_line(clock, grid_code, ac_type, phases, line_v
     if ac_type == 2:
         assert rs["gridVol1"] == round(legs_v[0], 1)                      # legs stay L-N
         assert rs["gridCurr1"] == round(abs(s.grid_w) / s.v_ln, 1)      # as before #151
+
+
+def test_1405_full_block_write_applies_bbbackupsoc(gw):
+    """#171: the DC library's catalogue (proven 2026-09-14): a full-block write applies
+    BBBackupSoc; the eight min/max fields are inert and stay 0; partial writes are refused."""
+    from franklinwh_emulator.dc_payloads import DcPayloads
+    p = DcPayloads(gw)
+    block = {k: v for k, v in p.handlers[1405]({"opt": 0}).items() if k not in ("opt", "result", "reason")}
+    assert block["BBBackupSoc"] == 20
+    w = p.handlers[1405]({"opt": 1, **{k: 30 for k in block}, "BBBackupSoc": 55})
+    assert (w["result"], w["reason"]) == (0, 0)
+    after = p.handlers[1405]({"opt": 0})
+    assert after["BBBackupSoc"] == 55
+    assert all(after[k] == 0 for k in block if k != "BBBackupSoc")
+    assert p.handlers[1405]({"opt": 1, "selfMinSoc": 30})["reason"] == -2
+    assert p.handlers[1405]({"opt": 0})["BBBackupSoc"] == 55

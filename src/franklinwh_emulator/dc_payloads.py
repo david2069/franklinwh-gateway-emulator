@@ -377,7 +377,10 @@ class DcPayloads:
         if req.get("opt") == 1:
             if set(self.soc_block) - set(req):
                 return _refused(-2)
-            return _ok()                     # acknowledged, discarded: cloud-owned
+            # BBBackupSoc applies; the eight min/max fields are inert and stay 0
+            # (franklinwh-direct-connect-api catalogue 1405, proven 2026-09-14) (#171).
+            self.soc_block["BBBackupSoc"] = int(req["BBBackupSoc"])
+            return _ok()
         return _ok(**self.soc_block)
 
     def tou_schedule(self, req: dict) -> dict:

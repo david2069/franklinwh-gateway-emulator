@@ -1,0 +1,18 @@
+# #171 Direct Connect 1405 full-block write applies BBBackupSoc — 2026-11-01
+
+Branch dc-1405-bbbackupsoc-171, base main b87b754.
+
+## New tests
+1 passed, 49 deselected in 0.02s
+
+## Break check
+with src stashed, test_1405_full_block_write_applies_bbbackupsoc fails
+
+## Full suite
+615 passed in 32.61s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
