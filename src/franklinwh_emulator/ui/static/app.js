@@ -25,6 +25,8 @@ function running() {
     sessionsList: [],  // saved sessions, newest first
     saveName: '',
     saveSnapshot: false,
+    forceEvents: {},   // GET /events presets (#87)
+    force: { event: '', all: true, ids: [], duration: '', msg: null },
     restoreName: '',
     sessionMsg: null,  // {ok, text, details}: the last save/restore, shown until the next
     log: [],           // the emulator's action log (newest last)
@@ -268,6 +270,29 @@ function running() {
         this.restoreName = r.name;
       } catch (e) {
         this.sessionMsg = { ok: false, text: 'Not saved: ' + e.message, details: [] };
+      }
+    },
+    async loadForceEvents() {
+      try {
+        const r = await fetch('/events');
+        this.forceEvents = await r.json();
+        if (!this.force.event) this.force.event = Object.keys(this.forceEvents)[0] || '';
+      } catch (e) {
+        this.force.msg = { ok: false, text: 'Presets not loaded: ' + e.message };
+      }
+    },
+    async fireEvent() {
+      const body = { event: this.force.event, targets: this.force.all ? 'all' : this.force.ids };
+      if (this.force.duration) body.duration_s = Number(this.force.duration);
+      try {
+        const r = await this._post('/events', body);
+        const n = r.results.filter(x => x.ok).length;
+        this.force.msg = { ok: n === r.results.length, results: r.results,
+          text: r.event + ' on ' + n + ' of ' + r.results.length + ' gateways' +
+                (r.clears_after_s ? ', clears after ' + r.clears_after_s + ' s' : ', stays until cleared') };
+        await this.poll();
+      } catch (e) {
+        this.force.msg = { ok: false, text: 'Not fired: ' + e.message };
       }
     },
     async saveScenario() {

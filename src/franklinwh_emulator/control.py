@@ -411,6 +411,21 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
 
 
 # Actions not replayed by a restore: they are events, not settings.
+# Force events (#87): presets onto existing actions, {name: (action, body, clear body)}. A
+# clear body of None means the event has nothing to undo.
+FORCE_EVENTS: dict[str, tuple[str, dict, dict | None]] = {
+    "offline": ("faults", {"offline": True}, {"offline": False}),
+    "slow": ("faults", {"latency_s": 2.0}, {"latency_s": 0.0}),
+    "faulty-responses": ("faults", {"exception": 4}, {"exception": None}),
+    "dc-offline": ("dc-faults", {"offline": True}, {"offline": False}),
+    "dc-slow": ("dc-faults", {"latency_s": 2.0}, {"latency_s": 0.0}),
+    "apower-failure": ("apower", {"n": 1, "on": False}, {"n": 1, "on": True}),
+    "grid-outage": ("grid", {"available": False}, {"restore": True}),
+    "brown-out": ("grid", {"v_pu": 0.85}, {"restore": True}),
+    "frequency-drop": ("grid", {"hz_offset": -1.0}, {"restore": True}),
+    "frequency-spike": ("grid", {"hz_offset": 1.5}, {"restore": True}),
+}
+
 TRANSIENT = {"episode", "dc-reboot"}      # not replayed on restore
 DC_ACTIONS = {"dc-modbus", "dc-reboot"}    # sent over the gateway's Direct Connect port
 LOG_MAX = 10_000
@@ -426,6 +441,7 @@ class ControlApi:
         self.workspace = workspace
         self.fleet_file = fleet_file
         self.log: list[dict] = []
+        self._clear_timers: list = []        # force events' auto-clears (#87), cancelled on stop
         # When the run began, in each gateway's site time: a saved scenario starts there (#90).
         self.began = {gid: gw.site.local_datetime(gw.site.clock.now()) for gid, gw in gateways.items()}
         self._server: asyncio.base_events.Server | None = None
@@ -440,6 +456,8 @@ class ControlApi:
         return self.host, self.port
 
     async def stop(self) -> None:
+        for t in self._clear_timers:
+            t.cancel()
         await self.process.stop()
         if self._server is not None:
             self._server.close()
@@ -580,6 +598,47 @@ class ControlApi:
                         "`ui FLEET --restore NAME`.\n" + yaml.safe_dump(doc, sort_keys=False))
         return {"name": name, "path": str(path), "actions": len(actions), "snapshot": snapshot}
 
+    def force_event(self, event: str, targets: list[str] | str = "all",
+                    duration_s: float | None = None) -> dict:
+        """Fire a preset event (FORCE_EVENTS) on many gateways at once through the logged path
+        (#87); ``targets`` is a list of ids or "all". With ``duration_s`` the event is cleared
+        that many wall seconds later. Returns each gateway's result."""
+        import threading
+        if event not in FORCE_EVENTS:
+            raise ApiError(400, f"unknown event {event!r}; choose from {sorted(FORCE_EVENTS)}")
+        action, body, clear = FORCE_EVENTS[event]
+        ids = list(self.gateways) if targets == "all" else list(targets or [])
+        if not ids:
+            raise ApiError(400, "events: no targets")
+        unknown = [i for i in ids if i not in self.gateways]
+        if unknown:
+            raise ApiError(400, f"events: no gateway {unknown}")
+        if duration_s is not None and (float(duration_s) <= 0 or clear is None):
+            raise ApiError(400, "events: duration_s must be > 0" if clear is not None
+                           else f"events: {event} has nothing to clear")
+        results, done = [], []
+        for gid in ids:
+            try:
+                self.apply_logged(self.gateways[gid], action, dict(body), source=f"event:{event}")
+                results.append({"gateway": gid, "ok": True, "error": None})
+                done.append(gid)
+            except ApiError as e:
+                results.append({"gateway": gid, "ok": False, "error": str(e)})
+        if duration_s is not None and done:
+            def clear_all():
+                for gid in done:
+                    try:
+                        self.apply_logged(self.gateways[gid], action, dict(clear),
+                                          source=f"event:{event}:clear")
+                    except ApiError:
+                        pass                       # logged by apply_logged
+            t = threading.Timer(float(duration_s), clear_all)
+            t.daemon = True
+            t.start()
+            self._clear_timers = [x for x in self._clear_timers if x.is_alive()] + [t]
+        return {"event": event, "action": action, "with": body, "clears_after_s": duration_s,
+                "results": results}
+
     def _fleet_doc(self) -> dict:
         """The fleet as a scenario's ``fleet:``: the fleet file, else each gateway's settings
         that differ from the defaults."""
@@ -686,6 +745,12 @@ class ControlApi:
             return self.sessions()
         if parts == ["session", "save"] and method == "POST":
             return self.save_session(body.get("name"), bool(body.get("snapshot", False)))
+        if parts == ["events"] and method == "GET":
+            return {name: {"action": a, "with": b, "clear": c} for name, (a, b, c) in FORCE_EVENTS.items()}
+        if parts == ["events"] and method == "POST":
+            if "event" not in body:
+                raise ApiError(400, "events: needs an event")
+            return self.force_event(body["event"], body.get("targets", "all"), body.get("duration_s"))
         if parts == ["session", "scenario"] and method == "POST":
             return self.save_scenario(body.get("name"))
         if parts == ["session", "restore"] and method == "POST":

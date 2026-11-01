@@ -25,6 +25,21 @@ API clients, and `restore:<name>` for a restore. Form results and Activity show 
 local time, as its card and Events do (`site_time` in the log; `at` is UTC). **Save** writes the successful ones, in order, plus each gateway's
 SoC, to `emulator-workspace/sessions/<name>.yaml`; after a restart, **Restore** (or
 `franklinwh-emulator ui FLEET --restore NAME`) replays them, so the fleet is set up as before.
+**Force events** (the side panel, or `POST /events {event, targets, duration_s}`) fire one
+preset on many gateways at once: `targets` is `all` (the default) or a list of ids, and
+`duration_s` clears the event that many seconds later. Each preset is an existing action
+(`GET /events` lists them):
+
+| Event | Action | Cleared by |
+|---|---|---|
+| `offline`, `slow`, `faulty-responses` | `faults` offline / latency 2 s / exception 4 | the same field reset |
+| `dc-offline`, `dc-slow` | `dc-faults` offline / latency 2 s | the same field reset |
+| `apower-failure` | `apower` 1 off | `apower` 1 on |
+| `grid-outage`, `brown-out`, `frequency-drop`, `frequency-spike` | `grid` unavailable / 0.85 pu / −1 Hz / +1.5 Hz | `grid` restore |
+
+Each gateway's result stays in the panel, and the Activity log records every gateway with
+source `event:<name>` (and `event:<name>:clear`).
+
 **With state** (`POST /session/save {name, snapshot: true}`) also saves each site's running
 state (#88): its clock (UTC and local, timezone), SoC, lifetime and per-leg counters, today's
 totals, the quarter-hour history (1303), circuit and generator energy, appliance (EV) sessions,
