@@ -1749,11 +1749,15 @@ class Site:
         return batt, grid
 
     def _advance_breaker(self, dt: float, snap: "Snapshot") -> None:
-        """Integrate the main breaker's inverse-time trip on grid import."""
+        """Integrate the main breaker's inverse-time trip on grid import. Each pole trips on its
+        own leg's import against main_breaker_a (#240): the most loaded leg leads."""
         if self.service is None or self.main_breaker_open or dt <= 0:
             return
-        rating = self.service.rating_w(self.grid.nominal_v_ln, len(self.phases))
-        t = trip_seconds(max(0.0, snap.grid_w) / rating) if rating > 0 else None
+        pole_w = self.service.rating_w(self.grid.nominal_v_ln, 1)
+        legs = snap.phases.values() if snap.phases else ()
+        worst = max((max(0.0, leg.grid_w) for leg in legs),
+                    default=max(0.0, snap.grid_w) / max(1, len(self.phases)))
+        t = trip_seconds(worst / pole_w) if pole_w > 0 else None
         if t is None:
             self.breaker_progress = max(0.0, self.breaker_progress - dt / 600.0)   # cools down
             return

@@ -1,0 +1,18 @@
+# #240 Main breaker trips per pole — 2026-11-02
+
+Branch fix/240-breaker-per-pole, base main 3fac8c2.
+
+## New tests
+13 passed in 0.16s
+
+## Break check
+src stashed: test_main_breaker_trips_per_pole_on_the_loaded_leg fails (no trip)
+
+## Full suite
+716 passed in 39.77s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
