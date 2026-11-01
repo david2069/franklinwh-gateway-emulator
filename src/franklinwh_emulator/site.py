@@ -282,6 +282,10 @@ class SiteConfig:
     # on- and off-grid (FranklinWH Commissioning Guide, MAC 1 & aPower 2 & aPower S, p. 24).
     # Above the unit's rating it has no effect. None = not derated.
     pcs_derate_w: float | None = None
+    # Region-locked power ratings (#113): "settable" (default) or "locked". FranklinWH removed
+    # the user's power-rating setting in some US areas (owner's statement); which regions, and
+    # what a client sees, are not evidenced, so it is a setting, never derived from the region.
+    power_limits: str = "settable"
     # Component age and warranty (#115): {agate, apower, pv_inverter, pv_panels}, each
     # {installed, warranty_years, ...}; installed defaults to the commissioned date.
     components: dict | None = None
@@ -535,6 +539,8 @@ class Site:
         if cfg.pcs_derate_w is not None and float(cfg.pcs_derate_w) <= 0:
             raise ValueError("pcs_derate_w: the derated power per aPower in W (> 0), or null")
         self.pcs_derate_w = None if cfg.pcs_derate_w is None else float(cfg.pcs_derate_w)
+        if cfg.power_limits not in ("settable", "locked"):
+            raise ValueError(f"power_limits must be settable or locked, not {cfg.power_limits!r}")
         self.rate_w = self._unit_w() * max(1, cfg.apower_units)
         if self.location.timezone:
             self.tz: tzinfo | None = ZoneInfo(self.location.timezone)

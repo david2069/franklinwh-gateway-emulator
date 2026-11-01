@@ -290,6 +290,11 @@ as LFP batteries are limited. Defaults are plausible, not measured; each is set 
 
 The state's `battery_temperature` shows the factors, heater and fan; cards show
 "derated: cold/hot". Region-locked power ratings (#113) are separate: policy, not physics.
+`power_limits: locked` emulates a site where the user can't change them: Direct Connect 1701
+limit writes are acknowledged and not stored, as a Debug Mode-off write was on earlier firmware.
+Which regions lock, and what a client sees, are not evidenced (no flag, no refused write in any
+capture; the cloud's `pcsEntrance` and `chargingPowerLimited` are candidates only), so it is a
+per-gateway setting, `settable` by default, never derived from the region.
 
 **PCS Permanent Derate** (`pcs_derate_w`, the installer's setting; FranklinWH Commissioning
 Guide, MAC 1 & aPower 2 & aPower S, p. 24) caps each aPower's charge and discharge, on- and

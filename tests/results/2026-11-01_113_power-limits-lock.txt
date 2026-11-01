@@ -1,0 +1,18 @@
+# #113 Region-locked power ratings as a setting — 2026-11-01
+
+Branch power-limits-lock, base main 494219e.
+
+## New tests
+55 passed in 5.49s
+
+## Break check
+the new test fails with the src change stashed (power_limits unknown).
+
+## Full suite
+682 passed in 36.39s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

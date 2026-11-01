@@ -398,7 +398,9 @@ class DcPayloads:
         if req.get("opt") == 1:
             if set(keys) - set(req):
                 return _refused(-2)
-            if self.gw.debug_mode:
+            # Locked (#113): acknowledged and not stored, as a Debug Mode-off write was on earlier
+            # firmware; nothing on the wire tells the two apart (fwh-local, 2026-11-01).
+            if self.gw.debug_mode and site.config.power_limits != "locked":
                 for k in keys:
                     self.install_limits[k] = int(req[k])
             return _ok()

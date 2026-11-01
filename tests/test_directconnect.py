@@ -585,3 +585,17 @@ def test_1702_key_set_follows_the_firmware(clock):
                                "gridHardLimit": -1})["result"] == 0     # full block on this firmware
     new = make_gateway(clock, profile="agate-v12r02b60d00-candidate").dc.payloads
     assert set(new.handlers[1701]({"opt": 0})) == measured | {"gridImportLimit"}
+
+
+def test_locked_power_limits_are_acknowledged_not_stored(clock):
+    """#113: a locked site acknowledges 1701 limit writes and keeps them, even with Debug Mode."""
+    from franklinwh_emulator.control import gateway_state
+    gw = make_gateway(clock, site={"power_limits": "locked"})
+    gw.set_debug_mode(True)
+    p = gw.dc.payloads
+    block = {k: 2000 for k in ("kwRatePower", "gridSoftLimit", "gridHardLimit", "gridImportLimit")}
+    assert p.handlers[1701]({"opt": 1, **block})["result"] == 0
+    assert p.handlers[1701]({"opt": 0})["kwRatePower"] == -1
+    assert gateway_state(gw)["power_limits"] == "locked"
+    with pytest.raises(ValueError, match="power_limits"):
+        make_gateway(clock, site={"power_limits": "maybe"})
