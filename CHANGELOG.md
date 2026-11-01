@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Grouped aGates share one grid connection (#241): a `grid` action on any member (outage, voltage, frequency, restore) reaches the whole group, `phase` picks the member on that leg, frequency is common; each member's state has `group`; `GET /groups` reports each phase (aGate, grid, load, solar, battery, SoC) and the service meter's totals (`3 × 63 A · 400 V`).
 - Fleet `groups:` (#241): aGates at one site and grid connection, one per phase (`group:` + `phases: [L1]`), share the group's location, weather, grid code, utility, service (per phase), clock and sky; `validate` refuses a member that sets a group setting, a shared phase or more than one leg. Example: `examples/au-3phase-group.yaml` (solar on L1, air conditioning and hot water on L2, EV on L3). Grid events and the combined meter are not shared yet.
 
 ### Fixed

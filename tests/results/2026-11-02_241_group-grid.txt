@@ -1,0 +1,18 @@
+# #241 Groups share one grid connection; GET /groups — 2026-11-02
+
+Branch feat/241-group-grid, base main da17288.
+
+## New tests
+18 passed in 3.16s
+
+## Break check
+src stashed: tests/test_groups.py errors at import (group_state absent)
+
+## Full suite
+710 passed in 40.54s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
