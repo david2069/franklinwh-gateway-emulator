@@ -11,6 +11,7 @@
 - **AU/NZ aGates are single phase** (owner, 2026-11-02): an AU/NZ model with more than one leg (`ac_type` 1 or 2, or `phases` with two or three legs) is refused, naming the fix: one aGate per phase in a fleet group. `examples/fleet.yaml`'s `au-3phase` and `au-2phase` are now groups of 3 and 2 aGates (`au-3phase-l1`…), and the `phase-loss-3ph` scenario islands only L2's aGate while L1 and L3 stay on the grid. Multi-leg layouts remain for North American grid codes and the `spec` profile ([#242](https://github.com/david2069/franklinwh-gateway-emulator/issues/242)).
 
 ### Fixed
+- The main breaker trips each pole on its own leg's import against `main_breaker_a`; it compared the total import with the rating of all legs, so 18 kW on one leg of a 100 A split-phase service (150 %) never tripped ([#240](https://github.com/david2069/franklinwh-gateway-emulator/issues/240)).
 - `solar_peak_w: 0` is a site without solar; it was ignored and the seed picked 3.5–6 kW of PV ([#238](https://github.com/david2069/franklinwh-gateway-emulator/issues/238)).
 
 ## 0.2.2 (2026-11-02)

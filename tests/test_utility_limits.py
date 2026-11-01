@@ -156,3 +156,27 @@ def test_busbar_120_percent_rule_sets_the_export_limit_on_na_models(clock):
     assert make_gateway(clock, site=svc).site.pcs_export_limit() is None
     with pytest.raises(ValueError, match="busbar_a"):
         make_gateway(clock, site={"service": {"main_breaker_a": 200, "busbar_a": 0}})
+
+
+def test_main_breaker_trips_per_pole_on_the_loaded_leg():
+    """#240: each pole trips on its own leg. US split phase, 100 A: 12 kW a pole, 24 kW in all.
+    18 kW on L1 and 6 kW on L2 is 24 kW in all, under the total, but 150 % on L1's pole."""
+    g = gw(ac_type=1, location={"country": "US"}, service={"main_breaker_a": 100},
+           load_split={"L1": 3, "L2": 1}, initial_soc=20, self_reserve=20)
+    peak = {"L1": 0.0, "L2": 0.0}
+    for _ in range(int(trip_seconds(1.5) // 10) + 3):
+        snap = run(g, 0, 23900, seconds=10)
+        for leg in peak:
+            peak[leg] = max(peak[leg], snap.phases[leg].grid_w)
+    pole = 100 * g.site.grid.nominal_v_ln
+    assert peak["L1"] > 1.4 * pole and peak["L2"] < pole and sum(peak.values()) < 2 * pole
+    st = gateway_state(g)
+    assert st["service"]["open"] and st["trip_reason"] == "main-breaker"
+
+
+def test_balanced_load_under_each_pole_never_trips():
+    g = gw(ac_type=1, location={"country": "US"}, service={"main_breaker_a": 100},
+           initial_soc=20, self_reserve=20)
+    for _ in range(60):
+        run(g, 0, 23000, seconds=10)                            # 11.5 kW a pole, under 12 kW
+    assert not gateway_state(g)["service"]["open"]
