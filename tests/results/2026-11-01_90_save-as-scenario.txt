@@ -1,0 +1,18 @@
+# #90 Save a run as a scenario — 2026-11-01
+
+Branch save-as-scenario, base main 5621a39.
+
+## New tests
+2 passed in 0.04s
+
+## Break check
+the new tests fail with the src change stashed (no save_scenario).
+
+## Full suite
+665 passed in 36.52s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

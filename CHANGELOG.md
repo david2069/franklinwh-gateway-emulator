@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Save as scenario (UI button, `POST /session/scenario`): writes the run as `scenarios/<name>.yaml` with `start`, the fleet and the logged actions as timed steps, replayable with `franklinwh-emulator scenario`.
 - timeseries.csv appends `cabinet_c`, `sky` (with a weather model) and the running lifetime counters (`grid_import_wh`, `grid_export_wh`, `pv_wh`, `batt_charge_wh`, `batt_discharge_wh`, `generator_wh`); existing columns are unchanged.
 - `firmware` control action (and UI form): switch a gateway to another aGate profile while it runs, like an update. Both listeners cycle; the new profile's Modbus image, versions and Direct Connect behaviour apply; the site's state is kept; sessions save it.
 - Commissioning lifecycle: `setup: commissioning`, the `commission` action (start, the app's System Parameters, PTO date, complete) and the state's `lifecycle`; `pto_date` in the fleet file. Only the state and settings change (the guide documents no per-state protocol behaviour, nothing before/after PTO).

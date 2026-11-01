@@ -25,6 +25,12 @@ API clients, and `restore:<name>` for a restore. Form results and Activity show 
 local time, as its card and Events do (`site_time` in the log; `at` is UTC). **Save** writes the successful ones, in order, plus each gateway's
 SoC, to `emulator-workspace/sessions/<name>.yaml`; after a restart, **Restore** (or
 `franklinwh-emulator ui FLEET --restore NAME`) replays them, so the fleet is set up as before.
+**Save as scenario** (or `POST /session/scenario {name}`) writes the run as a scenario,
+`emulator-workspace/scenarios/<name>.yaml`: `start` is the first gateway's site time when the run
+began, `fleet` is the fleet file (or, without one, each gateway's non-default settings), and the
+successful actions are timed `steps` (`at` from the start, by each gateway's site clock), so
+`franklinwh-emulator scenario <file>` replays it. Transient actions (episode, reboot) and Direct
+Connect writes are left out, as a scenario runs no listeners.
 The page notices a restart or a new version and offers to reload. Loopback only, no login, no
 internet. Plan:
 [UI plan](UI_PLAN.md); a hands-on walk-through: [testing the UI by hand](UI_TESTING.md).
