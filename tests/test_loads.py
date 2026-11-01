@@ -86,7 +86,7 @@ def test_circuit_switch_removes_load():
 
 def test_offgrid_sheds_circuits_first():
     s = site([{"name": "base", "type": "base", "w": 800, "drift": 0},
-              {"name": "ac", "type": "schedule", "w": 6000, "on": ["00:00-23:59"], "circuit": 3}],
+              {"name": "ac", "type": "schedule", "w": 6000, "on": ["00:00-23:59"], "circuit": 2}],
              initial_soc=60)
     s.set_grid(available=False)
     snap = at(s, 0.1)                                      # shortly after the blackout

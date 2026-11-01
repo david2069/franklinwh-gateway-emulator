@@ -499,15 +499,22 @@ class Site:
         else:
             self.tz = None                                    # the host's local zone
         self.loads = LoadModel(cfg.loads, seed=cfg.seed, legs=self.phases) if cfg.loads else None
-        self.circuits: dict[int, Circuit] = {n: Circuit(name) for n, name in DEFAULT_CIRCUITS.items()}
+        # Smart circuits per aGate model (#189): AU 1–2, North America 1–3.
+        k = self.model.agate.smart_circuits
+        self.circuits: dict[int, Circuit] = {n: Circuit(DEFAULT_CIRCUITS[n]) for n in range(1, k + 1)}
+        self.circuit_range = f"1–{k}"
         for n, c in (cfg.circuits or {}).items():
             n = int(n)
             if n not in self.circuits:
-                raise ValueError(f"circuit {n}: the aGate has smart circuits 1–3")
+                raise ValueError(f"circuit {n}: {self.model.agate.name} has smart circuits {self.circuit_range}")
             for k, v in c.items():
                 if not hasattr(self.circuits[n], k):
                     raise ValueError(f"circuit {n}: unknown field {k!r}")
                 setattr(self.circuits[n], k, v)
+        for comp in (self.loads.components if self.loads else []):
+            if comp.circuit is not None and comp.circuit not in self.circuits:
+                raise ValueError(f"{comp.name}: circuit {comp.circuit}: {self.model.agate.name} has "
+                                 f"smart circuits {self.circuit_range}")
         self.replay = None
         if cfg.replay:
             rcfg = ReplayConfig.from_dict(cfg.replay)
@@ -1757,7 +1764,7 @@ class Site:
         with self.lock:
             self.step()
             if n not in self.circuits:
-                raise ValueError("the aGate has smart circuits 1–3")
+                raise ValueError(f"{self.model.agate.name} has smart circuits {self.circuit_range}")
             self.circuits[n].on = bool(on)
 
     def force_appliance(self, name: str, state: bool | None) -> None:

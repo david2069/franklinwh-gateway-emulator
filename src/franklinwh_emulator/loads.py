@@ -50,8 +50,9 @@ PRESETS: dict[str, list[dict]] = {
         {"name": "hot_water", "type": "schedule", "w": 3600, "on": ["11:00-13:30"], "circuit": 1},
         {"name": "ev", "type": "ev", "w": 7000, "min_w": 1400, "arrive": "18:00",
          "depart": "07:30", "kwh": 18, "mode": "offpeak", "start": "22:00", "circuit": 2},
+        # Not on a smart circuit: AU aGates have two (#189), used by hot water and the EV.
         {"name": "aircon", "type": "hvac", "w": 2400, "cool_above": 26, "heat_below": 15,
-         "span": 8, "on": ["07:00-23:00"], "circuit": 3},
+         "span": 8, "on": ["07:00-23:00"]},
     ],
     "small-flat": [
         {"name": "base", "type": "base", "w": 180, "drift": 0.1},

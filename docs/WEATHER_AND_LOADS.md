@@ -92,7 +92,7 @@ North-facing beats south-facing at Sydney noon (test).
 | `hvac` | `w`, `cool_above`, `heat_below`, `span`, `on` | duty = how far the ambient temperature is past the set point ÷ span, on a 20-minute cycle; full power at ≥ 95 % duty |
 | `ev` | `w`, `min_w`, `arrive`, `depart`, `kwh`, `mode`, `start` | sessions are named by the evening they began; stops when `kwh` is delivered. `solar` mode takes `solar − non-EV load`, between `min_w` and `w`. |
 
-Every component accepts `circuit` (1–3) and `leg` (L1/L2/L3). Without a leg, a component is
+Every component accepts `circuit` (1–2 on AU aGates, 1–3 on North American) and `leg` (L1/L2/L3). Without a leg, a component is
 spread by `load_split`.
 
 ### Presets

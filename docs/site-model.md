@@ -118,7 +118,7 @@ loads:
 | `hvac` | AC/heating with duty growing as the ambient temperature passes the set points |
 | `ev` | charger with arrive/depart, kWh per session, mode `immediate`, `offpeak` (from `start`) or `solar` (PV surplus only, 6–32 A, ahead of the battery) |
 
-- **Smart circuits.** Any component can be bound to a smart circuit (`circuit: 1–3`).
+- **Smart circuits.** Any component can be bound to a smart circuit (`circuit: 1–2` on an AU aGate, `1–3` on a North American one).
   Switching the circuit off really removes its load, whether by `ctl <gw> circuit 2 off`, a
   scenario step, or a Direct Connect `1409` write. `1410` and `1708` report the state, and the
   new `1411` meter reports circuit power and energy.

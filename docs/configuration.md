@@ -135,7 +135,7 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 |---|---|---|---|
 | `loads` | any | — | house load: a preset name, a list of components, or {preset, add, remove, set} |
 | `home_base_w` | number | — | base house load, W; default derived from the seed |
-| `circuits` | object | — | smart circuits 1-3: {1: {name, on, soc_low_cutoff}} |
+| `circuits` | object | — | smart circuits: 1–2 on AU aGates, 1–3 on North American: {1: {name, on, soc_low_cutoff}} |
 
 ### Generator
 
