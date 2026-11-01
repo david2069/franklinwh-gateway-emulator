@@ -134,6 +134,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "apower_rating": {"wh": round(site.model.apower.kwh * 1000), "w": round(site.apower_w)},
         "time_travelled_days": round(site.time_travelled_s / 86400, 2),   # time machine (#116)
         "pcs_derate_w": site.pcs_derate_w,                    # installer's derate (#185)
+        "power_limits": site.config.power_limits,             # settable | locked (#113)
         # Age and warranty (#115): aPower SoH, PV ageing, each component's warranty.
         "components": {"soh": round(site.soh, 2), "pv_age_factor": round(site._pv_age, 4),
                        "usable_capacity_wh": round(site.capacity_wh),
