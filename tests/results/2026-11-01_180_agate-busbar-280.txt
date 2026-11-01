@@ -1,0 +1,18 @@
+# #180 aGate busbar 280 A opens the PV relay — 2026-11-01
+
+Branch agate-busbar-280, base main fbbb823.
+
+## New tests
+17 passed in 0.15s
+
+## Break check
+the new test fails with the src change stashed (no busbar_a).
+
+## Full suite
+683 passed in 37.55s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
