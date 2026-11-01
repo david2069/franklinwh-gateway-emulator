@@ -134,3 +134,25 @@ def test_grid_charge_off_and_max_charge_power():
     assert snap.battery_w == pytest.approx(-3000, abs=50) and snap.grid_w == pytest.approx(2000, abs=50)
     with pytest.raises(ValueError, match="must be ≥ 0"):
         Utility.from_dict({"grid_charge_max_w": -1})
+
+
+def test_busbar_120_percent_rule_sets_the_export_limit_on_na_models(clock):
+    """PCS Technical Brief (NA): ((busbar × 1.2) − main) / 1.25; 200 A / 200 A → 32 A =
+    7.68 kW (#123, #180). A utility limit wins; AU/NZ models ignore it."""
+    from conftest import make_gateway
+    from franklinwh_emulator.utility import Service
+    assert Service(200, 200).pel_a() == 32 and Service(200, 150).pel_a() == 0
+    svc = {"service": {"main_breaker_a": 200, "busbar_a": 200}}
+    gw = make_gateway(clock, site={"ac_type": 1, **svc})
+    assert gw.site.pcs_export_limit() == pytest.approx(7680)
+    st = gateway_state(gw)
+    assert st["pcs_export_limit_w"] == pytest.approx(7680) and st["service"]["busbar_a"] == 200
+    gw.site.solar_override_w, gw.site.load_override_w = 12000, 0
+    clock.advance(60)
+    assert gw.site.step().export_limit_w == pytest.approx(7680)
+    capped = make_gateway(clock, site={"ac_type": 1, **svc,
+                                       "utility": {"export": "limited", "export_limit_w": 5000}})
+    assert capped.site.pcs_export_limit() == 5000
+    assert make_gateway(clock, site=svc).site.pcs_export_limit() is None
+    with pytest.raises(ValueError, match="busbar_a"):
+        make_gateway(clock, site={"service": {"main_breaker_a": 200, "busbar_a": 0}})

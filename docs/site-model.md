@@ -253,6 +253,10 @@ service: {main_breaker_a: 63}
   the aGate opens the PV relay instead (FranklinWH PCS Technical Brief): PV stops for 300 s
   (the reclose interval isn't documented), and `pv_relays_auto_open` reads
   `export limit (PEL)`. AU/NZ models curtail smoothly.
+- **120 % rule** (North American models; FranklinWH PCS Technical Brief, NEC 705.12): with
+  `service: {main_breaker_a, busbar_a}` and no `utility` export limit, the PCS export limit is
+  ((busbar × 1.2) − main) / 1.25 A across the legs: 200 A / 200 A → 32 A = 7.68 kW. The
+  state's `pcs_export_limit_w` shows the limit in force.
   `battery_export: false` lets solar export but keeps the battery to the home load (often a
   scheme rule). Unset, the model's factory setting applies: North American models ship in ESS
   Import-Only Mode (no battery export; FranklinWH PCS Technical Brief), AU/NZ models export

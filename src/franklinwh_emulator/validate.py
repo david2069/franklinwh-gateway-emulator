@@ -78,8 +78,10 @@ DOCS: dict[str, str] = {
                "settings). Also accepted as dnsp (AU) or lines_company (NZ)",
     "dnsp": "AU name for utility (the same block)",
     "lines_company": "NZ name for utility (the same block)",
-    "service": "the main breaker: {main_breaker_a}; import above it trips the site off the grid "
-               "(inverse-time) until reset; the site also holds grid import below it",
+    "service": "the main breaker and busbar: {main_breaker_a, busbar_a}; import above the breaker "
+               "trips the site off the grid (inverse-time) until reset; the site also holds grid "
+               "import below it. North American models: busbar_a sets the PCS export limit by the "
+               "120 % rule when utility sets none",
     "install": "where the aGate/aPower sits: {indoor: heated|unheated|uninsulated} or {outdoor: {sun: "
                "morning|afternoon|all-day|shade, cover: none|roof|enclosure}}, plus cabinet_lag_h, "
                "self_heat_c_per_kw, room_c; drives the cabinet temperature. Default: ambient + 8 °C",

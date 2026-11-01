@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- `service.busbar_a`: on North American models with no utility export limit, the PCS export limit is ((busbar × 1.2) − main) / 1.25 A across the legs (PCS Technical Brief; 200 A / 200 A → 7.68 kW). The state shows `pcs_export_limit_w` and `service.busbar_a`.
 - North American aGates open the PV relay when PV must be curtailed to hold the PCS export limit (PEL) and the battery can't absorb it (PCS Technical Brief); it recloses after 300 s. AU/NZ curtail smoothly as before.
 - North American aGates off-grid open the PV relay of inverters that don't follow IEEE 1547 (`pv_non_1547`) on a surplus, and every producing input when the surplus is beyond what droop can remove before 62.2 Hz (PV above charging capacity); each closes after 300 s, so a lasting surplus toggles it. The state's `pv_relays_auto_open` names them; 1707/1708 read them open.
 - `accessories: {smart_circuits, generator_module, apbox}` sets which modules a gateway has (default all fitted). Without smart circuits there are none, and Direct Connect sends their keys inert and zeroed; a generator needs the generator module; remote PV inputs need an aPbox. The state shows `accessories`.
