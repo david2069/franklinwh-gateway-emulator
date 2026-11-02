@@ -71,6 +71,9 @@ def main():
     # documentation ranges are fine; examples use 192.0.2.x.
     ipv4_regex = re.compile(r'(?<![\d.])(?:\d{1,3}\.){3}\d{1,3}(?![\d.])')
     ip_allowed_prefixes = ("127.", "192.0.2.", "198.51.100.", "203.0.113.")
+    # Coordinates with 3+ decimals (~100 m or finer) can place a home; examples use 2 (~1 km).
+    coord_regex = re.compile(
+        r'\b(lat|latitude|lon|lng|long|longitude)\b["\']?\s*[:=]\s*["\']?(-?\d{1,3}\.\d{3,})', re.IGNORECASE)
 
     # Allowed emails / version-string false positives
     ignore_emails = [
@@ -177,6 +180,11 @@ def main():
                     if ip == "0.0.0.0" or ip.startswith(ip_allowed_prefixes):
                         continue
                     print(f"PII Leak [IP {ip}]: {rel}:{i+1}")
+                    found += 1
+
+                # ── Coordinates ───────────────────────────────────────────
+                for match in coord_regex.finditer(line):
+                    print(f"PII Leak [Coordinate {match.group(1)} {match.group(2)}]: {rel}:{i+1}")
                     found += 1
 
                 # ── Serial numbers ────────────────────────────────────────

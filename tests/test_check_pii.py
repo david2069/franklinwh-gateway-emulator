@@ -41,3 +41,17 @@ def test_loopback_any_and_documentation_ranges_pass(tmp_path):
 def test_versions_and_out_of_range_octets_pass(tmp_path):
     code, out = scan(tmp_path, f"version 1.2.3\nnot an address {ip(300, 1, 1, 1)}\nfive parts {ip(1, 2, 3, 4, 5)}\n")
     assert code == 0, out
+
+
+def test_coordinates_with_three_decimals_fail(tmp_path):
+    lat, lon = "-33." + "8688", "151." + "209"
+    text = (f"location: {{latitude: {lat}, longitude: {lon}}}\n"
+            f'"lat": "{lat}"\n?lat={lat}&lng={lon}\n')
+    code, out = scan(tmp_path, text)
+    assert code == 1
+    assert out.count("PII Leak [Coordinate ") == 5
+
+
+def test_coordinates_with_two_decimals_pass(tmp_path):
+    code, out = scan(tmp_path, "location: {latitude: -33.87, longitude: 151.21}\nlat=40.7, lon=-74\n")
+    assert code == 0, out

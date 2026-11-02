@@ -1,0 +1,18 @@
+# #250 PII scanner: fail on precise coordinates — 2026-11-02
+
+Branch pii-coord-check, base main 6816b30.
+
+## New tests
+5 passed in 0.34s
+
+## Break check
+with scripts/check_pii.py stashed, test_coordinates_with_three_decimals_fail fails
+
+## Full suite
+721 passed in 42.13s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
