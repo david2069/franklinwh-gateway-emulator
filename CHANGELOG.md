@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.3 (2026-11-02)
+
 ### Added
 - Web UI: a grouped site is drawn as one, after board E of the owner's design (#241): grid and the service meter (`3 × 63 A · 400 V`, site import, Home Loads across all phases), then one row per aGate with its phase line, amps and import, its aPowers, AC solar or its smart circuits and loads, and its phase's Home Loads (not on board E); the active member outlined. State adds `solar_peak_w` and `nominal_v_ln`.
 - Grouped aGates share one grid connection (#241): a `grid` action on any member (outage, voltage, frequency, restore) reaches the whole group, `phase` picks the member on that leg, frequency is common; each member's state has `group`; `GET /groups` reports each phase (aGate, grid, load, solar, battery, SoC) and the service meter's totals (`3 × 63 A · 400 V`).
