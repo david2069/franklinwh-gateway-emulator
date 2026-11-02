@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "franklinwh-gateway-emulator"
-version = "0.2.3"
+version = "0.2.4.dev0"
 description = "FranklinWH aGate emulator — Modbus TCP (SunSpec + extension registers), multi-gateway"
 readme = "README.md"
 license = "MIT"
