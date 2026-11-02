@@ -10,4 +10,4 @@ __all__ = ["Fleet", "Gateway", "GatewayConfig", "mock_serial", "Faults", "Site",
            "Profile", "PROFILES", "get_profile", "ManualClock", "ScaledClock", "SystemClock"]
 # Between releases main is "<next>.devN", so a build after a tag never reports the tag (#163).
 # A release sets the plain version; the commit after it bumps to the next .dev0.
-__version__ = "0.2.3"
+__version__ = "0.2.4.dev0"
