@@ -67,6 +67,10 @@ def main():
     # Placeholder MACs are fine; real ones that are already published are listed
     # as "allow:" lines in the terms source, never here.
     mac_placeholder_prefixes = ("AA:BB:CC:", "DE:AD:BE:", "00:00:00:", "11:22:33:")
+    # Real IPv4 addresses name a network. Loopback, 0.0.0.0 and the RFC 5737
+    # documentation ranges are fine; examples use 192.0.2.x.
+    ipv4_regex = re.compile(r'(?<![\d.])(?:\d{1,3}\.){3}\d{1,3}(?![\d.])')
+    ip_allowed_prefixes = ("127.", "192.0.2.", "198.51.100.", "203.0.113.")
 
     # Allowed emails / version-string false positives
     ignore_emails = [
@@ -163,6 +167,16 @@ def main():
                     if mac.startswith(mac_placeholder_prefixes) or mac in allowed_values:
                         continue
                     print(f"PII Leak [MAC {mac}]: {rel}:{i+1}")
+                    found += 1
+
+                # ── IPv4 addresses ────────────────────────────────────────
+                for match in ipv4_regex.finditer(line):
+                    ip = match.group(0)
+                    if any(int(o) > 255 for o in ip.split(".")):
+                        continue
+                    if ip == "0.0.0.0" or ip.startswith(ip_allowed_prefixes):
+                        continue
+                    print(f"PII Leak [IP {ip}]: {rel}:{i+1}")
                     found += 1
 
                 # ── Serial numbers ────────────────────────────────────────

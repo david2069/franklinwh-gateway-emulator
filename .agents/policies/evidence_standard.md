@@ -83,7 +83,7 @@ A citation is a number or a reference, never an adjective:
 # CONFIRMED: FranklinWH System Installation Guide p.59 — "The aGate supports
 # only 2.4Ghz Wi-Fi connection to the family router."
 
-# INFERRED: eth0 is static on 172.16.1.1, unrelated to the household LAN, so
+# INFERRED: eth0 is static on 192.0.2.1, unrelated to the household LAN, so
 # it is probably the Debug port. Disproved by any capture where eth0 holds a
 # household-range lease.
 
