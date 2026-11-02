@@ -1,0 +1,18 @@
+# #249 PII scanner: fail on real IPv4 addresses — 2026-11-02
+
+Branch pii-ip-check, base main 4d71c33.
+
+## New tests
+3 passed in 0.18s
+
+## Break check
+with scripts/check_pii.py stashed, test_private_and_public_ipv4_fail fails (exit 0, no IP hits)
+
+## Full suite
+719 passed in 41.36s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
