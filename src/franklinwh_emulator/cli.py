@@ -83,6 +83,9 @@ async def _run(gateways: list[Gateway], control_port: int | None, ui: bool = Fal
         print(f"control API on http://{host}:{port}/gateways", flush=True)
         if ui:
             print(f"UI on http://{host}:{port}/", flush=True)
+        api_opt = "" if port == 8502 else f" --api http://{host}:{port}"
+        print(f"who is connected: run `franklinwh-emulator monitor{api_opt} --watch 5` in another terminal "
+              "(leave this one running)", flush=True)
         if restore:
             from .control import ApiError
             try:
@@ -357,10 +360,17 @@ def ctl(api: str, gateway: str, verb: str, args: list[str], as_json: bool) -> in
         print(json.load(e).get("error", e), file=sys.stderr)
         return 1
     except urllib.error.URLError as e:
-        print(f"cannot reach control API at {api}: {e.reason}", file=sys.stderr)
+        print(_unreachable(api, e.reason), file=sys.stderr)
         return 1
     print(json.dumps(state, indent=1) if as_json else _summary(state))
     return 0
+
+
+def _unreachable(api: str, reason) -> str:
+    return (f"No emulator is running at {api} ({reason}).\n"
+            "This command talks to a running emulator. In another terminal, start one and leave it running:\n"
+            "    franklinwh-emulator ui examples/fleet.yaml\n"
+            "then run this command again here. If the emulator uses another port, add --api http://127.0.0.1:<port>.")
 
 
 def _get(api: str, path: str):
@@ -440,7 +450,7 @@ def monitor(api: str, gateways: list[str], watch: float | None, history: bool, a
             hist = None if not history else {
                 g["id"]: _get(api, f"/gateways/{g['id']}/events?limit=0") for g in m["gateways"]}
         except urllib.error.URLError as e:
-            print(f"cannot reach control API at {api}: {e.reason}", file=sys.stderr)
+            print(_unreachable(api, e.reason), file=sys.stderr)
             return 1
         if as_json:
             if hist is not None:
@@ -633,8 +643,10 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("args", nargs=argparse.REMAINDER)
 
     mo = sub.add_parser("monitor", help="who is using a running emulator: clients, TCP connections, history",
-                        description="Reads the control API's /monitor (and, with --history, each "
-                                    "gateway's client events). Read-only.")
+                        description="Needs an emulator running (serve, fleet or ui) in another "
+                                    "terminal: this reads its control API's /monitor (and, with --history, "
+                                    "each gateway's client events). Counts and history start from zero each "
+                                    "time the emulator starts. Read-only.")
     mo.add_argument("gateways", nargs="*", metavar="GATEWAY", help="only these gateways (default: all)")
     mo.add_argument("--api", default=DEFAULT_API)
     mo.add_argument("--watch", type=float, metavar="SECONDS", help="redraw every SECONDS until Ctrl-C")

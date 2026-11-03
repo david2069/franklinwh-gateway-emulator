@@ -32,7 +32,11 @@ clients, TCP connections, refusals and requests per second; and the process: CPU
 since the previous read, memory now and at peak, threads, asyncio tasks, event-loop lag and
 uptime. Memory now comes from psutil when installed, else `/proc` or `ps`.
 
-From a shell, `franklinwh-emulator monitor` prints the same as a table, with each connected
+From a shell, `franklinwh-emulator monitor` prints the same as a table. It reads a **running**
+emulator, so use two terminals: start the emulator in one and leave it running
+(`franklinwh-emulator ui examples/fleet.yaml`; its start-up lines end with the monitor command to
+use), then run `monitor` in the other. Stopping the emulator (Ctrl-C) ends what there is to see,
+and its counts and history start from zero at the next start. The table lists each connected
 client under its listener. Add gateway ids to show only those, `--history` for each gateway's
 client events (connected, left, refused, with the address and a repeat count; they share the
 1000-entry event log, so a long run can push old ones out, and the output says how many were

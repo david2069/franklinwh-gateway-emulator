@@ -176,4 +176,34 @@ def test_monitor_command_json_and_failures(fleet, capsys):
     assert main(["monitor", "--api", api, "nope"]) == 1
     assert "unknown gateway(s): nope" in capsys.readouterr().err
     assert main(["monitor", "--api", "http://127.0.0.1:9"]) == 1        # nothing listening
-    assert "cannot reach control API" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "No emulator is running at http://127.0.0.1:9" in err and "In another terminal" in err   # #259
+
+
+def test_ctl_without_an_emulator_says_what_to_do(capsys):
+    """#259: ctl, too, explains that it needs a running emulator."""
+    from franklinwh_emulator.cli import main
+    assert main(["ctl", "--api", "http://127.0.0.1:9", "site", "status"]) == 1
+    err = capsys.readouterr().err
+    assert "No emulator is running" in err and "franklinwh-emulator ui examples/fleet.yaml" in err
+
+
+def test_startup_output_names_the_monitor_command(capsys):
+    """#259: the start-up lines say how to see who is connected."""
+    import asyncio
+    import os
+    import signal
+    from franklinwh_emulator.cli import _run
+    from franklinwh_emulator.gateway import Gateway, GatewayConfig
+    gw = Gateway(GatewayConfig(id="a", setup="in-service", port=0))
+
+    async def go():
+        async def stop_soon():
+            await asyncio.sleep(0.3)
+            os.kill(os.getpid(), signal.SIGINT)          # _run's own Ctrl-C handler stops it cleanly
+        asyncio.create_task(stop_soon())
+        await _run([gw], control_port=0)
+    asyncio.run(go())
+    out = capsys.readouterr().out
+    assert "who is connected: run `franklinwh-emulator monitor --api http://127.0.0.1:" in out
+    assert "--watch 5` in another terminal (leave this one running)" in out
