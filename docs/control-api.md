@@ -32,6 +32,19 @@ clients, TCP connections, refusals and requests per second; and the process: CPU
 since the previous read, memory now and at peak, threads, asyncio tasks, event-loop lag and
 uptime. Memory now comes from psutil when installed, else `/proc` or `ps`.
 
+From a shell, `franklinwh-emulator monitor` prints the same as a table, with each connected
+client under its listener. Add gateway ids to show only those, `--history` for each gateway's
+client events (connected, left, refused, with the address and a repeat count; they share the
+1000-entry event log, so a long run can push old ones out, and the output says how many were
+dropped), `--watch 5` to redraw every 5 s until Ctrl-C, and `--json` for the raw reply.
+Read-only.
+
+```bash
+franklinwh-emulator monitor
+franklinwh-emulator monitor --history site
+franklinwh-emulator monitor --watch 5
+```
+
 **Events.** `GET /gateways/<id>/events` is what that gateway did on its own (the action log,
 `GET /log`, is what was asked): `{level, dropped, events: [{seq, rev, at, site_time, kind, text,
 count, last_at, last_site_time}]}`, oldest first. `?since=<rev>` returns only entries added or

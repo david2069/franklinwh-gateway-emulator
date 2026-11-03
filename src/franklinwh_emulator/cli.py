@@ -363,6 +363,103 @@ def ctl(api: str, gateway: str, verb: str, args: list[str], as_json: bool) -> in
     return 0
 
 
+def _get(api: str, path: str):
+    with urllib.request.urlopen(f"{api.rstrip('/')}{path}", timeout=5) as resp:
+        return json.load(resp)
+
+
+def _dur(s: float | None) -> str:
+    if s is None:
+        return "-"
+    s = int(s)
+    if s < 60:
+        return f"{s} s"
+    if s < 3600:
+        return f"{s // 60} min {s % 60:02d} s"
+    if s < 86400:
+        return f"{s // 3600} h {s % 3600 // 60:02d} min"
+    return f"{s // 86400} d {s % 86400 // 3600:02d} h"
+
+
+def _monitor_text(m: dict, history: dict[str, dict] | None = None) -> str:
+    """``GET /monitor`` (and, with ``history``, each gateway's client events) as plain text."""
+    p, t = m["process"], m["totals"]
+    lines = [f"process {p['pid']} · up {_dur(p['uptime_s'])} · CPU {p['cpu_pct']} % · "
+             f"memory {p['rss_mb']} MB (peak {p['peak_rss_mb']}) · loop lag {p['loop_lag_ms']} ms",
+             f"all: {t['gateways']} gateways, {t['with_clients']} with clients · {t['connections']} connected now · "
+             f"{t['accepted']} accepted since start · {t['refused_1h']} refused in the last hour · "
+             f"{t['requests_per_s']} req/s", "",
+             f"{'gateway':16} {'listener':14} {'port':>5} {'now':>3} {'accepted':>8} {'requests':>9} "
+             f"{'req/s':>6} {'refused 1h':>10}  last client"]
+    for g in m["gateways"]:
+        for name, label in (("modbus", "Modbus TCP"), ("dc", "Direct Connect")):
+            s = g[name]
+            if s is None:
+                continue
+            last = s["last_client"]
+            last = "-" if last is None else (f"{last['peer']} left {_dur(last['ago_s'])} ago, "
+                                             f"stayed {_dur(last['stayed_s'])}, {last['requests']} requests")
+            port = s["port"] if s["listening"] else "off"
+            lines.append(f"{g['id']:16} {label:14} {port:>5} {len(s['clients']):>3} {s['accepted']:>8} "
+                         f"{s['requests']:>9} {s['requests_per_s']:>6} {s['refused_1h']:>10}  {last}")
+            for c in s["clients"]:
+                lines.append(f"{'':16}   ↳ {c['peer']} connected {_dur(c['connected_s'])}, "
+                             f"{c['requests']} requests, idle {_dur(c['idle_s'])}")
+            if s["last_refused"]:
+                r = s["last_refused"]
+                lines.append(f"{'':16}   ↳ refused {r['peer']} {_dur(r['ago_s'])} ago")
+    if history is not None:
+        lines += ["", "client history (site time, oldest first)"]
+        for gid, ev in history.items():
+            rows = [e for e in ev["events"] if e["kind"] == "client"]
+            note = f" ({ev['dropped']} older events dropped)" if ev["dropped"] else ""
+            if ev["level"] == "off":
+                note = " (events off for this gateway)"
+            if not rows:
+                lines.append(f"{gid:16} none{note}")
+                continue
+            lines.append(f"{gid}{note}")
+            for e in rows:
+                n = f" ×{e['count']}, last {e['last_site_time'][:19].replace('T', ' ')}" if e["count"] > 1 else ""
+                lines.append(f"  {e['site_time'][:19].replace('T', ' ')}  {e['text']}{n}")
+    return "\n".join(lines)
+
+
+def monitor(api: str, gateways: list[str], watch: float | None, history: bool, as_json: bool) -> int:
+    """Who is using a running emulator: clients, TCP connections and their history (#257)."""
+    import time
+    while True:
+        try:
+            m = _get(api, "/monitor")
+            if gateways:
+                unknown = set(gateways) - {g["id"] for g in m["gateways"]}
+                if unknown:
+                    print(f"unknown gateway(s): {', '.join(sorted(unknown))}", file=sys.stderr)
+                    return 1
+                m["gateways"] = [g for g in m["gateways"] if g["id"] in gateways]
+            hist = None if not history else {
+                g["id"]: _get(api, f"/gateways/{g['id']}/events?limit=0") for g in m["gateways"]}
+        except urllib.error.URLError as e:
+            print(f"cannot reach control API at {api}: {e.reason}", file=sys.stderr)
+            return 1
+        if as_json:
+            if hist is not None:
+                m["history"] = {gid: [e for e in ev["events"] if e["kind"] == "client"]
+                                for gid, ev in hist.items()}
+            out = json.dumps(m, indent=1)
+        else:
+            out = _monitor_text(m, hist)
+        if watch is None:
+            print(out)
+            return 0
+        print("\033[H\033[2J" + time.strftime("%H:%M:%S") + f" · every {watch:g} s · Ctrl-C to stop\n" + out,
+              flush=True)
+        try:
+            time.sleep(watch)
+        except KeyboardInterrupt:
+            return 0
+
+
 def _scenario_cmd(args) -> int:
     from pathlib import Path
 
@@ -535,7 +632,19 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("verb")
     c.add_argument("args", nargs=argparse.REMAINDER)
 
+    mo = sub.add_parser("monitor", help="who is using a running emulator: clients, TCP connections, history",
+                        description="Reads the control API's /monitor (and, with --history, each "
+                                    "gateway's client events). Read-only.")
+    mo.add_argument("gateways", nargs="*", metavar="GATEWAY", help="only these gateways (default: all)")
+    mo.add_argument("--api", default=DEFAULT_API)
+    mo.add_argument("--watch", type=float, metavar="SECONDS", help="redraw every SECONDS until Ctrl-C")
+    mo.add_argument("--history", action="store_true",
+                    help="also list each gateway's client events: connected, left, refused")
+    mo.add_argument("--json", action="store_true", help="print the raw reply as JSON")
+
     args = ap.parse_args(argv)
+    if args.cmd == "monitor":
+        return monitor(args.api, args.gateways, args.watch, args.history, args.json)
     if args.cmd == "ctl":
         return ctl(args.api, args.gateway, args.verb, args.args, args.json)
     if args.cmd == "scenario":
