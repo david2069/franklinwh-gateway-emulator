@@ -144,3 +144,36 @@ def test_direct_connect_limit_is_opt_in(clock):
                 c3, ok3 = login(gw)
                 c3.transport.close()
                 assert ok3
+
+
+def test_monitor_command_lists_clients_and_history(fleet, capsys):
+    """#257: the shell command shows who is connected now and the connection history."""
+    from franklinwh_emulator.cli import main
+    api = f"http://127.0.0.1:{fleet.control.port}"
+    c = RawClient(*fleet["a"].address)
+    c.read(0, 2)
+    assert _wait(lambda: fleet["a"].server.clients.snapshot()["requests"] == 1)
+    assert main(["monitor", "--api", api]) == 0
+    out = capsys.readouterr().out
+    assert "2 gateways, 1 with clients · 1 connected now · 1 accepted since start" in out
+    assert "↳ 127.0.0.1:" in out and "1 requests" in out
+    c.close()
+    assert _wait(lambda: fleet["a"].server.clients.snapshot()["clients"] == [])
+    assert main(["monitor", "--api", api, "--history", "a"]) == 0
+    out = capsys.readouterr().out
+    assert "left" in out and "stayed" in out                 # last client, after it left
+    hist = out.split("client history", 1)[1]
+    assert "Modbus TCP client 127.0.0.1 connected" in hist and "Modbus TCP client 127.0.0.1 left" in hist
+    assert "\nb " not in out                                 # only the gateway asked for
+
+
+def test_monitor_command_json_and_failures(fleet, capsys):
+    from franklinwh_emulator.cli import main
+    api = f"http://127.0.0.1:{fleet.control.port}"
+    assert main(["monitor", "--api", api, "--json", "--history"]) == 0
+    m = json.loads(capsys.readouterr().out)
+    assert m["totals"]["gateways"] == 2 and set(m["history"]) == {"a", "b"}
+    assert main(["monitor", "--api", api, "nope"]) == 1
+    assert "unknown gateway(s): nope" in capsys.readouterr().err
+    assert main(["monitor", "--api", "http://127.0.0.1:9"]) == 1        # nothing listening
+    assert "cannot reach control API" in capsys.readouterr().err

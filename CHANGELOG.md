@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- `franklinwh-emulator monitor`: who is using a running emulator, from the shell: clients connected now per gateway and listener, accepted and refused counts, requests, the last client; `--history` lists each gateway's client events, `--watch N` redraws, `--json` prints the raw reply (#257).
+
 ## 0.2.3 (2026-11-02)
 
 ### Added
