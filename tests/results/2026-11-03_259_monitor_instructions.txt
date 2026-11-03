@@ -1,0 +1,18 @@
+# #259 monitor and ctl: say what to do when no emulator is running; start-up output names monitor — 2026-11-03
+
+Branch monitor-instructions, base main 14af456.
+
+## New tests
+11 passed in 0.64s
+
+## Break check
+with src stashed, the 3 new or changed tests in tests/test_monitor.py fail; restored, 11 passed
+
+## Full suite
+725 passed in 44.31s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
