@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- README badge row: latest release, the test and docs workflows, the Python floor and the license (#261).
 - `franklinwh-emulator monitor`: who is using a running emulator, from the shell: clients connected now per gateway and listener, accepted and refused counts, requests, the last client; `--history` lists each gateway's client events, `--watch N` redraws, `--json` prints the raw reply (#257).
 
 ### Fixed
