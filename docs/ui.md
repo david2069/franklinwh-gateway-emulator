@@ -78,7 +78,8 @@ has the design's icon. Lines move in the direction power flows; idle lines are g
 dot is green, red when faulted and orange when offline, as the card border.
 
 Above it: the site's name in bold (`location.name`, else the gateway id), its place and local
-time, the weather line, and tags for the state and how solar is connected; top right, the
+time, the weather line (the weather model, Open-Meteo's fallback when it applies, and a
+[weather event](WEATHER_AND_LOADS.md#weather-events) in force, with its end), and tags for the state and how solar is connected; top right, the
 hardware: aGate model, aPower count and model, total kWh and PV kWp.
 
 Each aPower card shows the combined battery's SoC and an even share of its power: per-aPower

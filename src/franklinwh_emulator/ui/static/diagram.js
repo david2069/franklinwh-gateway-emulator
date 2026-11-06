@@ -137,6 +137,8 @@ function weatherLine(g) {
       : w.model !== 'open-meteo' ? skyLabel(w.sky || w.model)
       : w.fallback ? 'Open-Meteo unavailable · synthetic ' + skyLabel(w.sky) + ' sky'   // #268
       : 'Open-Meteo',
+    g.weather_event ? 'weather event: ' + skyLabel(g.weather_event.sky) + ' until ' +
+      g.weather_event.end.slice(11, 16) : null,                                        // #270
     w && w.poa_w_m2 != null ? w.poa_w_m2 + ' W/m² on the array' : null,
     'ambient ' + temp(g.ambient_c) + (forced('ambient_c') ? ' (forced)' : ''),
     pvTempText(g.pv_temperature),

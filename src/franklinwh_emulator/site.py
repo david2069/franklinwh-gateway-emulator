@@ -230,6 +230,9 @@ class SiteConfig:
     # Solar resource: {"model": "bell"|"synthetic"|"open-meteo", "latitude", "longitude",
     # "kwp", "tilt", "azimuth", "sky", ...} — see weather.py. None = the original bell.
     weather: dict | None = None
+    # Timed or seeded-random darker skies on top of the weather (#270): a list of
+    # {sky, for, at, every, times} or {sky, for, chance, per: day} — see weather_events.py.
+    weather_events: list | None = None
     # House load: a preset name ("sydney-family"), a list of components, or
     # {"preset", "add", "remove", "set"} — see loads.py. None = the original curve.
     loads: Any = None
@@ -616,6 +619,9 @@ class Site:
         wcfg = WeatherConfig.from_dict(wdict)
         self.weather = None if wcfg.model == "bell" else Weather(
             wcfg, seed=self.sky_seed, kwp=self.solar_peak_w / 1000.0 / wcfg.efficiency)
+        from .weather_events import WeatherEvents
+        self.weather_events = WeatherEvents(cfg.weather_events, seed=self.sky_seed,
+                                            start=self.clock.now(), local_midnight=self.local_midnight)
         if self.weather is not None:                         # #268: say when Open-Meteo falls back
             self.weather.on_fallback = lambda text: (getattr(self, "events", None) is not None
                                                      and self.events.add("weather", text))
@@ -884,7 +890,8 @@ class Site:
             if v is not None:
                 return v
         poa, base = self._solar_poa_w(ts)
-        return base * self.pv_temperature_factor(ts, poa)[1] * self._pv_age
+        wx = self.weather_events.factor(ts)                  # #270: a scheduled darker sky
+        return base * wx * self.pv_temperature_factor(ts, poa * wx)[1] * self._pv_age
 
     def _solar_poa_w(self, ts: float) -> tuple[float, float]:
         """(irradiance on the array W/m², PV output before the temperature loss W)."""
