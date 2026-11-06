@@ -256,6 +256,10 @@ def _ctl_request(verb: str, args: list[str]) -> tuple[str, str, dict]:
     if verb == "sky":
         need(1)
         return "POST", "weather", {"sky": args[0]}
+    if verb == "weather":                                   # #278: weather model=synthetic latitude=.. longitude=..
+        need(1)
+        kv = dict(a.split("=", 1) for a in args)
+        return "POST", "weather", {k: v if k in ("model", "sky") else _parse_value(v) for k, v in kv.items()}
     if verb == "modbus":
         need(1)
         return "POST", "der-comms", {"modbus": bool(_parse_value(args[0]))}
@@ -625,7 +629,7 @@ def main(argv: list[str] | None = None) -> int:
     c = sub.add_parser("ctl", help="steer a running emulator via its control API",
                        description="verbs: status | outage [L1|L2|L3] | restore | voltage <V|0.8pu> [leg] | "
                                    "hz <Hz> | offgrid on|off | episode <down_s> <offgrid_s> | write-reject <model.point> [abs_gt|gt|lt=N] [code=N] | clear | addressing alias=..|none write=..|all | range-fault <start> <end> [mode] [code=N] [for=S] | clear | pv <proximal|remote1|remote2> on|off"
-                                   " | solar <W|auto> | load <W|auto> | ambient <C|auto> | "
+                                   " | solar <W|auto> | load <W|auto> | ambient <C|auto> | weather model=bell|synthetic|open-meteo [latitude=.. longitude=..] [sky=..] | "
                                    "alarm <NAME...> [--persistent] | clear-alarm [NAME...] | "
                                    "reset-alarms | fault|dc-fault key=value... | vpp <W, +charge> | release | "
                                    "mode <1|2|3> (Modbus 15507: 1 Emergency Backup, 2 Self-Consumption, 3 TOU) | soc <pct> | sky clear|broken|overcast|storm | "

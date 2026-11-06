@@ -72,6 +72,27 @@ array irradiance is used as it is. The built-in model stays the default.
   2026-01-15, used with `cache_dir: builtin`.
 - **Licence:** Open-Meteo data is CC BY 4.0, with attribution to https://open-meteo.com/.
 
+### Seeing and changing the weather while it runs
+
+Each gateway card in the [Web UI](ui.md) has a `Weather:` line, and the active gateway's
+diagram has the full weather line. To change it without editing the fleet file, use the
+`weather` action (Web UI: Inputs → weather; or `ctl`):
+
+```bash
+franklinwh-emulator ctl spec weather model=synthetic latitude=-33.87 longitude=151.21 sky=broken
+franklinwh-emulator ctl spec sky storm                 # the sky alone, once a model is set
+franklinwh-emulator ctl spec weather model=open-meteo  # keeps the place it has
+franklinwh-emulator ctl spec weather model=bell        # back to the half-sine day
+```
+
+- `model` without coordinates uses the current weather's place, else the site's location; a
+  gateway with neither must be given `latitude` and `longitude`.
+- The coordinates are the **weather's only**: the site's time zone, local time and location
+  (and the sun position shown for it) stay as configured.
+- The change lasts until the emulator stops. It is in the action log, so a saved session
+  replays it; to keep it, put it in the fleet file.
+- `ctl <gw> solar <W>` still fixes solar on any gateway, with or without a model.
+
 ### Weather events
 
 `weather_events` (per gateway, or per group so every phase sees the same sky) darkens the sky

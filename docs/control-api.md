@@ -13,6 +13,7 @@ franklinwh-emulator ctl agate outage
 franklinwh-emulator ctl agate restore
 franklinwh-emulator ctl agate solar 6000          # or: solar auto
 franklinwh-emulator ctl agate fault session_held=true
+franklinwh-emulator ctl agate weather model=synthetic latitude=-33.87 longitude=151.21
 franklinwh-emulator ctl --json agate status       # full state
 
 curl -s -X POST localhost:8502/gateways/agate/grid -d '{"hz": 51.3}'

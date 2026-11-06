@@ -612,23 +612,16 @@ class Site:
             rcfg = ReplayConfig.from_dict(cfg.replay)
             rcfg.apower_units = max(1, cfg.apower_units)
             self.replay = Replay(rcfg, local_midnight=self.local_midnight)
+        from .pvmodel import from_config as _pv_model
+        self.pvlib = _pv_model(cfg.pv)                       # None = the built-in PV model (#112)
         wdict = dict(cfg.weather or {})
         if self.location.latitude is not None:              # weather inherits the location
             wdict.setdefault("latitude", self.location.latitude)
             wdict.setdefault("longitude", self.location.longitude)
-        wcfg = WeatherConfig.from_dict(wdict)
-        self.weather = None if wcfg.model == "bell" else Weather(
-            wcfg, seed=self.sky_seed, kwp=self.solar_peak_w / 1000.0 / wcfg.efficiency)
+        self._build_weather(wdict)
         from .weather_events import WeatherEvents
         self.weather_events = WeatherEvents(cfg.weather_events, seed=self.sky_seed,
                                             start=self.clock.now(), local_midnight=self.local_midnight)
-        if self.weather is not None:                         # #268: say when Open-Meteo falls back
-            self.weather.on_fallback = lambda text: (getattr(self, "events", None) is not None
-                                                     and self.events.add("weather", text))
-        from .pvmodel import from_config as _pv_model
-        self.pvlib = _pv_model(cfg.pv)                       # None = the built-in PV model (#112)
-        if self.pvlib is not None and self.weather is not None:
-            self.weather.clear_sky = self.pvlib.clear_sky_poa
 
         # Grid, relays, alarms.
         self.utility = self._healthy_utility()
@@ -881,6 +874,44 @@ class Site:
             forced = max(0.0, self.solar_override_w)
             return min(forced, model) if self.config.cap_forced_solar else forced
         return model
+
+    def _build_weather(self, wdict: dict) -> None:
+        wcfg = WeatherConfig.from_dict(wdict)
+        self.weather = None if wcfg.model == "bell" else Weather(
+            wcfg, seed=self.sky_seed, kwp=self.solar_peak_w / 1000.0 / wcfg.efficiency)
+        if self.weather is not None:                         # #268: say when Open-Meteo falls back
+            self.weather.on_fallback = lambda text: (getattr(self, "events", None) is not None
+                                                     and self.events.add("weather", text))
+            if self.pvlib is not None:
+                self.weather.clear_sky = self.pvlib.clear_sky_poa
+
+    def set_weather_model(self, model: str | None, latitude: float | None = None,
+                          longitude: float | None = None) -> None:
+        """Change the weather model now (#278). Coordinates: these, else the current weather's,
+        else the site's location. They are the weather's only: the site's time zone and its
+        location stay as configured."""
+        with self.lock:
+            cur = self.weather.cfg if self.weather is not None else None
+            wdict = {k: v for k, v in (self.config.weather or {}).items() if k not in ("model", "latitude", "longitude")}
+            if cur is not None:
+                wdict.update(sky=cur.sky, flicker=cur.flicker)
+            lat = latitude if latitude is not None else (cur.latitude if cur else self.location.latitude)
+            lon = longitude if longitude is not None else (cur.longitude if cur else self.location.longitude)
+            if (latitude is None) != (longitude is None):
+                raise ValueError("weather: give latitude and longitude together")
+            if latitude is not None and not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+                raise ValueError("weather: latitude is -90..90 and longitude -180..180")
+            if model is None:
+                model = cur.model if cur else ("open-meteo" if latitude is not None else "bell")
+            if lat is not None and model != "bell":
+                wdict.update(latitude=lat, longitude=lon)
+                if latitude is not None:
+                    wdict.pop("azimuth", None)                # re-derive north/south facing
+            if model in ("synthetic", "open-meteo") and lat is None:
+                raise ValueError(f"weather: model {model} needs a place: give latitude and longitude "
+                                 "(this gateway has no location)")
+            wdict["model"] = model
+            self._build_weather(wdict)
 
     def solar_model_w(self, ts: float) -> float:
         """What the solar model gives now: replayed data (as measured), or the weather model or
