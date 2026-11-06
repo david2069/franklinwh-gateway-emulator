@@ -214,33 +214,43 @@ cooking events only.
 ### V2L
 
 V2L (vehicle-to-load) lets an EV supply the home through the aGate. It needs the **generator
-input** and the **smart circuits**; the EV sits on a smart circuit. Set it per gateway:
+input** and the **smart circuits**; the EV sits on a smart circuit. The FranklinWH app offers it
+on AU sites from a recent firmware update (Settings → Vehicle to Load (V2L)), and the emulator
+follows that page. Set it per gateway:
 
 ```yaml
 accessories: {smart_circuits: true, generator_module: true}
-v2l: {circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 2200, min_soc: 20}
+v2l: {circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 2200, min_soc: 20, charge_apower: true}
 ```
 
 - **When it supplies:** off-grid only, and only while a generator on the same input is not
-  running. It covers the house's shortfall (load less solar and the generator), up to `max_w`,
-  until the EV is down to `min_soc`; the aPower covers the rest. On-grid it is `Ready`.
-- **The EV on that circuit** doesn't charge while V2L supplies.
-- **Control:** the `v2l` action (Web UI: Generator → v2l; `ctl <gw> v2l on|off [soc=60]`)
-  enables or disables it, or sets the EV's state of charge.
-- **State:** `v2l` (enabled, state `Disabled`/`Ready`/`Supplying`, circuit, ev_soc, power_w,
-  energy_kwh, the limits). The diagrams draw that circuit as `SW 1 · V2L` (`SC 1 · V2L` on a
-  grouped site, as board E), amber while supplying, with the EV's SoC.
+  running, until the EV is down to `min_soc`. It covers the house's shortfall (load less solar
+  and the generator), and with `charge_apower` (the app's **Allow charging to aPower?**, on by
+  default as the app shows it) also charges the aPower, all within `max_w`. The aPower covers
+  what V2L can't.
+- **States**, as the app: `Disabled` (V2L Control off), `Standby` (on, not supplying: on-grid,
+  generator running or the EV at its floor), `Active` (supplying; the app's word for this
+  state has not been seen yet).
+- **The EV on that circuit** doesn't charge while V2L is available off-grid.
+- **Control:** the `v2l` action (Web UI: Generator → v2l; `ctl <gw> v2l on|off [soc=60]`):
+  `on` is the app's V2L Control, `charge_apower` its Allow charging to aPower, `ev_soc` the
+  EV's state of charge.
+- **State:** `v2l` with the app's Vehicle Data (`power_w`, `voltage_v`, `frequency_hz`: 0
+  unless Active, as the app shows in Standby), the state, the EV's SoC, `energy_kwh` and the
+  settings. The diagrams draw that circuit as `SW 1 · V2L` (`SC 1 · V2L` on a grouped site, as
+  board E), amber while Active, with the EV's SoC.
 - **Direct Connect:** `1411` reports V2L on the car switch where the aGate has no third
   circuit: `CarSWPower` negative while supplying and the energy supplied as `CarSWExpEnergy`.
   Modbus has no V2L registers (franklinwh-modbus docs).
 
-**What is not known.** Everything here comes from franklinwh-cloud's notes on captured traffic
-(`docs/GENERATOR_V2L_API.md`), not from FranklinWH documentation. Its device catalogue lists no
-V2L port on AU aGates, while its cookbook and the owner's AU site have one; the emulator models
-it as the owner's site has it. The `CarSWPower` sign and the energy fields' meanings are not
-established. The EV's battery size and SoC, the most V2L supplies and the SoC it stops at are
-not documented: the defaults (60 kWh, 80 %, 2.2 kW as board E shows, 20 %) are placeholders
-to confirm for a real site. Whether V2L also charges the aPower is not known; it doesn't here.
+**Sources and what is not known.** The FranklinWH app's V2L page on the owner's AU site (one
+site, firmware version not recorded) and franklinwh-cloud's notes on captured traffic
+(`docs/GENERATOR_V2L_API.md`); no FranklinWH documentation. franklinwh-cloud's device catalogue
+entry "no V2L port" for AU aGates predates the firmware that added it. Not established: the
+`CarSWPower` sign and the energy fields' meanings, the app's name for the active state, and
+whether V2L supplies only off-grid. The EV's battery size and SoC, the most V2L supplies and
+the SoC it stops at are not documented: the defaults (60 kWh, 80 %, 2.2 kW as board E shows,
+20 %) are placeholders to confirm for a real site.
 
 ## Replay of recorded data
 

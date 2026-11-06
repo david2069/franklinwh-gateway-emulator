@@ -615,7 +615,7 @@ def test_group_diagram_draws_every_phase_with_home_loads(tmp_path):
                        "  meter: /class=\"svc[^\"]*\"[^>]*>([^<]*)/.exec(h)[1],\n"
                        "  solar: (h.match(/AC solar · [\\d.]+ kWp/g) || []),\n"
                        "  circuits: (h.match(/>SC \\d · /g) || []).length,\n"
-                       "  v2l: (h.match(/>SC 1 · V2L · Ready</g) || []).length,\n"
+                       "  v2l: (h.match(/>SC 1 · V2L · Standby</g) || []).length,\n"
                        "  unused: h.includes('>Unused<'),\n"
                        "  active: (h.match(/box agate active/g) || []).length,\n"
                        "  activeTitle: (/class=\"lbl b active\"[^>]*>([^<]*)/.exec(h) || [])[1],\n"
@@ -715,7 +715,7 @@ print(JSON.stringify([
 
 @pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
 def test_group_diagram_draws_v2l_supplying_as_board_e(tmp_path):
-    """#287: L3's SC 1 is 'SC 1 · V2L · Supplying' in amber, the EV tile shows its SoC and kW,
+    """#287: L3's SC 1 is 'SC 1 · V2L · Active' in amber, the EV tile shows its SoC and kW,
     and the flow runs from the EV to the aGate."""
     import subprocess
     from franklinwh_emulator.clock import ManualClock
@@ -727,9 +727,9 @@ def test_group_diagram_draws_v2l_supplying_as_board_e(tmp_path):
                        (STATIC / "units.js").read_text() + (STATIC / "groups.js").read_text() +
                        (STATIC / "diagram.js").read_text() +
                        f"\nconst S = {json.dumps(states, default=str)};\n"
-                       "Object.assign(S[2].v2l, {state: 'Supplying', power_w: 2200, ev_soc: 76.4});\n"
+                       "Object.assign(S[2].v2l, {state: 'Active', power_w: 2200, ev_soc: 76.4});\n"
                        "const h = renderDiagram(S[2], 'C', S);\n"
-                       "print(JSON.stringify({label: h.includes('>SC 1 · V2L · Supplying<'),\n"
+                       "print(JSON.stringify({label: h.includes('>SC 1 · V2L · Active<'),\n"
                        "  ev: h.includes('>EV · 76%<') && h.includes('>2.20 kW<'),\n"
                        "  amber: (h.match(/box tile v2l/g) || []).length,\n"
                        "  flows: (h.match(/class=\"flow fwd v2l\"/g) || []).length,\n"

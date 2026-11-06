@@ -22,7 +22,7 @@ function skyLabel(sky) { return SKY_LABELS[sky] || sky; }
 function v2lOn(g, n) {
   const v = g.v2l;
   if (!v || String(v.circuit) !== String(n)) return null;
-  return { state: v.state, supplying: v.state === 'Supplying' };
+  return { state: v.state, supplying: v.state === 'Active' };     // the app's states (#289)
 }
 // One line for a gateway card (#277): the weather model, its sky, a fallback and an event.
 function weatherText(g) {
