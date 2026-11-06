@@ -18,6 +18,16 @@ const NOT_MODELLED = [
 ];
 const SKY_LABELS = { clear: 'clear sky', broken: 'broken cloud', overcast: 'overcast', storm: 'storm' };
 function skyLabel(sky) { return SKY_LABELS[sky] || sky; }
+// One line for a gateway card (#277): the weather model, its sky, a fallback and an event.
+function weatherText(g) {
+  const w = g.weather;
+  const model = !w ? 'bell curve'
+    : w.model === 'synthetic' ? 'synthetic · ' + skyLabel(w.sky)
+    : w.model === 'open-meteo' ? (w.fallback ? 'Open-Meteo unavailable · synthetic ' + skyLabel(w.sky) : 'Open-Meteo')
+    : w.model;
+  const ev = g.weather_event ? ' · ' + skyLabel(g.weather_event.sky) + ' until ' + g.weather_event.end.slice(11, 16) : '';
+  return 'Weather: ' + model + ev;
+}
 
 // Small inline icons for the weather line (decorative; the text beside them says the same).
 const SUN_ICON = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"></circle>' +

@@ -61,7 +61,9 @@ internet. Plan:
 
 ![Cards for every gateway, the actions column on the right](assets/ui/overview.png)
 
-Each card shows the gateway's local time and timezone, firmware, the Modbus TCP and Direct
+Each card shows the gateway's local time and timezone, firmware, its weather (`Weather:` the
+model, the synthetic sky, "Open-Meteo unavailable" when it fell back, and a weather event in
+force with its end), the Modbus TCP and Direct
 Connect addresses to point a client at, live power, and tags for the grid, mode, battery status,
 FORCE (an M704 setpoint), alarms, faults and Debug Mode. Click a card to make it the **active
 gateway**; the actions column works on it.
