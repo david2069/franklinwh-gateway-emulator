@@ -10,7 +10,7 @@
 #     1 split, 2 three: not on AU/NZ aGates, which are single phase), phases ([L1, L2, ...]),
 #     load_split / gen_split ({L1: 2, L2: 1}), grid_code (as4777-au-a, ieee1547-cat2,
 #     ieee1547-cat3, ausgrid), grid_overrides ({es_delay_s: 5, ...}),
-#     location ({latitude, longitude, timezone: <IANA, DST-aware>, postcode}), weather
+#     location ({latitude, longitude, timezone: <IANA, DST-aware>, postcode}), weather_events, weather
 #     ({model: bell|synthetic|open-meteo, kwp, tilt, azimuth, sky} — inherits lat/lon),
 #     tz_offset_hours (fixed offset, no DST; location.timezone wins),
 #     native_mode (Modbus 15507 numbering: 1 Emergency Backup, 2 Self-Consumption, 3 TOU;
@@ -43,6 +43,9 @@ gateways:
     location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000",
                country: AU, state: NSW, city: Sydney, site_id: demo-sydney}
     weather: {model: synthetic, kwp: 6.6, tilt: 20, sky: broken}
+    weather_events:          # darker skies on top of the weather (#270)
+      - {sky: storm, at: "15:00", for: 1h, every: 1d, times: 2}   # 15:00-16:00, the first two days
+      - {sky: overcast, for: 30m..2h, chance: 0.3, per: day}      # random, from the seed
     install: {outdoor: {sun: afternoon, cover: roof}}   # cabinet temperature (#110)
     loads: sydney-family     # appliances on smart circuits 1-3 (hot water, EV, aircon)
     history_days: 7          # a week of Direct Connect history and totals, run at start-up

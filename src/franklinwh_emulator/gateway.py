@@ -481,7 +481,7 @@ class Gateway:
 
 
 # Fleet `groups:` (#241): settings an aGate shares with the others on the same grid connection.
-GROUP_KEYS = ("seed", "location", "weather", "grid_code", "grid_overrides", "service", "utility",
+GROUP_KEYS = ("seed", "location", "weather", "weather_events", "grid_code", "grid_overrides", "service", "utility",
               "dnsp", "lines_company", "tz_offset_hours", "time_scale")
 
 

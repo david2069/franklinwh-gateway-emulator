@@ -70,6 +70,8 @@ DOCS: dict[str, str] = {
     "initial_soc": "starting state of charge, %; default derived from the seed",
     "solar_peak_w": "bell-curve solar peak, W; 0 = no solar; default derived from the seed",
     "home_base_w": "base house load, W; default derived from the seed",
+    "weather_events": "timed or seeded-random darker skies on top of the weather (#270): a list of "
+                      "{sky, at: 'HH:MM', for: 2h | 30m..3h, every: 1d, times: N} or {sky, for, chance: 0..1, per: day}",
     "weather": "{model: bell|synthetic|open-meteo, kwp, tilt, azimuth, sky, offline, refresh_h}; inherits lat/lon; "
                "without model: open-meteo with a location, else bell",
     "loads": "house load: a preset name, a list of components, or {preset, add, remove, set}",

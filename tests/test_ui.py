@@ -682,3 +682,9 @@ def test_weather_line_names_open_meteo_and_its_fallback():
     """#268: the weather line says Open-Meteo, or that it is unavailable and the sky is synthetic."""
     js = (STATIC / "diagram.js").read_text()
     assert "'Open-Meteo unavailable · synthetic '" in js and ": 'Open-Meteo'," in js
+
+
+def test_weather_line_shows_a_weather_event():
+    """#270: the weather line names the scheduled sky and when it ends."""
+    js = (STATIC / "diagram.js").read_text()
+    assert "g.weather_event ? 'weather event: ' + skyLabel(g.weather_event.sky) + ' until '" in js

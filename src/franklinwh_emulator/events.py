@@ -135,11 +135,19 @@ class EventLog:
             "breaker": bool(getattr(site, "main_breaker_open", False)),
             "force": None if force is None else (force["direction"], force["via"], force["target_w"]),
             "over": snap.export_over_limit_w > 1.0,
+            "wx": site.weather_events.active(snap.ts),
         }
         prev, self._prev = self._prev, cur
         if prev is None:
             return
         ts = snap.ts
+        if (cur["wx"] or {}).get("start") != (prev["wx"] or {}).get("start"):     # #270
+            if prev["wx"] is not None:
+                self.add("weather", f"Weather event over: {prev['wx']['sky']} sky ended", ts=ts)
+            if cur["wx"] is not None:
+                end = site.local_datetime(cur["wx"]["end"]).strftime("%H:%M")
+                self.add("weather", f"Weather event: {cur['wx']['sky']} sky until {end} "
+                                    f"(weather_events[{cur['wx']['entry']}])", ts=ts)
         if cur["mode"] != prev["mode"]:
             self.add("mode", f"Mode {prev['mode']} → {cur['mode']}", ts=ts)
         if cur["reserve"] != prev["reserve"]:

@@ -72,6 +72,33 @@ array irradiance is used as it is. The built-in model stays the default.
   2026-01-15, used with `cache_dir: builtin`.
 - **Licence:** Open-Meteo data is CC BY 4.0, with attribution to https://open-meteo.com/.
 
+### Weather events
+
+`weather_events` (per gateway, or per group so every phase sees the same sky) darkens the sky
+for a while, on top of whatever the weather model gives: Open-Meteo, synthetic or the bell. A
+storm on a sunny real day still dips. Each entry multiplies solar by its `sky`'s haze and a
+seeded cloud field (the [synthetic skies](#models) table). Replayed solar is left as measured.
+
+```yaml
+weather_events:
+  - {sky: storm, at: "13:00", for: 2h, every: 1d, times: 3}   # fixed: 13:00-15:00, 3 days
+  - {sky: overcast, for: 30m..3h, chance: 0.3, per: day}      # random: 30 % of days
+```
+
+| Key | Meaning |
+|---|---|
+| `sky` | `clear`, `broken`, `overcast` or `storm` |
+| `for` | how long: a duration (`90m`, `2h`) or a range `low..high`, drawn per occurrence |
+| `at` | fixed entries: local start time `HH:MM` on the day the gateway starts |
+| `every` | fixed entries: the gap between starts (default `1d`) |
+| `times` | how many occurrences (omitted: no end); for random entries, how many hits |
+| `chance` + `per: day` | random entries: the chance each local day has one, starting between 07:00 and 17:00 |
+
+Give either `at` or `chance`. Random draws come from the site's seed, so a run repeats
+exactly. When two entries overlap, the first listed wins. `ctl solar <W>` still overrides
+solar while it is set. The state shows the event in force (`weather_event`: sky, entry, start,
+end), and the gateway's event log records each start and end. `validate` checks the entries.
+
 ### Cloud-edge flicker on Open-Meteo data
 
 Open-Meteo's 15-minute values are model averages: smooth, with none of the second-scale edges
@@ -171,7 +198,7 @@ works with a `columns` mapping.
   and reserves. `replay_compare` then scores `native` and `dispatched` samples separately, and
   the report lists `replay_dispatches`. `battery` and `dispatch` are exclusive.
   `scale_solar` and `scale_load` resize them, for "what if we add 3 kW of panels".
-- **Priority:** for solar, override → replay → weather → bell. For load, override → replay →
+- **Priority:** for solar, override → replay → weather → bell (weather events scale the last two). For load, override → replay →
   `loads` → the curve. For ambient, override → replay → weather → the default.
 - **Alignment:** `day` maps the recording's first whole local day, DST-aware, onto the site's
   first day, and loops in whole days. `absolute` uses the recorded timestamps as they are.

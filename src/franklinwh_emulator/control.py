@@ -75,6 +75,14 @@ class ApiError(Exception):
         self.status = status
 
 
+def _weather_event(site, ts: float) -> dict | None:
+    a = site.weather_events.active(ts)
+    if a is None:
+        return None
+    fmt = lambda t: site.local_datetime(t).isoformat(timespec="minutes")
+    return {"sky": a["sky"], "entry": a["entry"], "start": fmt(a["start"]), "end": fmt(a["end"])}
+
+
 def gateway_state(gw: "Gateway") -> dict:
     snap = gw.site.step()
     site = gw.site
@@ -162,6 +170,7 @@ def gateway_state(gw: "Gateway") -> dict:
             "model": site.weather.cfg.model, "sky": site.weather.cfg.sky,
             "kwp": site.weather.kwp, "poa_w_m2": round(site.weather.poa(snap.ts), 1),
             "fallback": site.weather.fallback},       # #268: why Open-Meteo is not in use, or None
+        "weather_event": _weather_event(site, snap.ts),   # #270: the scheduled sky now, or None
         "generator": site.generator.status(),
         "faults": asdict(gw.faults),
         "dc_faults": asdict(gw.dc_faults),

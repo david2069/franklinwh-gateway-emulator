@@ -1,0 +1,18 @@
+# #270 Weather: timed and seeded-random weather events in the fleet YAML — 2026-11-06
+
+Branch weather-events, base main e9c9c17.
+
+## New tests
+15 passed in 0.09s
+
+## Break check
+with the solar factor disabled in site.py, test_site_solar_dips_and_state_and_log_report_it fails; restored, all 15 in tests/test_weather_events.py pass
+
+## Full suite
+754 passed in 47.07s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
