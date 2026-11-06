@@ -688,3 +688,24 @@ def test_weather_line_shows_a_weather_event():
     """#270: the weather line names the scheduled sky and when it ends."""
     js = (STATIC / "diagram.js").read_text()
     assert "g.weather_event ? 'weather event: ' + skyLabel(g.weather_event.sky) + ' until '" in js
+
+
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_card_weather_text(tmp_path):
+    """#277: each card says what weather the gateway is on."""
+    import subprocess
+    harness = tmp_path / "wx.js"
+    harness.write_text((STATIC / "diagram.js").read_text() + """
+print(JSON.stringify([
+  weatherText({weather: null}),
+  weatherText({weather: {model: 'synthetic', sky: 'storm'}}),
+  weatherText({weather: {model: 'open-meteo', sky: 'broken', fallback: null}}),
+  weatherText({weather: {model: 'open-meteo', sky: 'broken', fallback: 'no network'}}),
+  weatherText({weather: {model: 'open-meteo', fallback: null},
+               weather_event: {sky: 'overcast', end: '2026-11-07T15:00+11:00'}})]));
+""")
+    r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
+    assert r == ["Weather: bell curve", "Weather: synthetic · storm", "Weather: Open-Meteo",
+                 "Weather: Open-Meteo unavailable · synthetic broken cloud",
+                 "Weather: Open-Meteo · overcast until 15:00"]
+    assert 'x-text="weatherText(g)"' in (STATIC / "index.html").read_text()
