@@ -359,7 +359,7 @@ function renderGroupDiagram(g, members) {
       <circle class="ring-bg" cx="438" cy="${cy}" r="26"></circle>
       <circle class="ring" cx="438" cy="${cy}" r="26" stroke-dasharray="${(soc / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 438 ${cy})"></circle>
       ${text(438, cy + 5, Math.round(soc) + '%', 'pct s')}
-      <text class="bn" x="474" y="${cy - 10}">${esc((units > 1 ? units + '× ' : '') + (p ? p.name : 'aPower'))}</text>
+      <text class="bn s" x="474" y="${cy - 10}">${esc((units > 1 ? units + '× ' : '') + (p ? p.name : 'aPower'))}</text>
       <text class="bp c-${statusKey(m)}" x="474" y="${cy + 14}">${esc(kwText(m.battery_w) + dir)}</text></g>`);
 
     // A row tile: icon, label on the left, kW on the right.

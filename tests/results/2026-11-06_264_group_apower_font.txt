@@ -1,0 +1,18 @@
+# #264 UI group diagram: smaller aPower name — 2026-11-06
+
+Branch group-apower-font, base main 0441182.
+
+## New tests
+40 passed in 0.26s
+
+## Break check
+with src stashed, test_group_diagram_apower_name_fits_its_tile fails; restored, it passes
+
+## Full suite
+729 passed in 54.41s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

@@ -377,5 +377,6 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
 .diagram .gv { font: 700 15px var(--mono); fill: var(--text); text-anchor: end; }
 .diagram .gv.l { font-size: 17px; text-anchor: start; }
 .diagram .pct.s { font-size: 14px; }
+.diagram .bn.s { font-size: 13px; }   /* group diagram: fits the 180-wide aPower tile (#264) */
 .diagram .box.agate.active { stroke-width: 5; }
 .diagram .box.tile.unused { stroke-dasharray: 6 4; }
