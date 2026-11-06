@@ -229,6 +229,15 @@ def _ctl_request(verb: str, args: list[str]) -> tuple[str, str, dict]:
     if verb == "soc":
         need(1)
         return "POST", "soc", {"value": float(args[0])}
+    if verb == "v2l":                                       # v2l on|off [soc=60] (#287)
+        need(1)
+        body = {}
+        for x in args:
+            if x.startswith("soc="):
+                body["ev_soc"] = float(x[4:])
+            else:
+                body["on"] = bool(_parse_value(x))
+        return "POST", "v2l", body
     if verb == "circuit":                                   # circuit 2 on [w=7000 | w=auto]
         need(2)
         body = {"n": int(args[0])}
@@ -640,7 +649,7 @@ def main(argv: list[str] | None = None) -> int:
                                    "alarm <NAME...> [--persistent] | clear-alarm [NAME...] | "
                                    "reset-alarms | fault|dc-fault key=value... | vpp <W, +charge> | release | "
                                    "mode <1|2|3> (Modbus 15507: 1 Emergency Backup, 2 Self-Consumption, 3 TOU) | soc <pct> | sky clear|broken|overcast|storm | "
-                                   "circuit <1-3> on|off [w=<W>|w=auto] | appliance <name> on|off|auto | modbus on|off | "
+                                   "circuit <1-3> on|off [w=<W>|w=auto] | v2l on|off [soc=<pct>] | appliance <name> on|off|auto | modbus on|off | "
                                    "generator start|stop|clear|fault X|refuel L|set k=v... | "
                                    "export-limit enforce|track | csip on|off [uri] | "
                                    "csip server up|down | csip export|import|gen|load <W> [secs] | "

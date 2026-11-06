@@ -12,12 +12,18 @@
  */
 const NOT_MODELLED = [
   'per-aPower SoC and power (each card shows the combined battery: its SoC and an even share)',
-  'two PV inputs on the aGate', 'aPower S DC hybrid', 'V2L', 'non-backup panel',
+  'two PV inputs on the aGate', 'aPower S DC hybrid', 'non-backup panel',
   'EV battery SoC', 'hot-water temperature', 'tariff prices', 'remote (cloud) VPP mode',
   'network connection (Ethernet, WiFi, 4G)',
 ];
 const SKY_LABELS = { clear: 'clear sky', broken: 'broken cloud', overcast: 'overcast', storm: 'storm' };
 function skyLabel(sky) { return SKY_LABELS[sky] || sky; }
+// V2L on circuit n (#287): {state, supplying}, or null when V2L isn't on that circuit.
+function v2lOn(g, n) {
+  const v = g.v2l;
+  if (!v || String(v.circuit) !== String(n)) return null;
+  return { state: v.state, supplying: v.state === 'Supplying' };
+}
 // One line for a gateway card (#277): the weather model, its sky, a fallback and an event.
 function weatherText(g) {
   const w = g.weather;
@@ -291,12 +297,17 @@ function renderDiagram(g, _unit, all) {
     const x = xs[n];
     if (n !== 1) links.push(link([[x, 660], [x, n === 2 ? 674 : 690]], 0, +1));
     else links.push(link([[x, 660], [x, 674]], 0, +1));
-    out.push(box(x - 44, 690, 88, 88, c.on ? 'tile on' : 'tile'), icon(c.on ? 'switchOn' : 'switchOff', x - 19, 698, 38, c.on ? '' : 'dim'));
-    out.push(text(x, 754, 'SW ' + n, 'tt'), text(x, 770, c.on ? 'On' : 'Off', 'ts' + (c.on ? ' ok' : '')));
+    const v = v2lOn(g, n);                                   // #287: V2L on this circuit
+    out.push(box(x - 44, 690, 88, 88, v && v.supplying ? 'tile v2l' : c.on ? 'tile on' : 'tile'),
+             icon(c.on ? 'switchOn' : 'switchOff', x - 19, 698, 38, c.on ? '' : 'dim'));
+    out.push(text(x, 754, 'SW ' + n + (g.v2l ? ' · V2L' : ''), 'tt'),
+             text(x, 770, v ? v.state : g.v2l ? 'Idle' : c.on ? 'On' : 'Off', 'ts' + (v && v.supplying ? ' v2l' : c.on ? ' ok' : '')));
     const app = Object.entries(g.appliances || {}).find(([, a]) => a.circuit === n);
-    links.push(link([[x, 778], [x, 846]], c.power_w, +1));
-    out.push(icon(loadIcon(app && app[0], c.name), x - 27, 848, 54, c.on ? '' : 'dim'));
-    out.push(text(x, 922, c.name, 'lbl'), text(x, 946, kwText(c.power_w), 'val s'));
+    if (v && v.supplying) links.push(link([[x, 846], [x, 778]], g.v2l.power_w, +1, 'v2l'));
+    else links.push(link([[x, 778], [x, 846]], c.power_w, +1));
+    out.push(icon(v ? 'ev' : loadIcon(app && app[0], c.name), x - 27, 848, 54, c.on || v ? (v && v.supplying ? 'v2l' : '') : 'dim'));
+    out.push(text(x, 922, v ? 'EV · ' + Math.round(g.v2l.ev_soc) + '%' : c.name, 'lbl'),
+             text(x, 946, kwText(v && v.supplying ? g.v2l.power_w : c.power_w), 'val s'));
   });
 
   const label = `Energy flow for ${g.id}: grid ${kwText(g.grid_w)}, home ${kwText(g.load_w)}, ` +
@@ -394,12 +405,21 @@ function renderGroupDiagram(g, members) {
       circuits.slice(0, 2).forEach(([k, c], j) => {
         const y = T + 16 + 62 * j;
         const app = Object.entries(m.appliances || {}).find(([, a]) => String(a.circuit) === k);
-        links.push(link([[610, y + 23], [656, y + 23]], c.power_w, +1));
-        tile(656, y, 228, c.on ? 'switchOn' : 'switchOff', 'SC ' + k + ' · ' + (c.on ? 'On' : 'Off'), null,
-             c.on ? 'tile on' : 'tile', c.on ? '' : 'dim');
-        const used = app || Math.abs(c.power_w) >= IDLE_W;
-        links.push(link([[884, y + 23], [960, y + 23]], c.power_w, +1));
-        if (used) tile(960, y, 320, loadIcon(app && app[0], c.name), app ? app[0].replace(/_/g, ' ') : c.name, c.power_w, 'tile', c.on ? '' : 'dim');
+        const v = v2lOn(m, k);                                 // #287: V2L on this circuit (board E)
+        if (v && v.supplying) {
+          links.push(link([[656, y + 23], [610, y + 23]], m.v2l.power_w, +1, 'v2l'));
+          links.push(link([[960, y + 23], [884, y + 23]], m.v2l.power_w, +1, 'v2l'));
+        } else {
+          links.push(link([[610, y + 23], [656, y + 23]], c.power_w, +1));
+          links.push(link([[884, y + 23], [960, y + 23]], c.power_w, +1));
+        }
+        tile(656, y, 228, c.on ? 'switchOn' : 'switchOff',
+             'SC ' + k + (m.v2l ? ' · V2L · ' + (v ? v.state : 'Idle') : ' · ' + (c.on ? 'On' : 'Off')), null,
+             v && v.supplying ? 'tile v2l' : c.on ? 'tile on' : 'tile', c.on ? '' : 'dim');
+        const used = v || app || Math.abs(c.power_w) >= IDLE_W;
+        if (v) tile(960, y, 320, 'ev', 'EV · ' + Math.round(m.v2l.ev_soc) + '%', v.supplying ? m.v2l.power_w : c.power_w,
+                    v.supplying ? 'tile v2l' : 'tile', v.supplying ? 'v2l' : '');
+        else if (used) tile(960, y, 320, loadIcon(app && app[0], c.name), app ? app[0].replace(/_/g, ' ') : c.name, c.power_w, 'tile', c.on ? '' : 'dim');
         else tile(960, y, 320, 'panel', 'Unused', null, 'tile unused', 'dim');
       });
     }

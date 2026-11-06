@@ -15,6 +15,7 @@ franklinwh-emulator ctl agate solar 6000          # or: solar auto
 franklinwh-emulator ctl agate fault session_held=true
 franklinwh-emulator ctl agate weather model=synthetic latitude=-33.87 longitude=151.21
 franklinwh-emulator ctl agate circuit 2 on w=7000      # 7 kW on smart circuit 2; w=auto hands it back
+franklinwh-emulator ctl agate v2l on soc=70             # V2L (with `v2l:` in the fleet entry)
 franklinwh-emulator ctl --json agate status       # full state
 
 curl -s -X POST localhost:8502/gateways/agate/grid -d '{"hz": 51.3}'

@@ -67,8 +67,8 @@ gateways:
   # au-3phase group (#241, #242), as board E of the design (#285):
   #   L1: solar (remote PV through an aPbox), no smart circuits; most of the house
   #   L2: aircon and hot water + induction on smart circuits 1 and 2
-  #   L3: the EV on smart circuit 1 (V2L uses the generator input and the smart circuits; V2L
-  #       itself is not modelled, so the EV only charges here), circuit 2 unused
+  #   L3: the EV on smart circuit 1 with V2L (through the generator input and the smart
+  #       circuits): it charges on-grid and supplies the home off-grid (#287); circuit 2 unused
   - id: au-3phase-l1
     group: au-3phase
     phases: [L1]
@@ -101,6 +101,7 @@ gateways:
     install: {indoor: unheated}
     solar_peak_w: 0
     accessories: {smart_circuits: true, generator_module: true}   # what V2L needs
+    v2l: {circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 2200, min_soc: 20}   # EV values: placeholders (#287)
     loads:
       - {name: base, type: base, w: 200, drift: 0.1}
       - {name: ev, type: ev, w: 7000, min_w: 1400, arrive: "18:00", depart: "07:30", kwh: 18,

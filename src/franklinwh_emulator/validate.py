@@ -104,6 +104,9 @@ DOCS: dict[str, str] = {
     "export_limit_enforced": "enforce the grid code's export limit (default: tracked only)",
     "battery": "loss model: agate-measured, ideal, legacy, or {preset, ...}",
     "generator": "{installed, rated_w, ...} plus 1901 fields; null = none fitted",
+    "v2l": "V2L (#287): an EV on a smart circuit supplying the home off-grid through the generator input: "
+           "{circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 2200, min_soc: 20, enabled: true} (the EV values are "
+           "settings to confirm); needs the smart circuits and the generator module; null = none",
     "model": "hardware models (#180): {agate, apower}, each a code, SKU or name, e.g. {agate: 102, apower: 2}; the aPower model sets kWh, kW and charge kW per unit, Direct Connect 1102 serves the codes; default by region: AU/NZ 102 + 2, North America 103 + 0; apower may be a list, one model per aPower (mixed, e.g. [0, 3]: aPower X + aPower 2), checked against the Backwards Compatibility Statement (15 at most; aGate X 1.1 with X and 2 mixed, 8; up to 8 aPower S) (docs/sources-and-regions.md)",
     "pv_non_1547": "PV inputs whose inverters don't follow IEEE 1547-2018 (no Freq/Watt droop), e.g. [remote1]; off-grid, a North American aGate opens their relay instead, for 300 s at a time (#178)",
     "dc_pv": "aPower S DC PV on its MPPT inputs (#180): {rated_w, export: true}; needs an aPower S, rated_w up to 15 kW per aPower S (datasheet MPPT limit). It follows the site's solar shape, shares the aPower S inverter with battery discharge (11.5 kW each), charges the battery directly, and with export: false only serves the house and battery. The app's MPPT page (Commissioning Guide p. 22)",

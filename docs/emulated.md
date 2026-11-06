@@ -21,7 +21,8 @@ You describe each site in a fleet file: see [Configuration](configuration.md).
 | **Controls** | What a client can do to a real aGate: Modbus M704 setpoints (FORCE), Direct Connect writes (mode, off-grid, smart circuits, generator, Modbus enable, reboot, Debug Mode, …), plus the emulator's own control API and web UI for things a client can't do (cut the grid, set the weather, inject faults) |
 
 **Not modelled** (each gateway's diagram lists these too): per-aPower SoC and power (one
-combined battery), aPower S (DC hybrid), aHub, V2L, a non-backup panel, EV battery SoC, hot-water
+combined battery), aPower S (DC hybrid), aHub, a non-backup panel, EV battery SoC (V2L keeps its
+own, [V2L](WEATHER_AND_LOADS.md#v2l)), hot-water
 temperature, the FranklinWH Cloud API, network connectivity (Ethernet/Wi-Fi/4G). See the
 [backlog](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/BACKLOG.md).
 
