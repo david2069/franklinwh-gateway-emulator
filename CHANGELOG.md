@@ -16,6 +16,7 @@
 - Group diagram: the active aGate is drawn in cyan (outline, title and its phase line from the meter) instead of only a thicker green outline; under FORCE its outline stays orange (#267). Docs: Web UI, grouped site.
 
 ### Fixed
+- `weather` action on a grouped site now changes every aGate in the group (one sky, as the fleet file's shared `weather`), not only the active one; a refused body (e.g. an unknown sky) now changes nothing (#283). Docs: Weather and loads, Web UI (grouped site).
 - Group diagram: the aPower name was too big for its tile; it is now 13 px (#264).
 - Group diagram: on an aGate with smart circuits and AC solar, the phase's Home Loads tile overlapped the AC solar tile; it now ends before it (#263).
 - `monitor` and `ctl` with no emulator running now say so and how to start one in another terminal, instead of only "Connection refused"; the start-up output ends with the `monitor` command to run, and `monitor --help` and the docs say it needs a running emulator (#259).

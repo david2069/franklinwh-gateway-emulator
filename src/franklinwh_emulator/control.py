@@ -241,6 +241,29 @@ def _num_or_none(body: dict, key: str):
     return None if v is None else float(v)
 
 
+def _weather(gw: "Gateway", body: dict) -> None:
+    """The weather model, its place and the sky (#278). Grouped aGates share one sky (#283): the
+    change reaches every member. Checked on the active one first, so a refusal changes nothing."""
+    if "sky" in body and body["sky"] not in SKIES:
+        raise ApiError(400, f"weather: sky must be one of {sorted(SKIES)}")
+    for m in [gw] + [x for x in gw.group_members if x is not gw]:
+        site = m.site
+        if any(k in body for k in ("model", "latitude", "longitude")):
+            try:
+                site.set_weather_model(body.get("model"), body.get("latitude"), body.get("longitude"))
+            except ValueError as e:
+                raise ApiError(400, str(e)) from None
+        if site.weather is None:
+            if "sky" in body or "flicker" in body:
+                raise ApiError(400, "weather: this gateway is on the bell curve, which has no sky: "
+                                    "send model: synthetic (with latitude and longitude if it has no "
+                                    "location) first")
+            continue
+        for key in ("sky", "flicker"):
+            if key in body:
+                setattr(site.weather.cfg, key, body[key])
+
+
 def _grid(gw: "Gateway", body: dict) -> None:
     """The utility's supply. Grouped aGates share one grid connection (#241): an event on one
     reaches them all; ``phase`` picks the aGate on that leg, and frequency is common to all."""
@@ -458,22 +481,7 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
             if "refuel" in body:
                 gen.refuel(None if body["refuel"] is None else float(body["refuel"]))
         elif action == "weather":
-            if any(k in body for k in ("model", "latitude", "longitude")):     # #278
-                try:
-                    site.set_weather_model(body.get("model"), body.get("latitude"), body.get("longitude"))
-                except ValueError as e:
-                    raise ApiError(400, str(e)) from None
-            if site.weather is None:
-                if "sky" in body or "flicker" in body:
-                    raise ApiError(400, "weather: this gateway is on the bell curve, which has no sky: "
-                                        "send model: synthetic (with latitude and longitude if it has no "
-                                        "location) first")
-                return
-            for key in ("sky", "flicker"):
-                if key in body:
-                    setattr(site.weather.cfg, key, body[key])
-            if site.weather.cfg.sky not in SKIES:
-                raise ApiError(400, f"weather: sky must be one of {sorted(SKIES)}")
+            _weather(gw, body)
         elif action == "export":
             site.set_export_limit_enforced(bool(body["enforced"]))
         elif action == "range-fault":

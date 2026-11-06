@@ -319,3 +319,24 @@ def test_running_model_picks_up_a_refreshed_today(tmp_path, monkeypatch):
     w._loaded_at = {k: 0 for k in w._loaded_at}
     w.solar_w(now)
     assert len(calls) == 2
+
+
+def test_weather_action_reaches_every_aGate_in_a_group():
+    """#283: a grouped site has one sky; the weather action changes every member."""
+    from franklinwh_emulator.control import ApiError, apply, gateway_state
+    from franklinwh_emulator.gateway import Fleet
+    f = Fleet.from_dict({"groups": {"g": {"seed": 3, "location": {**SYD, "timezone": "Australia/Sydney"},
+                                          "weather": {"model": "synthetic", "sky": "clear"}}},
+                         "gateways": [{"id": "a", "group": "g", "phases": ["L1"]},
+                                      {"id": "b", "group": "g", "phases": ["L2"]},
+                                      {"id": "c", "group": "g", "phases": ["L3"]},
+                                      {"id": "solo", "seed": 5, "weather": {"model": "synthetic", **SYD}}]},
+                        clock=ManualClock(NOON_AEST))
+    apply(f["b"], "weather", {"sky": "storm"})
+    assert [gateway_state(f[g])["weather"]["sky"] for g in "abc"] == ["storm"] * 3
+    assert gateway_state(f["solo"])["weather"]["sky"] == "broken"          # not in the group
+    apply(f["a"], "weather", {"model": "bell"})
+    assert [gateway_state(f[g])["weather"] for g in "abc"] == [None] * 3
+    with pytest.raises(ApiError, match="sky must be one of"):
+        apply(f["a"], "weather", {"model": "synthetic", "sky": "fog"})
+    assert [gateway_state(f[g])["weather"] for g in "abc"] == [None] * 3   # refused: nothing changed

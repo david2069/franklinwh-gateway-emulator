@@ -282,7 +282,8 @@ ACTIONS: dict[str, dict[str, Any]] = {
     },
     "weather": {
         "doc": "Change the weather model and its place (#278), or the sky (synthetic and open-meteo). "
-               "Coordinates are the weather's only; the site's time zone and location stay as configured.",
+               "Coordinates are the weather's only; the site's time zone and location stay as configured. "
+               "On a grouped site it reaches every aGate (one sky).",
         "fields": {"model": _f("string", "bell = the half-sine day; synthetic and open-meteo need a place",
                                enum=["bell", "synthetic", "open-meteo"]),
                    "latitude": _f("number", "with longitude: where the weather is (default: the site's location)", unit="°"),
