@@ -395,13 +395,13 @@ function renderGroupDiagram(g, members) {
         out.push(box(656, T + 35, 320, 70, 'tile'), icon('solar', 668, T + 46, 48));
         out.push(text(728, T + 64, label, 'gl'), text(728, T + 88, kwText(pvW), 'gv l'));
       } else {
-        links.push(link([[960, T + 173], [930, T + 173], [930, T + 146], [640, T + 146], [640, T + 128], [560, T + 128]], pvW, +1));
+        links.push(link([[960, T + 173], [952, T + 173], [952, T + 146], [640, T + 146], [640, T + 128], [560, T + 128]], pvW, +1));
         tile(960, T + 150, 320, 'solar', label, pvW, 'tile');
       }
     }
     // This phase's backed-up house load (all of it, smart circuits included).
     links.push(link([[560, T + 118], [620, T + 118], [620, T + 173], [656, T + 173]], m.load_w, +1));
-    tile(656, T + 150, 320, 'home', 'Home Loads · ' + leg, m.load_w, 'tile');
+    tile(656, T + 150, 288, 'home', 'Home Loads · ' + leg, m.load_w, 'tile');   // ends before AC solar at 960 (#263)
   });
 
   const label = `Energy flow for ${g.group.id}: grid ${kwText(gridW)}, home ${kwText(sum('load_w'))}; ` +
