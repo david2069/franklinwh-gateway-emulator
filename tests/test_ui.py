@@ -655,3 +655,13 @@ def test_group_diagram_tiles_do_not_overlap(tmp_path):
         spans.sort()
         for (_, end), (start, _) in zip(spans, spans[1:]):
             assert end <= start, f"tiles overlap at y={y}: {spans}"
+
+
+def test_group_diagram_apower_name_fits_its_tile():
+    """#264: the group diagram's aPower name uses the small size, which the CSS sets to 13 px."""
+    import re
+    js = (STATIC / "diagram.js").read_text()
+    group = js[js.index("function renderGroupDiagram"):]
+    assert '<text class="bn s"' in group
+    size = re.search(r"\.diagram \.bn\.s \{ font-size: (\d+)px", (STATIC / "style.css").read_text())
+    assert size and int(size[1]) <= 13
