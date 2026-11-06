@@ -436,6 +436,14 @@ def _even_split(phases: tuple[str, ...], shares: dict[str, float] | None) -> dic
     return {ph: shares.get(ph, 0.0) / total for ph in phases}
 
 
+@dataclass
+class _CircuitLoad:
+    """Watts set on a smart circuit at runtime (#279), as the model sees a component."""
+    circuit: int
+    leg: str | None = None
+    type: str = "circuit"
+
+
 class Site:
     """One site. Thread-safe: protocol frontends call in from their own threads."""
 
@@ -541,6 +549,7 @@ class Site:
         self._out_gen = 1.0                      # tightening response lags from the output
         self.solar_override_w: float | None = None
         self.load_override_w: float | None = None
+        self.circuit_load_w: dict[int, float] = {}    # watts set on a smart circuit at runtime (#279)
         self.ambient_override_c: float | None = None
         self.location = Location.from_dict(cfg.location)
         # Hardware models (#180): the aPower model sets capacity and power per unit.
@@ -1495,6 +1504,7 @@ class Site:
         Switched-off smart circuits, and circuits below their islanded SoC cutoff, demand 0."""
         if self.load_override_w is not None:              # the house forced; heater/fan still draw
             out, comps = {"override": max(0.0, self.load_override_w)}, {"override": None}
+            self._add_circuit_loads(out, comps, islanded)
             self._add_battery_aux(out, comps)
             return out, comps
         if self.replay is not None:
@@ -1503,6 +1513,7 @@ class Site:
                 return {"recorded": v}, {"recorded": None}
         if self.loads is None:
             out, comps = {"house": self.load_w(ts)}, {"house": None}
+            self._add_circuit_loads(out, comps, islanded)
             self._add_battery_aux(out, comps)
             return out, comps
         ctx = Context(ts, self.local_datetime(ts), ambient, 0.0)
@@ -1526,8 +1537,21 @@ class Site:
             if c.type == "ev":
                 out[c.name] = c.demand(ctx, self.loads.seed) if allowed(c) else 0.0
                 comps[c.name] = c
+        self._add_circuit_loads(out, comps, islanded)
         self._add_battery_aux(out, comps)
         return out, comps
+
+    def _add_circuit_loads(self, out: dict, comps: dict, islanded: bool) -> None:
+        """Watts set on a smart circuit (#279): they replace its appliances' demand, and obey the
+        circuit's switch and islanded SoC cutoff like any load on it."""
+        for n, w in self.circuit_load_w.items():
+            for name, c in comps.items():
+                if c is not None and c.circuit == n:
+                    out[name] = 0.0
+            circ = self.circuits[n]
+            ok = circ.on and not (islanded and circ.soc_low_cutoff and self.soc < circ.soc_low_cutoff)
+            out[f"circuit {n}"] = w if ok else 0.0
+            comps[f"circuit {n}"] = _CircuitLoad(n)
 
     def _add_battery_aux(self, out: dict, comps: dict) -> None:
         """The battery heater and fan draw like house loads (#111)."""
@@ -2169,12 +2193,20 @@ class Site:
             (self.apower_off.discard if on else self.apower_off.add)(n)
             self.rate_w = self._rate_on()
 
-    def set_circuit(self, n: int, on: bool) -> None:
+    def set_circuit(self, n: int, on: bool | None = None, w: float | None | str = "keep") -> None:
+        """Switch a circuit and/or set its load: ``w`` watts (#279), None = back to its appliances."""
         with self.lock:
             self.step()
             if n not in self.circuits:
                 raise ValueError(f"{self.model.agate.name} has smart circuits {self.circuit_range}")
-            self.circuits[n].on = bool(on)
+            if on is not None:
+                self.circuits[n].on = bool(on)
+            if w is None:
+                self.circuit_load_w.pop(n, None)
+            elif w != "keep":
+                if float(w) < 0:
+                    raise ValueError("circuit: w is 0 or more watts (null or auto hands it back)")
+                self.circuit_load_w[n] = float(w)
 
     def force_appliance(self, name: str, state: bool | None) -> None:
         """True = run now, False = off, None = back to its own schedule."""

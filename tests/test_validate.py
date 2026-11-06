@@ -82,7 +82,7 @@ def test_every_scenario_problem_reported_at_once():
         ("steps[0].with", "grid: unknown keys ['hzz']"),
         ("steps[1].do", "unknown action 'fly'"),
         ("steps[2].gateway", "no gateway 'shed'"),
-        ("steps[3].with", "circuit: missing ['on']"),
+        ("steps[3].with", "circuit: give on or w, or both"),
     ]
 
 

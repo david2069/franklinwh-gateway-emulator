@@ -229,9 +229,16 @@ def _ctl_request(verb: str, args: list[str]) -> tuple[str, str, dict]:
     if verb == "soc":
         need(1)
         return "POST", "soc", {"value": float(args[0])}
-    if verb == "circuit":
+    if verb == "circuit":                                   # circuit 2 on [w=7000 | w=auto]
         need(2)
-        return "POST", "circuit", {"n": int(args[0]), "on": bool(_parse_value(args[1]))}
+        body = {"n": int(args[0])}
+        for a in args[1:]:
+            if a.startswith("w="):
+                v = a[2:]
+                body["w"] = None if v in ("auto", "none") else float(v)
+            else:
+                body["on"] = bool(_parse_value(a))
+        return "POST", "circuit", body
     if verb == "appliance":
         need(2)
         v = _parse_value(args[1])
@@ -633,7 +640,7 @@ def main(argv: list[str] | None = None) -> int:
                                    "alarm <NAME...> [--persistent] | clear-alarm [NAME...] | "
                                    "reset-alarms | fault|dc-fault key=value... | vpp <W, +charge> | release | "
                                    "mode <1|2|3> (Modbus 15507: 1 Emergency Backup, 2 Self-Consumption, 3 TOU) | soc <pct> | sky clear|broken|overcast|storm | "
-                                   "circuit <1-3> on|off | appliance <name> on|off|auto | modbus on|off | "
+                                   "circuit <1-3> on|off [w=<W>|w=auto] | appliance <name> on|off|auto | modbus on|off | "
                                    "generator start|stop|clear|fault X|refuel L|set k=v... | "
                                    "export-limit enforce|track | csip on|off [uri] | "
                                    "csip server up|down | csip export|import|gen|load <W> [secs] | "

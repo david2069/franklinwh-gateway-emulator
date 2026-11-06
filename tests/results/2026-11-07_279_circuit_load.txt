@@ -1,0 +1,18 @@
+# #279 circuit action: set a smart circuit's load in watts at runtime — 2026-11-07
+
+Branch circuit-load, base main c848673.
+
+## New tests
+93 passed in 4.72s
+
+## Break check
+with src stashed, the 5 tests in tests/test_circuit_load.py fail; restored, they pass
+
+## Full suite
+766 passed in 58.58s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

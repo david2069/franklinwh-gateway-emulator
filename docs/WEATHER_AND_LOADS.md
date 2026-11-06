@@ -191,6 +191,14 @@ cooking events only.
 
 - **State lives in the site:** name, on/off, `soc_low_cutoff`, energy. All three circuits are
   on by default; set them with `circuits: {3: {on: false}}`.
+- **Loads on a circuit:** a load component with `circuit: N` in the fleet file's `loads:`
+  (the `sydney-family` preset puts hot water, EV and aircon on circuits), for example
+  `- {name: hot_water, type: schedule, w: 3600, on: ["10:00-14:00"], circuit: 1}`.
+- **Watts set while running** (#279): `circuit` with `w` makes the circuit draw that many watts,
+  replacing its appliances (a gateway without `loads:` gets a load this way), until `w: null`
+  hands it back. It still obeys the circuit's switch, the islanded SoC cutoff and off-grid
+  shedding. `ctl <gw> circuit 2 on w=7000`, `ctl <gw> circuit 2 w=auto`; the state shows it as
+  the circuit's `set_w`.
 - **Switching** removes the bound load. It can be done by:
   - the control action `circuit`;
   - `ctl circuit`;
