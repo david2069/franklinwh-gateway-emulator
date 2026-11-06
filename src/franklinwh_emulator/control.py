@@ -172,6 +172,9 @@ def gateway_state(gw: "Gateway") -> dict:
             "fallback": site.weather.fallback},       # #268: why Open-Meteo is not in use, or None
         "weather_event": _weather_event(site, snap.ts),   # #270: the scheduled sky now, or None
         "generator": site.generator.status(),
+        # V2L (#287): the EV supplying the home off-grid, or None when not fitted.
+        "v2l": None if site.v2l is None else site.v2l.status(not site.grid_relay_closed,
+                                                             site.generator.relay_closed),
         "faults": asdict(gw.faults),
         "dc_faults": asdict(gw.dc_faults),
         "modbus_enabled": gw.modbus_enabled,
@@ -441,6 +444,19 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
         elif action == "appliance":
             state = body.get("on", None)
             site.force_appliance(body["name"], None if state in (None, "auto") else bool(state))
+        elif action == "v2l":
+            if site.v2l is None:
+                raise ApiError(400, "v2l: this gateway has no V2L: add `v2l: {circuit: 1}` (and the "
+                                    "smart circuits and generator module) to its fleet entry and restart")
+            with site.lock:
+                site.step()
+                if "on" in body:
+                    site.v2l.enabled = bool(body["on"])
+                if "ev_soc" in body:
+                    v = float(body["ev_soc"])
+                    if not 0 <= v <= 100:
+                        raise ApiError(400, "v2l: ev_soc is 0..100 %")
+                    site.v2l.ev_soc = v
         elif action == "generator":
             gen = site.generator
             site.step()

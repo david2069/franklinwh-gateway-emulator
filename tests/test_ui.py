@@ -80,7 +80,7 @@ def test_page_reads_only_fields_the_state_has(ui):
     fleet, _ = ui
     state = gateway_state(fleet["site"])
     text = "".join((STATIC / n).read_text() for n in ("index.html", "app.js", "diagram.js", "actions.js", "tou.js", "groups.js", "units.js"))
-    used = set(re.findall(r"\b(?:g|current)\.([a-z_]+)", text))
+    used = set(re.findall(r"\b(?:g|current)\.([a-z0-9_]+)", text))
     assert used and used <= set(state), sorted(used - set(state))
     leg_fields = set(re.findall(r"\bleg\.([a-z_]+)", text))
     leg_state = set(next(iter(state["phases"].values())))
@@ -614,7 +614,8 @@ def test_group_diagram_draws_every_phase_with_home_loads(tmp_path):
                        "  total: h.includes('Home Loads, all phases'),\n"
                        "  meter: /class=\"svc[^\"]*\"[^>]*>([^<]*)/.exec(h)[1],\n"
                        "  solar: (h.match(/AC solar · [\\d.]+ kWp/g) || []),\n"
-                       "  circuits: (h.match(/>SC \\d · O/g) || []).length,\n"
+                       "  circuits: (h.match(/>SC \\d · /g) || []).length,\n"
+                       "  v2l: (h.match(/>SC 1 · V2L · Ready</g) || []).length,\n"
                        "  unused: h.includes('>Unused<'),\n"
                        "  active: (h.match(/box agate active/g) || []).length,\n"
                        "  activeTitle: (/class=\"lbl b active\"[^>]*>([^<]*)/.exec(h) || [])[1],\n"
@@ -627,6 +628,7 @@ def test_group_diagram_draws_every_phase_with_home_loads(tmp_path):
     assert r["meter"] == "3 × 63 A · 400 V"
     assert r["solar"] == ["AC solar · 6 kWp"]            # only L1 has PV
     assert r["circuits"] == 4 and r["unused"]             # SC 1 + 2 on L2 and L3; L3's SC 2 is free
+    assert r["v2l"] == 1                                   # #287: L3's EV on SC 1 is V2L, ready on-grid
     assert r["active"] == 1
     assert r["activeTitle"] == "aGate 2 · L2" and r["activeLines"] == 1   # #267: S[1] is the active one
     assert r["model"] == "3× aGate X-01-AU (one per phase) · 3× aPower X-01-AU · 40.8 kWh · PV 6 kWp"
@@ -709,3 +711,28 @@ print(JSON.stringify([
                  "Weather: Open-Meteo unavailable · synthetic broken cloud",
                  "Weather: Open-Meteo · overcast until 15:00"]
     assert 'x-text="weatherText(g)"' in (STATIC / "index.html").read_text()
+
+
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_group_diagram_draws_v2l_supplying_as_board_e(tmp_path):
+    """#287: L3's SC 1 is 'SC 1 · V2L · Supplying' in amber, the EV tile shows its SoC and kW,
+    and the flow runs from the EV to the aGate."""
+    import subprocess
+    from franklinwh_emulator.clock import ManualClock
+    from franklinwh_emulator.gateway import Fleet, load_yaml
+    f = Fleet.from_dict(load_yaml("examples/au-3phase-group.yaml"), clock=ManualClock(1_793_584_800))
+    states = [gateway_state(gw) for gw in f.gateways.values()]
+    harness = tmp_path / "v2l.js"
+    harness.write_text("const performance = {now: () => 0};\n" +
+                       (STATIC / "units.js").read_text() + (STATIC / "groups.js").read_text() +
+                       (STATIC / "diagram.js").read_text() +
+                       f"\nconst S = {json.dumps(states, default=str)};\n"
+                       "Object.assign(S[2].v2l, {state: 'Supplying', power_w: 2200, ev_soc: 76.4});\n"
+                       "const h = renderDiagram(S[2], 'C', S);\n"
+                       "print(JSON.stringify({label: h.includes('>SC 1 · V2L · Supplying<'),\n"
+                       "  ev: h.includes('>EV · 76%<') && h.includes('>2.20 kW<'),\n"
+                       "  amber: (h.match(/box tile v2l/g) || []).length,\n"
+                       "  flows: (h.match(/class=\"flow fwd v2l\"/g) || []).length,\n"
+                       "  listed: NOT_MODELLED.includes('V2L')}));\n")
+    r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
+    assert r == {"label": True, "ev": True, "amber": 2, "flows": 2, "listed": False}

@@ -321,6 +321,14 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "required": ["name"],
         "examples": [{"name": "ev", "on": True}, {"name": "ev", "on": None}],
     },
+    "v2l": {
+        "doc": "V2L (#287): enable or disable the EV supplying the home (off-grid only), or set the "
+               "EV's state of charge.",
+        "fields": {"on": _f("boolean", "true = V2L enabled: it supplies when off-grid and the generator is off"),
+                   "ev_soc": _f("number", "the EV's state of charge now", unit="%")},
+        "required_any": ["on", "ev_soc"],
+        "examples": [{"on": True}, {"ev_soc": 60}, {"on": False}],
+    },
     "generator": {
         "doc": "The generator: 1901 settings, hardware, manual start/stop, faults, fuel.",
         "fields": {
@@ -405,7 +413,7 @@ GROUPS: dict[str, list[str]] = {
     "Inputs": ["pv", "load", "ambient", "weather"],
     "Battery and modes": ["vpp", "release", "mode", "tou", "reserve", "soc", "apower", "time-machine"],
     "Loads": ["circuit", "appliance"],
-    "Generator": ["generator"],
+    "Generator": ["generator", "v2l"],
     "CSIP and comms": ["csip", "der-comms", "dc-modbus", "dc-reboot", "firmware", "export"],
     "Alarms and faults": ["alarms", "faults", "dc-faults", "range-fault", "write-reject",
                           "addressing", "episode", "debug-mode"],

@@ -284,6 +284,10 @@ class SiteConfig:
     # oilmano*, manuSw) and hardware facts (crank_s, warmup_s, cooldown_s, min_run_s,
     # fuel_l). None = the reference site: feature off, nothing fitted. See generator.py.
     generator: dict | None = None
+    # V2L (#287): an EV on a smart circuit supplying the home off-grid through the generator
+    # input: {circuit, ev_kwh, ev_soc, max_w, min_soc, enabled}. Needs the smart circuits and
+    # the generator module. None = no V2L. See v2l.py.
+    v2l: dict | None = None
     # Hardware models (#180): {agate: code|SKU|name, apower: …}; None → the region's defaults.
     # The aPower model sets capacity and power per unit (models.py).
     model: dict | None = None
@@ -418,6 +422,7 @@ class Snapshot:
     circuit_w: dict = field(default_factory=dict) # served W per smart circuit
     circuits_shed: bool = False                   # islanded: smart circuits dropped
     generator_w: float = 0.0                      # generator output into the house/battery
+    v2l_w: float = 0.0                            # V2L: the EV supplying the house (#287)
     gen_state: int = 0                            # genStat: 0 off, 1 running, 2 cooldown, 3 fault
     gen_relay_closed: bool = False
 
@@ -604,6 +609,15 @@ class Site:
         k = self.model.agate.smart_circuits if self.accessories["smart_circuits"] else 0
         self.circuits: dict[int, Circuit] = {n: Circuit(DEFAULT_CIRCUITS[n]) for n in range(1, k + 1)}
         self.circuit_range = f"1–{k}" if k else "none (accessories.smart_circuits is false)"
+        from .v2l import V2L
+        self.v2l = V2L.from_dict(cfg.v2l)
+        if self.v2l is not None:
+            if not (self.accessories["smart_circuits"] and self.accessories["generator_module"]):
+                raise ValueError("v2l: needs the smart circuits and the generator module "
+                                 "(accessories.smart_circuits and generator_module)")
+            if self.v2l.circuit not in self.circuits:
+                raise ValueError(f"v2l: circuit {self.v2l.circuit}: {self.model.agate.name} has "
+                                 f"smart circuits {self.circuit_range}")
         for n, c in (cfg.circuits or {}).items():
             n = int(n)
             if n not in self.circuits:
@@ -1523,6 +1537,9 @@ class Site:
         def allowed(c: Component) -> bool:
             if c.circuit is None:
                 return True
+            if (self.v2l is not None and self.v2l.circuit == c.circuit
+                    and self.v2l.available_w(islanded, self.generator.relay_closed) > 0):
+                return False                                  # the port is a V2L source now (#287)
             circ = self.circuits[c.circuit]
             if not circ.on:
                 return False
@@ -1540,6 +1557,14 @@ class Site:
         self._add_circuit_loads(out, comps, islanded)
         self._add_battery_aux(out, comps)
         return out, comps
+
+    def _v2l_w(self, shortfall_w: float, islanded: bool) -> float:
+        """V2L's share (#287): the house's shortfall after solar and the generator, off-grid,
+        up to its limit; nothing while the generator runs on the same input."""
+        if self.v2l is None:
+            return 0.0
+        cap = self.v2l.available_w(islanded, self.generator.relay_closed)
+        return min(cap, max(0.0, shortfall_w))
 
     def _add_circuit_loads(self, out: dict, comps: dict, islanded: bool) -> None:
         """Watts set on a smart circuit (#279): they replace its appliances' demand, and obey the
@@ -1577,6 +1602,7 @@ class Site:
         faulted = self.inverter_faulted()
         g = self.grid
         clipped = shed = var = 0.0
+        v2l_w = 0.0                                  # V2L supplies off-grid only (#287)
         throttle = 0
         ctl: dict = {}
         source = "none"
@@ -1598,7 +1624,8 @@ class Site:
             # aPower S DC PV is the aPower's own, not frequency-curtailed: it stays (#180).
             pv_in = pv.get("mppt", 0.0) if self.pv_cutoff else solar_avail
             gen_w = self.generator.output_w(load - pv_in, max_chg)
-            net = load - pv_in - gen_w
+            v2l_w = self._v2l_w(load - pv_in - gen_w, islanded)
+            net = load - pv_in - gen_w - v2l_w
             on_circuits = [n for n, c in comps.items() if c is not None and c.circuit and demand[n] > 0]
             if net > max_dis and on_circuits:
                 # Short of power off-grid: the aGate sheds smart circuits first.
@@ -1607,7 +1634,8 @@ class Site:
                 circuits_shed = True
                 load = sum(demand.values())
                 gen_w = self.generator.output_w(load - pv_in, max_chg)
-                net = load - pv_in - gen_w
+                v2l_w = self._v2l_w(load - pv_in - gen_w, islanded)
+                net = load - pv_in - gen_w - v2l_w
             clipped = solar_avail - pv_in
             if net >= 0:
                 batt = min(net, max_dis)
@@ -1618,14 +1646,14 @@ class Site:
             solar = solar_avail - clipped
             served = load - shed
             grid = 0.0
-            dark = served <= 0 and load > 0 and gen_w <= 0
-            if faulted and gen_w <= 0 or dark:
+            dark = served <= 0 and load > 0 and gen_w <= 0 and v2l_w <= 0
+            if faulted and gen_w <= 0 and v2l_w <= 0 or dark:
                 # Nothing forms the grid: the house is dark and PV inverters drop out.
                 v_legs = {ph: 0.0 for ph in self.phases}
                 hz = 0.0
                 inv = INV_FAULT if faulted else INV_STANDBY
                 solar, clipped, shed, served, batt = 0.0, solar_avail, load, 0.0, 0.0
-                gen_w = 0.0
+                gen_w = v2l_w = 0.0
             else:
                 v_legs = {ph: g.nominal_v_ln for ph in self.phases}
                 hz = PV_CUTOFF_HZ if self.pv_cutoff else self._droop(clipped, solar_avail, dt)
@@ -1760,7 +1788,7 @@ class Site:
             export_limit_w=enforced_limit, declared_export_limit_w=declared,
             export_over_limit_w=over, der_connected=der_on, csip_source=source,
             loads={n: round(w, 1) for n, w in served.items()}, circuit_w=circuit_w,
-            circuits_shed=circuits_shed, generator_w=gen_w,
+            circuits_shed=circuits_shed, generator_w=gen_w, v2l_w=v2l_w,
             gen_state=self.generator.state, gen_relay_closed=self.generator.relay_closed,
         )
 
@@ -1984,6 +2012,8 @@ class Site:
         self.pv_wh += snap.solar_w * hours
         self.gen_wh += snap.generator_w * hours
         self.generator.burn(snap.generator_w, dt)
+        if self.v2l is not None:
+            self.v2l.commit(snap.v2l_w, dt)
         self.load_wh += snap.load_w * hours
         for n, w in snap.circuit_w.items():
             self.circuits[n].energy_wh += w * hours

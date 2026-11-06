@@ -19,7 +19,8 @@ FLEET = {"groups": {"home": {
     "location": {"latitude": -33.87, "longitude": 151.21, "timezone": "Australia/Sydney"},
     "weather": {"model": "synthetic", "kwp": 6.6, "sky": "broken"}}},
     "gateways": [{"id": "site", "seed": 7, "group": "home", "phases": ["L1"], "loads": "sydney-family",
-                  "generator": {"installed": True, "rated_w": 6000}, "directconnect": {"port": 0}},
+                  "generator": {"installed": True, "rated_w": 6000}, "v2l": {"circuit": 1},
+                  "directconnect": {"port": 0}},
                  {"id": "site-l2", "seed": 8, "group": "home", "phases": ["L2"], "directconnect": {"port": 0}},
                  {"id": "site-l3", "seed": 9, "group": "home", "phases": ["L3"], "directconnect": {"port": 0}}]}
 
@@ -47,9 +48,9 @@ def test_every_handler_is_in_the_schema():
     """Each action control.apply handles is described, and each described action is handled."""
     src = Path(control.__file__).read_text()
     body = src[src.index("def apply("):src.index("class ControlApi")]
-    handled = set(re.findall(r'action == "([a-z-]+)"', body))
+    handled = set(re.findall(r'action == "([a-z0-9-]+)"', body))
     for group in re.findall(r"action in \(([^)]*)\)", body):
-        handled |= set(re.findall(r'"([a-z-]+)"', group))
+        handled |= set(re.findall(r'"([a-z0-9-]+)"', group))
     handled |= control.DC_ACTIONS                 # sent over Direct Connect by ControlApi.dc_write
     assert handled == set(ACTIONS)
 

@@ -76,7 +76,8 @@ Not yet:
 - appliance power factor (var) and inrush;
 - EV "after battery" divert priority (today the EV takes surplus ahead of the battery);
 - smart-circuit schedules (the real aGate discards local writes to them anyway);
-- V2L.
+- V2L beyond #287: charging the aPower from the EV, the cloud `v2lRunState` codes, and the
+  `CarSWPower` sign and energy fields once a capture settles them.
 
 Original intent:
 **Why:** the load is two gaussians plus jitter. Controls need steps and spikes.

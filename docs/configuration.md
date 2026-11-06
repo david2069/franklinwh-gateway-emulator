@@ -165,6 +165,7 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 
 | Key | Type | Default | What it does |
 |---|---|---|---|
+| `v2l` | object | — | V2L: an EV on a smart circuit supplying the home **off-grid** through the generator input: `{circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 2200, min_soc: 20, enabled: true}`; the EV values are not documented by FranklinWH, so confirm them for your site; needs the smart circuits and the generator module ([Weather and loads](WEATHER_AND_LOADS.md#v2l)) |
 | `generator` | object | — | {installed, rated_w, ...} plus 1901 fields; null = none fitted; AU/NZ: `rated_w` at most 80 A × line-to-neutral V (18.4 kW at 230 V) |
 | `dc_pv` | object | — | aPower S DC PV on its MPPT inputs: {rated_w, export: true}; needs an aPower S, rated_w up to 15 kW per aPower S (datasheet MPPT limit). It follows the site's solar shape, shares the aPower S inverter with battery discharge (11.5 kW each), charges the battery directly, and with export: false only serves the house and battery. The app's MPPT page (Commissioning Guide p. 22) |
 | `power_limits` | string | `settable` | settable (default) or locked: locked = the user's power-rating settings can't be changed, as FranklinWH has done in some US areas (owner's statement; regions not evidenced, so never derived). Direct Connect 1701 limit writes are then acknowledged and not stored |

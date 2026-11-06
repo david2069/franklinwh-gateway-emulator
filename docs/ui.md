@@ -13,7 +13,8 @@ Direct Connect addresses to point a bridge at, SoC, solar, home, battery and gri
 state, mode, battery status, FORCE, alarms and injected faults. Selecting a card shows its live energy diagram
 (grid, meter, aGate, home, PV per input with the aPbox for remote inputs, the battery, generator
 and smart circuits, with lines moving in the direction power flows), then its legs, circuits,
-appliances and generator. What the emulator doesn't model (per-aPower values, V2L, a non-backup
+appliances and generator, and V2L where it is set up (amber while the EV supplies the home).
+What the emulator doesn't model (per-aPower values, a non-backup
 panel, tariffs and more) is listed under the diagram rather than drawn. Under it, every control action
 has a form (built from `GET /schema`, grouped as in SCENARIOS.md); only the fields you fill are
 sent, and the emulator's answer (applied, or its error) stays in the form. The control API below
@@ -85,7 +86,7 @@ time, the weather line (the weather model, Open-Meteo's fallback when it applies
 hardware: aGate model, aPower count and model, total kWh and PV kWp.
 
 Each aPower card shows the combined battery's SoC and an even share of its power: per-aPower
-values are not modelled. The design's aPower S DC board, non-backup panel, V2L and prices are not
+values are not modelled. The design's aPower S DC board, non-backup panel and prices are not
 drawn. Below the diagram: grid legs, smart circuits, appliances, the generator and the TOU schedule.
 
 **A grouped site** (fleet `groups:`, one single-phase aGate per phase; [Configuration](configuration.md))

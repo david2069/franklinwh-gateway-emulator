@@ -211,6 +211,37 @@ cooking events only.
 - **Off-grid:** when the battery cannot carry the house, every running circuit is shed before
   any other load. A circuit is also dropped while islanded with SoC below its `soc_low_cutoff`.
 
+### V2L
+
+V2L (vehicle-to-load) lets an EV supply the home through the aGate. It needs the **generator
+input** and the **smart circuits**; the EV sits on a smart circuit. Set it per gateway:
+
+```yaml
+accessories: {smart_circuits: true, generator_module: true}
+v2l: {circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 2200, min_soc: 20}
+```
+
+- **When it supplies:** off-grid only, and only while a generator on the same input is not
+  running. It covers the house's shortfall (load less solar and the generator), up to `max_w`,
+  until the EV is down to `min_soc`; the aPower covers the rest. On-grid it is `Ready`.
+- **The EV on that circuit** doesn't charge while V2L supplies.
+- **Control:** the `v2l` action (Web UI: Generator → v2l; `ctl <gw> v2l on|off [soc=60]`)
+  enables or disables it, or sets the EV's state of charge.
+- **State:** `v2l` (enabled, state `Disabled`/`Ready`/`Supplying`, circuit, ev_soc, power_w,
+  energy_kwh, the limits). The diagrams draw that circuit as `SW 1 · V2L` (`SC 1 · V2L` on a
+  grouped site, as board E), amber while supplying, with the EV's SoC.
+- **Direct Connect:** `1411` reports V2L on the car switch where the aGate has no third
+  circuit: `CarSWPower` negative while supplying and the energy supplied as `CarSWExpEnergy`.
+  Modbus has no V2L registers (franklinwh-modbus docs).
+
+**What is not known.** Everything here comes from franklinwh-cloud's notes on captured traffic
+(`docs/GENERATOR_V2L_API.md`), not from FranklinWH documentation. Its device catalogue lists no
+V2L port on AU aGates, while its cookbook and the owner's AU site have one; the emulator models
+it as the owner's site has it. The `CarSWPower` sign and the energy fields' meanings are not
+established. The EV's battery size and SoC, the most V2L supplies and the SoC it stops at are
+not documented: the defaults (60 kWh, 80 %, 2.2 kW as board E shows, 20 %) are placeholders
+to confirm for a real site. Whether V2L also charges the aPower is not known; it doesn't here.
+
 ## Replay of recorded data
 
 `replay.py` reads the Modbus bridge's metrics export CSV
