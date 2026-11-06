@@ -1,0 +1,18 @@
+# #285 examples/fleet.yaml: au-3phase smart circuits follow board E — 2026-11-07
+
+Branch fleet-au3phase-circuits, base main d4237b9.
+
+## New tests
+41 passed in 53.47s
+
+## Break check
+with examples/ stashed, test_example_fleet_au_3phase_follows_board_e fails; restored, it passes; validate examples/fleet.yaml: ok
+
+## Full suite
+768 passed in 286.28s (0:04:46)
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
