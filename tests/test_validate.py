@@ -265,3 +265,13 @@ def test_single_phase_on_a_120v_code_is_refused():
     for ac in (1, 2):
         assert validate_fleet({"gateways": [{"id": "a", "ac_type": ac, "grid_code": "ieee1547-cat2"}]}) == []
     assert validate_fleet({"gateways": [{"id": "a", "ac_type": 0}]}) == []          # AU single phase
+
+
+def test_example_fleet_au_3phase_follows_board_e():
+    """#285: L1 has no smart circuits; L2 aircon + hot water/induction on SC 1-2; L3 the EV on SC 1."""
+    from franklinwh_emulator.gateway import Fleet, load_yaml
+    f = Fleet.from_dict(load_yaml("examples/fleet.yaml"))
+    l1, l2, l3 = (f[f"au-3phase-l{n}"].site for n in (1, 2, 3))
+    assert l1.circuits == {}
+    assert sorted({c.circuit for c in l2.loads.components if c.circuit}) == [1, 2]
+    assert [(c.name, c.circuit) for c in l3.loads.components if c.circuit] == [("ev", 1)]

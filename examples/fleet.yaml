@@ -64,7 +64,11 @@ gateways:
     directconnect: {port: 9021}
 
   # Melbourne three-phase home: the AU aGate is single phase, so one aGate per phase in the
-  # au-3phase group (#241, #242); remote PV through an aPbox on L1, most of the house on L1.
+  # au-3phase group (#241, #242), as board E of the design (#285):
+  #   L1: solar (remote PV through an aPbox), no smart circuits; most of the house
+  #   L2: aircon and hot water + induction on smart circuits 1 and 2
+  #   L3: the EV on smart circuit 1 (V2L uses the generator input and the smart circuits; V2L
+  #       itself is not modelled, so the EV only charges here), circuit 2 unused
   - id: au-3phase-l1
     group: au-3phase
     phases: [L1]
@@ -72,6 +76,7 @@ gateways:
     install: {indoor: unheated}   # a garage: lags the outside air
     home_base_w: 600
     pv_inputs: {proximal: 0.6, remote1: 0.4}
+    accessories: {smart_circuits: false}
     modbus: {port: 5022}
     directconnect: {port: 9022}
   - id: au-3phase-l2
@@ -79,8 +84,14 @@ gateways:
     phases: [L2]
     seed: 111
     install: {indoor: unheated}
-    home_base_w: 200
     solar_peak_w: 0
+    loads:
+      - {name: base, type: base, w: 200, drift: 0.1}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 26, heat_below: 15, span: 8,
+         on: ["07:00-23:00"], circuit: 1}
+      - {name: hot_water, type: schedule, w: 3600, on: ["11:00-13:30"], circuit: 2}
+      - {name: induction, type: events, w: 2400, duration: 30m, per_day: 1,
+         windows: ["17:30-19:00"], circuit: 2}
     modbus: {port: 5030}
     directconnect: {port: 9030}
   - id: au-3phase-l3
@@ -88,8 +99,12 @@ gateways:
     phases: [L3]
     seed: 112
     install: {indoor: unheated}
-    home_base_w: 200
     solar_peak_w: 0
+    accessories: {smart_circuits: true, generator_module: true}   # what V2L needs
+    loads:
+      - {name: base, type: base, w: 200, drift: 0.1}
+      - {name: ev, type: ev, w: 7000, min_w: 1400, arrive: "18:00", depart: "07:30", kwh: 18,
+         mode: offpeak, start: "22:00", circuit: 1}
     modbus: {port: 5031}
     directconnect: {port: 9031}
 
