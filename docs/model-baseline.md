@@ -85,7 +85,8 @@ MAC 1, aHub, and per-aPower SoC (backlog HARDWARE-TOPOLOGIES).
 | Influence | Affects | Default | Status | Key |
 |---|---|---|---|---|
 | Location | sun position, local time and DST, weather data | none: fixed UTC offset, no sun | documented (NOAA sun) | `location` |
-| Weather model | irradiance on the array, cloud, ambient | bell curve | Open-Meteo: real data; synthetic: modelled | `weather` |
+| Weather model | irradiance on the array, cloud, ambient | Open-Meteo with a location (synthetic for a day it can't fetch), else the bell curve | Open-Meteo: real data; synthetic: modelled | `weather` |
+| Weather events | darker skies for a while, fixed or seeded-random | none | modelled | `weather_events` |
 | PV temperature | PV output: −0.4 %/°C from a 45 °C cell | on | plausible | `pv_temperature` |
 | Placement | temperature around the cabinet (room, garage, shed, outdoors with sun and cover) | none: ambient + 8 °C | plausible | `install` |
 | Cabinet temperature | battery limits, heater/fan, OVER_TEMP, Modbus `TmpCab` | 1.5 h lag, +3 °C per kW | plausible | `install` |
