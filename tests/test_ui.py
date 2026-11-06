@@ -676,3 +676,9 @@ def test_active_agate_is_cyan_not_a_status_colour():
     for rule in (".diagram .box.agate.active {", ".diagram .lbl.active {", ".diagram .flow.active {"):
         line = next(l for l in css.splitlines() if l.startswith(rule))
         assert "var(--c-cyan)" in line, line
+
+
+def test_weather_line_names_open_meteo_and_its_fallback():
+    """#268: the weather line says Open-Meteo, or that it is unavailable and the sky is synthetic."""
+    js = (STATIC / "diagram.js").read_text()
+    assert "'Open-Meteo unavailable · synthetic '" in js and ": 'Open-Meteo'," in js

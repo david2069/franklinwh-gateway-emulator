@@ -160,7 +160,8 @@ def gateway_state(gw: "Gateway") -> dict:
         "tou_reserve": site.tou_reserve,
         "weather": None if site.weather is None else {
             "model": site.weather.cfg.model, "sky": site.weather.cfg.sky,
-            "kwp": site.weather.kwp, "poa_w_m2": round(site.weather.poa(snap.ts), 1)},
+            "kwp": site.weather.kwp, "poa_w_m2": round(site.weather.poa(snap.ts), 1),
+            "fallback": site.weather.fallback},       # #268: why Open-Meteo is not in use, or None
         "generator": site.generator.status(),
         "faults": asdict(gw.faults),
         "dc_faults": asdict(gw.dc_faults),
@@ -447,8 +448,8 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
         elif action == "weather":
             if site.weather is None:
                 raise ApiError(400, "weather: this gateway has no weather model (it uses the bell "
-                                    "curve): add `weather: {model: synthetic}` to its fleet entry "
-                                    "and restart")
+                                    "curve, as it has no location): add a `location` or `weather: {model: synthetic, "
+                                    "latitude: .., longitude: ..}` to its fleet entry and restart")
             for key in ("sky", "flicker"):
                 if key in body:
                     setattr(site.weather.cfg, key, body[key])

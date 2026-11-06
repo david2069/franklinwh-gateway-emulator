@@ -5,9 +5,11 @@ description: >
 start: "2026-01-15T14:00:00"
 duration: 20m
 record_every: 5s
+# Weather pinned to the bell day so the checks repeat exactly (#268: a location alone
+# now means Open-Meteo).
 fleet:
   gateways:
-    - {id: us, seed: 42, ac_type: 1, location: {latitude: 33.45, longitude: -112.07, timezone: America/Phoenix}, initial_soc: 60}
+    - {id: us, seed: 42, ac_type: 1, location: {latitude: 33.45, longitude: -112.07, timezone: America/Phoenix}, weather: {model: bell}, initial_soc: 60}
 steps:
   - {at: 1m,   do: grid, with: {hz: 61.5}}
   - {at: 5m55s, expect: {grid_connected: true}}

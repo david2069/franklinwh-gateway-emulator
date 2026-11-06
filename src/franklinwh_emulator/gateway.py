@@ -209,6 +209,8 @@ class Gateway:
             cfg.events, site_time=lambda ts: site.local_datetime(ts).isoformat(timespec="seconds"),
             clock_now=lambda: site.clock.now())
         self.site.events = self.events                 # after backfill: its days aren't events
+        if site.weather is not None and site.weather.fallback:   # #268: a fallback before the log existed
+            self.events.add("weather", site.weather.fallback)
         self.device = AGateDevice(self.site, self.profile, serial=self.serial)
         self.faults = Faults()
         self.server = ModbusServer(self.device, cfg.host, cfg.port, self.faults)

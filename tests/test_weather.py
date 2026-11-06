@@ -61,10 +61,56 @@ def test_open_meteo_bundled_day():
     assert w.ambient_c(NOON_AEST) == pytest.approx(24.0, abs=3)
 
 
-def test_open_meteo_offline_missing_day_raises(tmp_path):
+def test_open_meteo_offline_missing_day_falls_back_to_synthetic(tmp_path):
+    """#268: a day that can't be had runs on the synthetic sky, and says why."""
+    from franklinwh_emulator import weather as wmod
     w = weather(model="open-meteo", cache_dir=str(tmp_path), offline=True)
-    with pytest.raises(FileNotFoundError):
-        w.solar_w(NOON_AEST)
+    seen = []
+    w.on_fallback = seen.append
+    syn = weather(model="synthetic")
+    assert w.solar_w(NOON_AEST) == pytest.approx(syn.solar_w(NOON_AEST)) and w.solar_w(NOON_AEST) > 0
+    assert w.ambient_c(NOON_AEST) is None
+    assert "unavailable" in w.fallback and "synthetic" in w.fallback and len(seen) == 1   # said once
+    with pytest.raises(FileNotFoundError):                 # the fetch itself still reports the miss
+        wmod.fetch_open_meteo_day(w.cfg, "2026-01-16")
+
+
+def test_open_meteo_fetch_is_retried_after_a_failure(tmp_path, monkeypatch):
+    """#268: after a failed fetch the day is synthetic until RETRY_S has passed, then real."""
+    from franklinwh_emulator import weather as wmod
+    calls = []
+    def fail(cfg, day):
+        calls.append(day)
+        raise OSError("network is unreachable")
+    monkeypatch.setattr(wmod, "fetch_open_meteo_day", fail)
+    w = weather(model="open-meteo", cache_dir=str(tmp_path), offline=False)
+    w.solar_w(NOON_AEST); w.solar_w(NOON_AEST + 60)
+    assert len(calls) == 1                                 # not again within RETRY_S
+    now = wmod.time.time()
+    monkeypatch.setattr(wmod.time, "time", lambda: now + wmod.RETRY_S + 1)
+    w.solar_w(NOON_AEST)
+    assert len(calls) == 2
+
+
+def test_a_location_alone_means_open_meteo():
+    """#268: no `model` with a location → open-meteo; without one → bell; explicit wins."""
+    assert WeatherConfig.from_dict({**SYD}).model == "open-meteo"
+    assert WeatherConfig.from_dict({}).model == "bell"
+    assert WeatherConfig.from_dict({**SYD, "model": "bell"}).model == "bell"
+    assert WeatherConfig.from_dict({**SYD}).offline                    # conftest: FRANKLINWH_EMULATOR_OFFLINE=1
+    assert not WeatherConfig.from_dict({**SYD, "offline": False}).offline
+
+
+def test_site_with_a_location_uses_open_meteo_and_reports_the_fallback(tmp_path, monkeypatch):
+    monkeypatch.setenv("FRANKLINWH_EMULATOR_CACHE", str(tmp_path))       # empty cache, offline
+    from franklinwh_emulator.control import gateway_state
+    from franklinwh_emulator.gateway import Gateway, GatewayConfig
+    cfg = GatewayConfig(setup="in-service", seed=7)
+    cfg.site = SiteConfig(seed=7, location={**SYD, "timezone": "Australia/Sydney"})
+    gw = Gateway(cfg, clock=ManualClock(NOON_AEST))
+    st = gateway_state(gw)
+    assert st["weather"]["model"] == "open-meteo" and "synthetic" in st["weather"]["fallback"]
+    assert any(e["kind"] == "weather" for e in gw.events.recent(0))
 
 
 def test_open_meteo_cache_stores_requested_point(tmp_path, monkeypatch):
@@ -78,7 +124,8 @@ def test_open_meteo_cache_stores_requested_point(tmp_path, monkeypatch):
               "hourly": {"time": [], "cloud_cover": []}}
     monkeypatch.setattr(wmod.urllib.request, "urlopen",
                         lambda req, timeout: io.BytesIO(json.dumps(answer).encode()))
-    cfg = WeatherConfig.from_dict({**SYD, "kwp": 6.6, "model": "open-meteo", "cache_dir": str(tmp_path)})
+    cfg = WeatherConfig.from_dict({**SYD, "kwp": 6.6, "model": "open-meteo", "cache_dir": str(tmp_path),
+                                   "offline": False})
     wmod.fetch_open_meteo_day(cfg, "2026-01-16")
     (cached,) = tmp_path.rglob("*.json")
     stored = json.loads(cached.read_text())
@@ -119,7 +166,7 @@ def test_weather_action_without_a_model_says_how_to_add_one():
     from franklinwh_emulator.control import ApiError, apply
     from franklinwh_emulator.gateway import Gateway, GatewayConfig
     gw = Gateway(GatewayConfig(setup="in-service", seed=7))
-    with pytest.raises(ApiError, match=r"this gateway has no weather model.*weather: \{model: synthetic\}"):
+    with pytest.raises(ApiError, match=r"this gateway has no weather model.*add a `location`"):
         apply(gw, "weather", {"sky": "storm"})
 
 

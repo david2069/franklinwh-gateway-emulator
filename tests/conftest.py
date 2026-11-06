@@ -1,5 +1,9 @@
+import os
 import socket
 import struct
+
+# #268: sites with a location default to Open-Meteo; tests never use the network.
+os.environ.setdefault("FRANKLINWH_EMULATOR_OFFLINE", "1")
 
 import pytest
 

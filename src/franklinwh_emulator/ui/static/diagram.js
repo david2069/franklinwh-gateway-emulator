@@ -133,7 +133,10 @@ function weatherLine(g) {
   const ic = sun ? (sun.up ? SUN_ICON : MOON_ICON) : '';
   const head = [
     sun ? (sun.up ? 'Day' : 'Night') + ' · sun ' + sun.elevation_deg + '°' : 'No location, so no sun position',
-    w ? skyLabel(w.sky || w.model) : 'bell curve (no weather model)',
+    !w ? 'bell curve (no weather model)'
+      : w.model !== 'open-meteo' ? skyLabel(w.sky || w.model)
+      : w.fallback ? 'Open-Meteo unavailable · synthetic ' + skyLabel(w.sky) + ' sky'   // #268
+      : 'Open-Meteo',
     w && w.poa_w_m2 != null ? w.poa_w_m2 + ' W/m² on the array' : null,
     'ambient ' + temp(g.ambient_c) + (forced('ambient_c') ? ' (forced)' : ''),
     pvTempText(g.pv_temperature),

@@ -131,9 +131,9 @@ Solar comes from one of three models (`weather:` per gateway):
 
 | Model | Source | Use |
 |---|---|---|
-| `bell` (default) | the original half-sine day | quick tests, no location |
+| `bell` | the original half-sine day | the default without a location; quick tests |
 | `synthetic` | sun position + clear-sky irradiance on the array plane, and a seeded cloud field (`sky: clear \| broken \| overcast \| storm`) with second-scale edges | offline, deterministic variability |
-| `open-meteo` | real 15-minute tilted irradiance and temperature for the location and day ([Open-Meteo](https://open-meteo.com/), free, CC BY 4.0), cached per day | realistic days, past or forecast |
+| `open-meteo` | real 15-minute tilted irradiance and temperature for the location and day ([Open-Meteo](https://open-meteo.com/), free, CC BY 4.0), cached per day; a day it can't fetch runs on `synthetic` | **the default with a location**; realistic days, past or forecast |
 
 ```yaml
 weather: {model: open-meteo, kwp: 6.6, tilt: 20}      # lat/lon from `location`
