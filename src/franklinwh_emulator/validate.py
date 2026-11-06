@@ -70,7 +70,8 @@ DOCS: dict[str, str] = {
     "initial_soc": "starting state of charge, %; default derived from the seed",
     "solar_peak_w": "bell-curve solar peak, W; 0 = no solar; default derived from the seed",
     "home_base_w": "base house load, W; default derived from the seed",
-    "weather": "{model: bell|synthetic|open-meteo, kwp, tilt, azimuth, sky}; inherits lat/lon",
+    "weather": "{model: bell|synthetic|open-meteo, kwp, tilt, azimuth, sky, offline, refresh_h}; inherits lat/lon; "
+               "without model: open-meteo with a location, else bell",
     "loads": "house load: a preset name, a list of components, or {preset, add, remove, set}",
     "replay": "recorded solar/load to replay: a path, or {source, use, align, loop}",
     "circuits": "smart circuits: 1–2 on AU aGates, 1–3 on North American: {1: {name, on, soc_low_cutoff}}",

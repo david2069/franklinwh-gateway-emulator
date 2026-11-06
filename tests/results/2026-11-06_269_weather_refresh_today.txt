@@ -1,0 +1,18 @@
+# #269 Weather: refresh today's Open-Meteo data every few hours, and fetch tomorrow — 2026-11-06
+
+Branch weather-refresh-today, base main 6d1ffe6.
+
+## New tests
+20 passed in 1.57s
+
+## Break check
+with src stashed, the 4 new tests in tests/test_weather.py fail; restored, they pass; live: today's fetch (Sydney city centre) gave 96 fifteen-minute and 24 hourly values and cached tomorrow
+
+## Full suite
+738 passed in 68.41s (0:01:08)
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

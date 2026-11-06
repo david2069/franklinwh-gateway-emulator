@@ -26,6 +26,7 @@ Open-Meteo data is CC BY 4.0 (https://open-meteo.com/).
 
 from __future__ import annotations
 
+import calendar
 import json
 import logging
 import math
@@ -70,6 +71,7 @@ class WeatherConfig:
     cache_dir: str | None = None        # open-meteo; default ~/.cache/franklinwh-emulator;
                                         # "builtin" = days bundled with the package
     offline: bool = False               # open-meteo: never fetch, cache only
+    refresh_h: float = 2.0              # open-meteo: re-fetch today and later after this (#269)
 
     @classmethod
     def from_dict(cls, d: dict | None) -> "WeatherConfig":
@@ -83,6 +85,8 @@ class WeatherConfig:
             raise ValueError(f"weather model must be bell, synthetic or open-meteo, not {cfg.model!r}")
         if cfg.model != "bell" and (cfg.latitude is None or cfg.longitude is None):
             raise ValueError(f"weather model {cfg.model!r} needs latitude and longitude")
+        if cfg.refresh_h <= 0:
+            raise ValueError("weather refresh_h must be more than 0 hours")
         if cfg.sky not in SKIES:
             raise ValueError(f"sky must be one of {sorted(SKIES)}")
         if cfg.azimuth is None and cfg.latitude is not None:
@@ -195,33 +199,84 @@ def _cache_root(cfg: WeatherConfig) -> Path:
     return Path(root) / "open-meteo"
 
 
+def _cache_path(cfg: WeatherConfig, day: str) -> Path:
+    return _cache_root(cfg) / f"{cfg.latitude:.4f}_{cfg.longitude:.4f}_t{cfg.tilt:g}_a{cfg.azimuth:g}_{day}.json"
+
+
+def _is_current(day: str, now: float | None = None) -> bool:
+    """Today (UTC, real time) or later: Open-Meteo's values for it can still change."""
+    return day >= time.strftime("%Y-%m-%d", time.gmtime(time.time() if now is None else now))
+
+
+def _stale(cfg: WeatherConfig, path: Path, day: str) -> bool:
+    return _is_current(day) and time.time() - path.stat().st_mtime > cfg.refresh_h * 3600
+
+
+def _next_day(day: str) -> str:
+    return time.strftime("%Y-%m-%d", time.gmtime(_utc_midnight(day) + 86400))
+
+
+def _utc_midnight(day: str) -> int:
+    return calendar.timegm(time.strptime(day, "%Y-%m-%d"))
+
+
+def _split_by_day(raw: dict, days: list[str]) -> dict[str, dict]:
+    """One response covering several UTC days → one cache entry per day."""
+    out = {}
+    for day in days:
+        t0 = _utc_midnight(day)
+        t1 = t0 + 86400
+        part = {k: v for k, v in raw.items() if k not in ("minutely_15", "hourly")}
+        for block, lo, hi in (("minutely_15", t0, t1), ("hourly", t0, t1)):
+            b = raw.get(block)
+            if not b:
+                continue
+            # 15-minute values are means of the preceding window: (t0, t1] belongs to this day.
+            keep = [i for i, t in enumerate(b["time"])
+                    if (lo < t <= hi if block == "minutely_15" else lo <= t < hi)]
+            part[block] = {k: [v[i] for i in keep] for k, v in b.items()}
+        out[day] = part
+    return out
+
+
 def fetch_open_meteo_day(cfg: WeatherConfig, day: str) -> dict:
-    """Raw Open-Meteo JSON for one UTC day (cached on disk)."""
-    key = f"{cfg.latitude:.4f}_{cfg.longitude:.4f}_t{cfg.tilt:g}_a{cfg.azimuth:g}_{day}.json"
-    path = _cache_root(cfg) / key
-    if path.exists():
+    """Raw Open-Meteo JSON for one UTC day, cached on disk. A past day is fetched once; today
+    and later are fetched again once their copy is ``refresh_h`` old, and today's request also
+    brings tomorrow (#269). If a refresh fails, the stale copy is used."""
+    path = _cache_path(cfg, day)
+    if path.exists() and (cfg.offline or not _stale(cfg, path, day)):
         return json.loads(path.read_text())
     if cfg.offline:
         raise FileNotFoundError(f"open-meteo day {day} not cached at {path} (offline: true)")
+    days = [day, _next_day(day)] if _is_current(day) else [day]
     age_days = (time.time() - time.mktime(time.strptime(day, "%Y-%m-%d"))) / 86400
     api = HISTORICAL_API if age_days > FORECAST_PAST_DAYS else FORECAST_API
     params = {"latitude": cfg.latitude, "longitude": cfg.longitude,
-              "start_date": day, "end_date": day, "tilt": cfg.tilt, "azimuth": cfg.azimuth,
+              "start_date": days[0], "end_date": days[-1], "tilt": cfg.tilt, "azimuth": cfg.azimuth,
               "minutely_15": "global_tilted_irradiance,temperature_2m",
               "hourly": "cloud_cover", "timezone": "GMT", "timeformat": "unixtime"}
     req = urllib.request.Request(api + "?" + urllib.parse.urlencode(params),
                                  headers={"User-Agent": "franklinwh-gateway-emulator"})
-    with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
-        raw = json.loads(r.read())
-    if raw.get("error"):
-        raise RuntimeError(f"open-meteo: {raw.get('reason')}")
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
+            raw = json.loads(r.read())
+        if raw.get("error"):
+            raise RuntimeError(f"open-meteo: {raw.get('reason')}")
+    except (OSError, ValueError, RuntimeError):
+        if path.exists():                              # a refresh failed: keep the older copy
+            log.warning("weather: refreshing Open-Meteo %s failed; using the copy from %s", day,
+                        time.strftime("%H:%M UTC", time.gmtime(path.stat().st_mtime)))
+            return json.loads(path.read_text())
+        raise
     # Cache the point we asked for, not the grid cell Open-Meteo snapped to (or its
     # elevation): the cell can lie nearer a real address than the requested point.
     raw["latitude"], raw["longitude"] = cfg.latitude, cfg.longitude
     raw.pop("elevation", None)
+    parts = _split_by_day(raw, days) if len(days) > 1 else {day: raw}
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(raw))
-    return raw
+    for d, part in parts.items():
+        _cache_path(cfg, d).write_text(json.dumps(part))
+    return parts[day]
 
 
 class Weather:
@@ -230,6 +285,7 @@ class Weather:
         self.seed = seed
         self.kwp = cfg.kwp or kwp
         self._days: dict[str, OpenMeteoDay] = {}
+        self._loaded_at: dict[str, float] = {}    # day → when it was read (real time, #269)
         self._window_means: dict[tuple, float] = {}
         self._retry_at: dict[str, float] = {}     # day → when to try fetching it again (#268)
         self.fallback: str | None = None          # why the last day fell back to synthetic
@@ -240,13 +296,18 @@ class Weather:
     def _day(self, ts: float) -> OpenMeteoDay | None:
         """That UTC day's Open-Meteo data, or None while it can't be had (synthetic instead)."""
         day = time.strftime("%Y-%m-%d", time.gmtime(ts))
-        if day in self._days:
+        if day in self._days and not (_is_current(day) and not self.cfg.offline
+                                      and time.time() - self._loaded_at[day] > self.cfg.refresh_h * 3600):
             return self._days[day]
         if time.time() < self._retry_at.get(day, 0):
             return None
         try:
             self._days[day] = OpenMeteoDay(fetch_open_meteo_day(self.cfg, day))
+            self._loaded_at[day] = time.time()
         except (OSError, ValueError, KeyError, RuntimeError) as e:   # URLError, timeout, offline miss
+            if day in self._days:                  # a refresh failed: keep what we have
+                self._loaded_at[day] = time.time()
+                return self._days[day]
             self._retry_at[day] = time.time() + RETRY_S
             reason = f"Open-Meteo {day} unavailable ({e.__class__.__name__}: {e}); synthetic sky until it is"
             if reason != self.fallback:

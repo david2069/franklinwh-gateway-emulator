@@ -49,13 +49,18 @@ array irradiance is used as it is. The built-in model stays the default.
   `historical-forecast-api.open-meteo.com/v1/forecast` serves older dates (2022 onwards, with
   15-minute data). The emulator picks by the date's age (more than 85 days → historical).
   Requests use `timezone=GMT` and `timeformat=unixtime`, so times are UTC epochs.
-- **Fetching and caching:** each UTC day is fetched once and cached as JSON under
+- **Fetching and caching:** each UTC day is cached as JSON under
   `~/.cache/franklinwh-emulator/open-meteo/` (or `cache_dir`, or the
   `FRANKLINWH_EMULATOR_CACHE` environment variable). `offline: true` never fetches; the
   `FRANKLINWH_EMULATOR_OFFLINE=1` environment variable sets it for every site (the test suite
   does). A local day spans two UTC days, so both get fetched.
-- **Calls:** one per site and UTC day, using that site's own latitude, longitude, tilt and
-  azimuth; there is no polling. Sites sharing a location and array share the cached file.
+- **Refresh:** a past day is fetched once and kept. Today and later can still change, so a
+  copy older than `refresh_h` hours (default 2) is fetched again, by a running site too, and
+  today's request also brings tomorrow. If a refresh fails, the older copy is used.
+- **Calls:** each uses that site's own latitude, longitude, tilt and azimuth; there is no
+  polling beyond the refresh. About 12 a day per site with the default `refresh_h: 2` (plus one
+  per past day a run reaches, e.g. with `history_days`). Sites sharing a location and array
+  share the cached files.
 - **When a day can't be fetched** (no network, an API error, or `offline` with nothing cached),
   that day runs on the `synthetic` sky instead (the site's `sky`, default `broken`), with no
   measured ambient temperature. The emulator logs it once, adds a `weather` event to the
