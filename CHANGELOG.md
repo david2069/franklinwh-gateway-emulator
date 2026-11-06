@@ -7,6 +7,7 @@
 - `franklinwh-emulator monitor`: who is using a running emulator, from the shell: clients connected now per gateway and listener, accepted and refused counts, requests, the last client; `--history` lists each gateway's client events, `--watch N` redraws, `--json` prints the raw reply (#257).
 
 ### Changed
+- Weather (open-meteo): today and later are fetched again once their cached copy is `refresh_h` hours old (default 2; was: fetched once and kept), by a running site too; today's request also caches tomorrow; a failed refresh keeps the older copy. Past days are still fetched once (#269). Docs: Weather and loads, Configuration.
 - Weather: a site with a location and no `weather.model` now uses `open-meteo` (was `bell`); without a location it stays `bell`. A day Open-Meteo can't serve (no network, an API error, `offline` with nothing cached) runs on the `synthetic` sky, is logged once, adds a `weather` event, shows `weather.fallback` in the state and in the UI, and is fetched again after 10 minutes. `FRANKLINWH_EMULATOR_OFFLINE=1` sets `offline` for every site. Built-in scenarios pin `weather: {model: bell}` so their checks repeat exactly (#268). Docs: Weather and loads, Configuration, The site model.
 - Group diagram: the active aGate is drawn in cyan (outline, title and its phase line from the meter) instead of only a thicker green outline; under FORCE its outline stays orange (#267). Docs: Web UI, grouped site.
 

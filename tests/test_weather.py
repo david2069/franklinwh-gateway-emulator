@@ -191,3 +191,102 @@ def test_forced_solar_is_capped_by_the_sun():
     s = Site(SiteConfig(seed=7, location=syd, weather={"model": "synthetic", "kwp": 6.6}), ManualClock(noon))
     s.solar_override_w = 1000
     assert s.solar_w(noon) == 1000                     # below the sun: as forced
+
+
+def _om_answer(days):
+    """A fake Open-Meteo reply covering whole UTC days: 15-min GTI 100 W/m², hourly cloud."""
+    import calendar
+    import time as _t
+    t0 = calendar.timegm(_t.strptime(days[0], "%Y-%m-%d"))
+    n = 96 * len(days)
+    return {"latitude": -33.1, "longitude": 151.9,
+            "minutely_15": {"time": [t0 + 900 * (i + 1) for i in range(n)],
+                            "global_tilted_irradiance": [100.0] * n, "temperature_2m": [20.0] * n},
+            "hourly": {"time": [t0 + 3600 * i for i in range(24 * len(days))],
+                       "cloud_cover": [10] * (24 * len(days))}}
+
+
+def _fake_api(monkeypatch, calls):
+    import io
+    import json
+    from urllib.parse import parse_qs, urlsplit
+    from franklinwh_emulator import weather as wmod
+
+    def urlopen(req, timeout):
+        q = parse_qs(urlsplit(req.full_url).query)
+        calls.append((q["start_date"][0], q["end_date"][0]))
+        start, end = q["start_date"][0], q["end_date"][0]
+        days = [start] if start == end else [start, end]
+        return io.BytesIO(json.dumps(_om_answer(days)).encode())
+    monkeypatch.setattr(wmod.urllib.request, "urlopen", urlopen)
+
+
+def test_today_brings_tomorrow_and_is_refreshed(tmp_path, monkeypatch):
+    """#269: today's request also caches tomorrow; today is fetched again after refresh_h; a
+    past day is fetched once."""
+    import os
+    import time as _t
+    from franklinwh_emulator import weather as wmod
+    calls = []
+    _fake_api(monkeypatch, calls)
+    cfg = WeatherConfig.from_dict({**SYD, "model": "open-meteo", "cache_dir": str(tmp_path),
+                                   "offline": False, "refresh_h": 2})
+    today = _t.strftime("%Y-%m-%d", _t.gmtime())
+    tomorrow = wmod._next_day(today)
+    d = wmod.fetch_open_meteo_day(cfg, today)
+    assert calls == [(today, tomorrow)]
+    assert len(d["minutely_15"]["time"]) == 96 and len(d["hourly"]["time"]) == 24   # split per day
+    wmod.fetch_open_meteo_day(cfg, tomorrow)               # already cached by today's call
+    wmod.fetch_open_meteo_day(cfg, today)                  # fresh: no new call
+    assert len(calls) == 1
+    path = wmod._cache_path(cfg, today)
+    old = _t.time() - 3 * 3600
+    os.utime(path, (old, old))                             # 3 h old > refresh_h
+    wmod.fetch_open_meteo_day(cfg, today)
+    assert len(calls) == 2
+    past = "2026-01-10"
+    wmod.fetch_open_meteo_day(cfg, past)
+    p = wmod._cache_path(cfg, past)
+    os.utime(p, (0, 0))                                    # very old, but a past day never refreshes
+    wmod.fetch_open_meteo_day(cfg, past)
+    assert calls[2:] == [(past, past)]
+
+
+def test_failed_refresh_keeps_the_older_copy(tmp_path, monkeypatch):
+    import os
+    import time as _t
+    from franklinwh_emulator import weather as wmod
+    calls = []
+    _fake_api(monkeypatch, calls)
+    cfg = WeatherConfig.from_dict({**SYD, "model": "open-meteo", "cache_dir": str(tmp_path), "offline": False})
+    today = _t.strftime("%Y-%m-%d", _t.gmtime())
+    wmod.fetch_open_meteo_day(cfg, today)
+    path = wmod._cache_path(cfg, today)
+    os.utime(path, (0, 0))
+    def down(req, timeout):
+        raise OSError("network is unreachable")
+    monkeypatch.setattr(wmod.urllib.request, "urlopen", down)
+    assert len(wmod.fetch_open_meteo_day(cfg, today)["minutely_15"]["time"]) == 96
+
+
+def test_refresh_h_must_be_positive():
+    with pytest.raises(ValueError, match="refresh_h"):
+        WeatherConfig.from_dict({**SYD, "refresh_h": 0})
+
+
+def test_running_model_picks_up_a_refreshed_today(tmp_path, monkeypatch):
+    """#269: a running site reads today again once its copy is refresh_h old."""
+    import time as _t
+    from franklinwh_emulator import weather as wmod
+    calls = []
+    _fake_api(monkeypatch, calls)
+    w = weather(model="open-meteo", cache_dir=str(tmp_path), offline=False, refresh_h=1)
+    now = _t.time()
+    w.solar_w(now); w.solar_w(now + 60)
+    assert len(calls) == 1
+    import os
+    for f in tmp_path.rglob("*.json"):
+        os.utime(f, (0, 0))
+    w._loaded_at = {k: 0 for k in w._loaded_at}
+    w.solar_w(now)
+    assert len(calls) == 2
