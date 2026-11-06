@@ -1,0 +1,15 @@
+# #275 Docs: model baseline weather default and weather events — 2026-11-06
+
+Branch docs-baseline-weather-default, base main e30733e.
+
+## Break check
+docs only: mkdocs --strict and the full suite
+
+## Full suite
+754 passed in 61.29s (0:01:01)
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
