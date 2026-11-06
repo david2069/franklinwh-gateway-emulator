@@ -174,7 +174,8 @@ def gateway_state(gw: "Gateway") -> dict:
         "generator": site.generator.status(),
         # V2L (#287): the EV supplying the home off-grid, or None when not fitted.
         "v2l": None if site.v2l is None else site.v2l.status(not site.grid_relay_closed,
-                                                             site.generator.relay_closed),
+                                                             site.generator.relay_closed,
+                                                             snap.v_ln or 0.0, snap.hz or 0.0),
         "faults": asdict(gw.faults),
         "dc_faults": asdict(gw.dc_faults),
         "modbus_enabled": gw.modbus_enabled,
@@ -452,6 +453,8 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
                 site.step()
                 if "on" in body:
                     site.v2l.enabled = bool(body["on"])
+                if "charge_apower" in body:
+                    site.v2l.charge_apower = bool(body["charge_apower"])
                 if "ev_soc" in body:
                     v = float(body["ev_soc"])
                     if not 0 <= v <= 100:

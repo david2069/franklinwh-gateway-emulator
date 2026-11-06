@@ -322,11 +322,12 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "examples": [{"name": "ev", "on": True}, {"name": "ev", "on": None}],
     },
     "v2l": {
-        "doc": "V2L (#287): enable or disable the EV supplying the home (off-grid only), or set the "
-               "EV's state of charge.",
+        "doc": "V2L (#287): the app's V2L Control (enable or disable the EV supplying the home, off-grid "
+               "only), Allow charging to aPower, or the EV's state of charge.",
         "fields": {"on": _f("boolean", "true = V2L enabled: it supplies when off-grid and the generator is off"),
-                   "ev_soc": _f("number", "the EV's state of charge now", unit="%")},
-        "required_any": ["on", "ev_soc"],
+                   "ev_soc": _f("number", "the EV's state of charge now", unit="%"),
+                   "charge_apower": _f("boolean", "the app's \"Allow charging to aPower?\": V2L may also charge the aPower")},
+        "required_any": ["on", "ev_soc", "charge_apower"],
         "examples": [{"on": True}, {"ev_soc": 60}, {"on": False}],
     },
     "generator": {

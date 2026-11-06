@@ -1,0 +1,18 @@
+# #289 V2L: follow the FranklinWH app (Standby, Allow charging to aPower, vehicle voltage and frequency) — 2026-11-07
+
+Branch v2l-follow-app, base main a832565.
+
+## New tests
+53 passed in 0.34s
+
+## Break check
+with src stashed, the V2L tests in tests/test_v2l.py fail; restored, 8 passed
+
+## Full suite
+780 passed in 52.87s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

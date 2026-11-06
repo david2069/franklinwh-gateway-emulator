@@ -1558,13 +1558,17 @@ class Site:
         self._add_battery_aux(out, comps)
         return out, comps
 
-    def _v2l_w(self, shortfall_w: float, islanded: bool) -> float:
-        """V2L's share (#287): the house's shortfall after solar and the generator, off-grid,
-        up to its limit; nothing while the generator runs on the same input."""
+    def _v2l_w(self, net_w: float, islanded: bool, max_charge_w: float = 0.0) -> float:
+        """V2L's share (#287): the house's shortfall after solar and the generator (``net_w``,
+        negative = surplus), off-grid, up to its limit; with ``charge_apower`` (#289) also the
+        aPower's remaining charge headroom. Nothing while the generator runs on the same input."""
         if self.v2l is None:
             return 0.0
         cap = self.v2l.available_w(islanded, self.generator.relay_closed)
-        return min(cap, max(0.0, shortfall_w))
+        want = max(0.0, net_w)
+        if self.v2l.charge_apower:
+            want += max(0.0, max_charge_w - max(0.0, -net_w))
+        return min(cap, want)
 
     def _add_circuit_loads(self, out: dict, comps: dict, islanded: bool) -> None:
         """Watts set on a smart circuit (#279): they replace its appliances' demand, and obey the
@@ -1624,7 +1628,7 @@ class Site:
             # aPower S DC PV is the aPower's own, not frequency-curtailed: it stays (#180).
             pv_in = pv.get("mppt", 0.0) if self.pv_cutoff else solar_avail
             gen_w = self.generator.output_w(load - pv_in, max_chg)
-            v2l_w = self._v2l_w(load - pv_in - gen_w, islanded)
+            v2l_w = self._v2l_w(load - pv_in - gen_w, islanded, max_chg)
             net = load - pv_in - gen_w - v2l_w
             on_circuits = [n for n, c in comps.items() if c is not None and c.circuit and demand[n] > 0]
             if net > max_dis and on_circuits:
@@ -1634,7 +1638,7 @@ class Site:
                 circuits_shed = True
                 load = sum(demand.values())
                 gen_w = self.generator.output_w(load - pv_in, max_chg)
-                v2l_w = self._v2l_w(load - pv_in - gen_w, islanded)
+                v2l_w = self._v2l_w(load - pv_in - gen_w, islanded, max_chg)
                 net = load - pv_in - gen_w - v2l_w
             clipped = solar_avail - pv_in
             if net >= 0:

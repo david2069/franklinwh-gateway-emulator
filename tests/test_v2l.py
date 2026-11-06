@@ -5,7 +5,7 @@ import pytest
 from conftest import make_gateway
 from franklinwh_emulator.control import ApiError, apply, gateway_state
 
-V2L = {"circuit": 1, "ev_kwh": 60, "ev_soc": 80, "max_w": 2200, "min_soc": 20}
+V2L = {"circuit": 1, "ev_kwh": 60, "ev_soc": 80, "max_w": 2200, "min_soc": 20, "charge_apower": False}
 
 
 def gateway(clock, **site):
@@ -23,12 +23,14 @@ def run(gw, clock, seconds):
 def test_ready_on_grid_supplying_off_grid(clock):
     gw = gateway(clock)
     snap = run(gw, clock, 3)
-    assert snap.v2l_w == 0 and gateway_state(gw)["v2l"]["state"] == "Ready"
+    st = gateway_state(gw)["v2l"]
+    assert snap.v2l_w == 0 and st["state"] == "Standby"                  # the app's word (#289)
+    assert st["voltage_v"] == 0 and st["frequency_hz"] == 0               # as the app shows in Standby
     apply(gw, "grid", {"available": False})
     snap = run(gw, clock, 5)
     st = gateway_state(gw)["v2l"]
-    assert st["state"] == "Supplying" and 0 < snap.v2l_w <= 2200
-    assert snap.battery_w == pytest.approx(snap.load_w - snap.v2l_w, abs=60)   # the aPower covers the rest
+    assert st["state"] == "Active" and 0 < snap.v2l_w <= 2200
+    assert st["voltage_v"] > 200 and 49 < st["frequency_hz"] < 51          # the app's Vehicle Data
     soc0 = st["ev_soc"]
     run(gw, clock, 600)
     assert gateway_state(gw)["v2l"]["ev_soc"] < soc0 and gateway_state(gw)["v2l"]["energy_kwh"] > 0
@@ -79,3 +81,22 @@ def test_v2l_needs_the_modules_and_a_circuit(clock):
 def test_ctl_v2l_verb():
     from franklinwh_emulator.cli import _ctl_request
     assert _ctl_request("v2l", ["on", "soc=55"]) == ("POST", "v2l", {"on": True, "ev_soc": 55.0})
+
+
+
+def test_allow_charging_to_apower(clock):
+    """#289: the app's "Allow charging to aPower?": on, V2L also charges the aPower within max_w;
+    off, it covers the house only."""
+    gw = gateway(clock, home_base_w=300)
+    apply(gw, "grid", {"available": False})
+    snap = run(gw, clock, 5)
+    assert snap.v2l_w == pytest.approx(snap.load_w, rel=0.05) and snap.battery_w > -50   # house only
+    apply(gw, "v2l", {"charge_apower": True})
+    snap = run(gw, clock, 5)
+    assert snap.v2l_w == pytest.approx(2200, abs=1) and snap.battery_w < -1000            # charging
+    assert gateway_state(gw)["v2l"]["charge_apower"] is True
+
+
+def test_charge_apower_defaults_on_as_the_app_shows(clock):
+    from franklinwh_emulator.v2l import V2L as Model
+    assert Model.from_dict({"circuit": 1}).charge_apower is True
