@@ -628,3 +628,30 @@ def test_group_diagram_draws_every_phase_with_home_loads(tmp_path):
     assert r["active"] == 1
     assert r["model"] == "3× aGate X-01-AU (one per phase) · 3× aPower X-01-AU · 40.8 kWh · PV 6 kWp"
     assert r["solo"]                                       # without the others: the single board
+
+
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_group_diagram_tiles_do_not_overlap(tmp_path):
+    """#263: on an aGate with smart circuits and AC solar, Home Loads ends before AC solar."""
+    import re
+    import subprocess
+    from franklinwh_emulator.clock import ManualClock
+    from franklinwh_emulator.gateway import Fleet, load_yaml
+    f = Fleet.from_dict(load_yaml("examples/au-3phase-group.yaml"), clock=ManualClock(1_793_584_800))
+    states = [gateway_state(gw) for gw in f.gateways.values()]
+    harness = tmp_path / "group.js"
+    harness.write_text("const performance = {now: () => 0};\n" +
+                       (STATIC / "units.js").read_text() + (STATIC / "groups.js").read_text() +
+                       (STATIC / "diagram.js").read_text() +
+                       f"\nconst S = {json.dumps(states, default=str)};\n"
+                       "S[0].circuits = S[1].circuits;   // L1: smart circuits and AC solar, as on the owner's screen\n"
+                       "print(renderDiagram(S[0], 'C', S));\n")
+    h = subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout
+    assert "AC solar" in h and ">SC 1 · O" in h
+    rows: dict[float, list[tuple[float, float]]] = {}
+    for x, y, w in re.findall(r'class="box tile[^"]*" x="([\d.]+)" y="([\d.]+)" width="([\d.]+)"', h):
+        rows.setdefault(float(y), []).append((float(x), float(x) + float(w)))
+    for y, spans in rows.items():
+        spans.sort()
+        for (_, end), (start, _) in zip(spans, spans[1:]):
+            assert end <= start, f"tiles overlap at y={y}: {spans}"

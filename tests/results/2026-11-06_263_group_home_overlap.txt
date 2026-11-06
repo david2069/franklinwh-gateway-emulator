@@ -1,0 +1,18 @@
+# #263 UI group diagram: Home Loads no longer overlaps AC solar — 2026-11-06
+
+Branch group-home-overlap, base main 6363daf.
+
+## New tests
+39 passed in 0.78s
+
+## Break check
+with src stashed, test_group_diagram_tiles_do_not_overlap fails (Home Loads 656–976 over AC solar at 960); restored, it passes
+
+## Full suite
+728 passed in 65.26s (0:01:05)
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok
