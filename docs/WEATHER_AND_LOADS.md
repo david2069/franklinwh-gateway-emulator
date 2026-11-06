@@ -87,6 +87,9 @@ franklinwh-emulator ctl spec weather model=bell        # back to the half-sine d
 
 - `model` without coordinates uses the current weather's place, else the site's location; a
   gateway with neither must be given `latitude` and `longitude`.
+- On a **grouped site** (fleet `groups:`, one aGate per phase) the change reaches every aGate
+  in the group, as the `grid` action does: a site has one sky. Every other action changes only
+  the active aGate.
 - The coordinates are the **weather's only**: the site's time zone, local time and location
   (and the sun position shown for it) stay as configured.
 - The change lasts until the emulator stops. It is in the action log, so a saved session

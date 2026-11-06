@@ -96,7 +96,9 @@ that phase's amps and import; its aPowers under it; AC solar or its smart circui
 loads (an unused circuit dashed) to the right; and its phase's **Home Loads**, which board E
 leaves out. The active gateway is drawn in **cyan**: its outline (thicker), its title and its
 phase line from the meter; under FORCE its outline stays orange. Pick another member from the
-gateway picker to act on it. The tables below the diagram are the active member's.
+gateway picker to act on it. The tables below the diagram are the active member's. Two actions
+reach the whole group: `grid` (one grid connection; its `phase` picks one leg) and `weather`
+(one sky).
 
 ## Temperature units
 
