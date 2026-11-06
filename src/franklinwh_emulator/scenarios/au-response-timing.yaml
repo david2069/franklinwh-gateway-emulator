@@ -7,11 +7,13 @@ description: >
 start: "2026-01-15T12:00:00"
 duration: 15m
 record_every: 500ms
+# Weather pinned to the bell day so the checks repeat exactly (#268: a location alone
+# now means Open-Meteo).
 fleet:
   defaults:
     cap_forced_solar: false   # PV is a test input here, set exactly (#56)
   gateways:
-    - {id: home, seed: 7, grid_code: ausgrid, location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}, initial_soc: 100}
+    - {id: home, seed: 7, grid_code: ausgrid, location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}, weather: {model: bell}, initial_soc: 100}
 steps:
   - {at: 0,   do: pv,   with: {solar_w: 4000}}
   - {at: 0,   do: load, with: {w: 0}}

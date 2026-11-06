@@ -9,12 +9,15 @@ description: >
 start: "2026-07-10T01:00:00"
 duration: 4h
 record_every: 10s
+# Weather pinned to the bell day so the checks repeat exactly (#268: a location alone
+# now means Open-Meteo).
 fleet:
   gateways:
     - id: home
       seed: 7
       grid_code: ausgrid
       location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney}
+      weather: {model: bell}
       initial_soc: 22
       generator: {installed: true, rated_w: 7000, genStartElec: 20, genCloseElec: 30,
                   charge1En: 0, min_run_s: 900}

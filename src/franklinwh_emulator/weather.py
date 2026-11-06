@@ -2,16 +2,20 @@
 
 Models (``SiteConfig.weather = {"model": ...}``):
 
-``bell``         the original half-sine day (default; no location needed).
+``bell``         the original half-sine day (the default without a location).
 ``synthetic``    sun position for latitude/longitude/date, clear-sky irradiance on the array
                  plane, and a seeded cloud field (``sky``: clear | broken | overcast | storm).
                  Offline and fully deterministic.
-``open-meteo``   real 15-minute global tilted irradiance (and temperature) for the location
+``open-meteo``   the default when the site has a latitude and longitude (#268): real 15-minute
+                 global tilted irradiance (and temperature) for the location
                  and day, from the same free API and with the same conversion as
                  franklinwh-local-bridge's solar forecast (GTI / 1000 × kWp × 0.85). Data is
                  cached per day on disk, so a replay is identical once fetched. Open-Meteo's
                  15-minute values are model averages, so seeded cloud-edge flicker scaled by
                  cloud cover is added *within* each 15 minutes, keeping its mean exactly.
+                 A day that can't be fetched (no network, an API error, or ``offline`` with
+                 nothing cached) falls back to ``synthetic`` for that day; the fetch is tried
+                 again after ``RETRY_S``. ``FRANKLINWH_EMULATOR_OFFLINE=1`` sets ``offline``.
 
 Array geometry uses Open-Meteo's convention: ``tilt`` degrees from horizontal, ``azimuth``
 0 = south, −90 = east, 90 = west, ±180 = north. A Sydney roof facing north is
@@ -23,6 +27,7 @@ Open-Meteo data is CC BY 4.0 (https://open-meteo.com/).
 from __future__ import annotations
 
 import json
+import logging
 import math
 import os
 import time
@@ -38,6 +43,9 @@ FORECAST_API = "https://api.open-meteo.com/v1/forecast"
 HISTORICAL_API = "https://historical-forecast-api.open-meteo.com/v1/forecast"
 FORECAST_PAST_DAYS = 85         # the forecast API serves about 92 days back; stay inside
 TIMEOUT_S = 20
+RETRY_S = 600                   # after a failed fetch, use synthetic and try again this much later
+
+log = logging.getLogger(__name__)
 
 # Synthetic skies: mean cloud cover, cloud opacity, and an overall haze transmittance.
 SKIES = {
@@ -50,7 +58,7 @@ SKIES = {
 
 @dataclass
 class WeatherConfig:
-    model: str = "bell"
+    model: str = "bell"                 # from_dict: open-meteo when a location is given (#268)
     latitude: float | None = None
     longitude: float | None = None
     kwp: float | None = None            # None → from the site's solar_peak_w
@@ -65,7 +73,12 @@ class WeatherConfig:
 
     @classmethod
     def from_dict(cls, d: dict | None) -> "WeatherConfig":
-        cfg = cls(**(d or {}))
+        d = dict(d or {})
+        if "model" not in d:                           # #268: real weather wherever we know where
+            d["model"] = "open-meteo" if d.get("latitude") is not None and d.get("longitude") is not None else "bell"
+        if "offline" not in d and os.environ.get("FRANKLINWH_EMULATOR_OFFLINE") == "1":
+            d["offline"] = True
+        cfg = cls(**d)
         if cfg.model not in ("bell", "synthetic", "open-meteo"):
             raise ValueError(f"weather model must be bell, synthetic or open-meteo, not {cfg.model!r}")
         if cfg.model != "bell" and (cfg.latitude is None or cfg.longitude is None):
@@ -218,21 +231,51 @@ class Weather:
         self.kwp = cfg.kwp or kwp
         self._days: dict[str, OpenMeteoDay] = {}
         self._window_means: dict[tuple, float] = {}
+        self._retry_at: dict[str, float] = {}     # day → when to try fetching it again (#268)
+        self.fallback: str | None = None          # why the last day fell back to synthetic
+        self.on_fallback = None                   # (text) -> None: the gateway's event log
         self.clear_sky = clear_sky_poa           # pvlib's when pv: {model: pvlib} (#112)
 
     # Open-Meteo radiation values are the mean over the *preceding* 15 minutes.
-    def _day(self, ts: float) -> OpenMeteoDay:
+    def _day(self, ts: float) -> OpenMeteoDay | None:
+        """That UTC day's Open-Meteo data, or None while it can't be had (synthetic instead)."""
         day = time.strftime("%Y-%m-%d", time.gmtime(ts))
-        if day not in self._days:
+        if day in self._days:
+            return self._days[day]
+        if time.time() < self._retry_at.get(day, 0):
+            return None
+        try:
             self._days[day] = OpenMeteoDay(fetch_open_meteo_day(self.cfg, day))
+        except (OSError, ValueError, KeyError, RuntimeError) as e:   # URLError, timeout, offline miss
+            self._retry_at[day] = time.time() + RETRY_S
+            reason = f"Open-Meteo {day} unavailable ({e.__class__.__name__}: {e}); synthetic sky until it is"
+            if reason != self.fallback:
+                log.warning("weather: %s", reason)
+                if self.on_fallback:
+                    self.on_fallback(reason)
+            self.fallback = reason
+            return None
+        self._retry_at.pop(day, None)
+        self.fallback = None
         return self._days[day]
 
-    def _om_value(self, ts: float) -> tuple[float, float | None, float]:
-        """(GTI W/m² window mean, temperature, cloud cover 0..1) for the 15-min window."""
+    def _synthetic_poa(self, ts: float) -> float:
+        c = self.cfg
+        sky = SKIES[c.sky]
+        return (self.clear_sky(ts, c.latitude, c.longitude, c.tilt, c.azimuth)
+                * sky["haze"] * cloud_factor(self.seed, ts, sky["cover"], sky["opacity"]))
+
+    def _om_value(self, ts: float) -> tuple[float, float | None, float] | None:
+        """(GTI W/m² window mean, temperature, cloud cover 0..1) for the 15-min window, or
+        None while that day can't be fetched."""
         d = self._day(ts)
+        if d is None:
+            return None
         i = bisect_right(d.t, ts)                  # window (t[i-1], t[i]] holds ts
         if i >= len(d.t):
             nxt = self._day(ts + 900)
+            if nxt is None:
+                return None
             i, d = 0, nxt
         gti = d.gti[i]
         temp = d.temp[i] if i < len(d.temp) else None
@@ -277,12 +320,12 @@ class Weather:
 
     def poa(self, ts: float) -> float:
         """Irradiance on the array plane (W/m²)."""
-        c = self.cfg
-        if c.model == "synthetic":
-            sky = SKIES[c.sky]
-            return (self.clear_sky(ts, c.latitude, c.longitude, c.tilt, c.azimuth)
-                    * sky["haze"] * cloud_factor(self.seed, ts, sky["cover"], sky["opacity"]))
-        gti, _, cloud = self._om_value(ts)
+        if self.cfg.model == "synthetic":
+            return self._synthetic_poa(ts)
+        v = self._om_value(ts)
+        if v is None:                              # #268: no Open-Meteo data for now
+            return self._synthetic_poa(ts)
+        gti, _, cloud = v
         return self._flickered(ts, gti, cloud)
 
     def solar_w(self, ts: float) -> float:
@@ -291,4 +334,5 @@ class Weather:
     def ambient_c(self, ts: float) -> float | None:
         if self.cfg.model != "open-meteo":
             return None
-        return self._om_value(ts)[1]
+        v = self._om_value(ts)
+        return None if v is None else v[1]

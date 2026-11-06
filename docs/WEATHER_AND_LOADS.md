@@ -9,9 +9,9 @@ covers how the models work, how they were checked, and what they show.
 
 | `weather.model` | How it works |
 |---|---|
-| `bell` (default) | Half-sine from 06:00 to 20:00 local, with a ±12 % ripple. No location needed. |
+| `bell` | Half-sine from 06:00 to 20:00 local, with a ±12 % ripple. No location needed. The default for a site **without** a location. |
 | `synthetic` | Sun position (NOAA approximation), Haurwitz clear-sky GHI, a 15 % diffuse share, beam by angle of incidence on the array, isotropic diffuse. Then a deterministic cloud field (a ~6 min structure plus ~40 s edges, thresholded to the sky's cover). |
-| `open-meteo` | Real 15-minute global tilted irradiance (GTI) and 2 m temperature for the location and UTC day, plus hourly cloud cover. PV = GTI ÷ 1000 × kWp × 0.85, **the same formula as franklinwh-local-bridge's `solar_forecast.py`**. |
+| `open-meteo` | **The default for a site with a location** (latitude and longitude). Real 15-minute global tilted irradiance (GTI) and 2 m temperature for the location and UTC day, plus hourly cloud cover. PV = GTI ÷ 1000 × kWp × 0.85, **the same formula as franklinwh-local-bridge's `solar_forecast.py`**. |
 
 Synthetic skies:
 
@@ -51,8 +51,18 @@ array irradiance is used as it is. The built-in model stays the default.
   Requests use `timezone=GMT` and `timeformat=unixtime`, so times are UTC epochs.
 - **Fetching and caching:** each UTC day is fetched once and cached as JSON under
   `~/.cache/franklinwh-emulator/open-meteo/` (or `cache_dir`, or the
-  `FRANKLINWH_EMULATOR_CACHE` environment variable). `offline: true` never fetches. A local day
-  spans two UTC days, so both get fetched.
+  `FRANKLINWH_EMULATOR_CACHE` environment variable). `offline: true` never fetches; the
+  `FRANKLINWH_EMULATOR_OFFLINE=1` environment variable sets it for every site (the test suite
+  does). A local day spans two UTC days, so both get fetched.
+- **Calls:** one per site and UTC day, using that site's own latitude, longitude, tilt and
+  azimuth; there is no polling. Sites sharing a location and array share the cached file.
+- **When a day can't be fetched** (no network, an API error, or `offline` with nothing cached),
+  that day runs on the `synthetic` sky instead (the site's `sky`, default `broken`), with no
+  measured ambient temperature. The emulator logs it once, adds a `weather` event to the
+  gateway's event log, shows `weather.fallback` (the reason) in the state and "Open-Meteo
+  unavailable · synthetic … sky" in the UI, and tries the fetch again after 10 minutes.
+- **Repeatable runs:** real weather differs from day to day. Set `weather: {model: bell}` or
+  `synthetic` when a run must give the same numbers every time; the built-in scenarios do.
 - **Bundled data:** Sydney (−33.87, 151.21, tilt 20, azimuth 180) for 2026-01-14 and
   2026-01-15, used with `cache_dir: builtin`.
 - **Licence:** Open-Meteo data is CC BY 4.0, with attribution to https://open-meteo.com/.

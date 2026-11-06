@@ -7,11 +7,13 @@ description: >
 start: "2026-04-04T12:00:00"          # AEDT (UTC+11)
 duration: 36h
 record_every: 15m
+# Weather pinned to the bell day so the checks repeat exactly (#268: a location alone
+# now means Open-Meteo).
 fleet:
   gateways:
     - {id: home, seed: 7, grid_code: ausgrid, native_mode: 3, tou_reserve: 20, initial_soc: 90,
        location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney,
-                  postcode: "2000"}}
+                  postcode: "2000"}, weather: {model: bell}}
 steps:
   - {at: 0,     do: pv,   with: {solar_w: 0}}
   - {at: 0,     do: load, with: {w: 1500}}

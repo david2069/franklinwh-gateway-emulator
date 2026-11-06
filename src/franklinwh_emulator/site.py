@@ -616,6 +616,9 @@ class Site:
         wcfg = WeatherConfig.from_dict(wdict)
         self.weather = None if wcfg.model == "bell" else Weather(
             wcfg, seed=self.sky_seed, kwp=self.solar_peak_w / 1000.0 / wcfg.efficiency)
+        if self.weather is not None:                         # #268: say when Open-Meteo falls back
+            self.weather.on_fallback = lambda text: (getattr(self, "events", None) is not None
+                                                     and self.events.add("weather", text))
         from .pvmodel import from_config as _pv_model
         self.pvlib = _pv_model(cfg.pv)                       # None = the built-in PV model (#112)
         if self.pvlib is not None and self.weather is not None:
