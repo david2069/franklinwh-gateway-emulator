@@ -48,7 +48,7 @@ def test_log_save_restart_restore(tmp_path):
             post(f, "/gateways/site/circuit", {"n": 2})                  # refused, still logged
         log = get(f, "/log")
         assert [e["action"] for e in log] == [a for _, a, _ in SETUP] + ["circuit"]
-        assert log[-1]["ok"] is False and "missing ['on']" in log[-1]["error"]
+        assert log[-1]["ok"] is False and "give on or w, or both" in log[-1]["error"]
         assert all(e["site_time"] and e["at"] for e in log)
         soc = {g: gateway_state(f[g])["soc"] for g in ("site", "b")}
         saved = post(f, "/session/save", {"name": "evening"})

@@ -72,7 +72,7 @@ def test_unknown_action_is_404(fleet):
 @pytest.mark.parametrize("action,body,text", [
     ("grid", {"hz": 51, "phse": "L2"}, "unknown keys ['phse']"),
     ("release", {"now": True}, "unknown keys ['now']"),
-    ("circuit", {"n": 2}, "missing ['on']"),
+    ("circuit", {"n": 2}, "give on or w, or both"),
     ("episode", {"down_s": 5}, "missing ['offgrid_s']"),
 ])
 def test_bad_body_is_400_and_changes_nothing(fleet, action, body, text):

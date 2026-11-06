@@ -302,11 +302,14 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "examples": [{"n": 1, "on": False}, {"n": 1, "on": True}],
     },
     "circuit": {
-        "doc": "Switch a smart circuit.",
+        "doc": "Switch a smart circuit, and/or set the load on it (#279).",
         "fields": {"n": _f("integer", enum=[1, 2, 3]),
-                   "on": _f("boolean", "true = circuit on; false = switched off")},
-        "required": ["n", "on"],
-        "examples": [{"n": 2, "on": False}],
+                   "on": _f("boolean", "true = circuit on; false = switched off"),
+                   "w": _f("number", "watts drawn on this circuit, replacing its appliances; "
+                           "null = back to its appliances", unit="W", nullable=True)},
+        "required": ["n"],
+        "required_any": ["on", "w"],
+        "examples": [{"n": 2, "on": False}, {"n": 2, "on": True, "w": 7000}, {"n": 2, "w": None}],
     },
     "appliance": {
         "doc": "Force an appliance on or off, or hand it back to its schedule.",
@@ -420,6 +423,9 @@ def check_body(action: str, body: dict) -> str | None:
     missing = [k for k in spec.get("required", []) if k not in body]
     if missing:
         return f"{action}: missing {missing}"
+    any_of = spec.get("required_any")
+    if any_of and not any(k in body for k in any_of):
+        return f"{action}: give {', '.join(any_of[:-1])} or {any_of[-1]}, or both"
     return None
 
 

@@ -191,6 +191,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "location": asdict(site.location),
         "today_kwh": {k: round(v, 4) for k, v in site.today_kwh().items()},
         "circuits": {str(n): {"name": c.name, "on": c.on, "power_w": round(snap.circuit_w.get(n, 0.0), 1),
+                              "set_w": site.circuit_load_w.get(n),     # #279: watts set at runtime, or None
                               "energy_kwh": round(c.energy_wh / 1000.0, 3),
                               "soc_low_cutoff": c.soc_low_cutoff}
                      for n, c in site.circuits.items()},
@@ -409,7 +410,9 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
                 site.step()
                 site.soc = max(0.0, min(100.0, float(body["value"])))
         elif action == "circuit":
-            site.set_circuit(int(body["n"]), bool(body["on"]))
+            w = body.get("w", "keep")
+            site.set_circuit(int(body["n"]), None if body.get("on") is None else bool(body["on"]),
+                             None if w in (None, "auto") else w)
         elif action == "apower":
             site.set_apower(int(body["n"]), bool(body["on"]))
         elif action == "appliance":
