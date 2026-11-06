@@ -166,8 +166,37 @@ def test_weather_action_without_a_model_says_how_to_add_one():
     from franklinwh_emulator.control import ApiError, apply
     from franklinwh_emulator.gateway import Gateway, GatewayConfig
     gw = Gateway(GatewayConfig(setup="in-service", seed=7))
-    with pytest.raises(ApiError, match=r"this gateway has no weather model.*add a `location`"):
+    with pytest.raises(ApiError, match=r"bell curve, which has no sky: send model: synthetic"):
         apply(gw, "weather", {"sky": "storm"})
+
+
+def test_weather_action_sets_the_model_at_runtime():
+    """#278: a gateway with no weather and no location gets a model and a place, and back."""
+    from franklinwh_emulator.control import ApiError, apply, gateway_state
+    from franklinwh_emulator.gateway import Gateway, GatewayConfig
+    gw = Gateway(GatewayConfig(setup="in-service", seed=7), clock=ManualClock(NOON_AEST))
+    assert gw.site.weather is None
+    with pytest.raises(ApiError, match="needs a place"):
+        apply(gw, "weather", {"model": "synthetic"})
+    with pytest.raises(ApiError, match="together"):
+        apply(gw, "weather", {"model": "synthetic", "latitude": -33.87})
+    apply(gw, "weather", {"model": "synthetic", **SYD, "sky": "storm"})
+    w = gateway_state(gw)["weather"]
+    assert w["model"] == "synthetic" and w["sky"] == "storm"
+    assert gw.site.weather.cfg.azimuth == 180.0                   # north-facing in the south
+    assert gw.site.location.latitude is None                      # the site's location is untouched
+    assert gw.site.solar_model_w(NOON_AEST) > 0
+    apply(gw, "weather", {"sky": "clear"})                        # sky alone now works
+    apply(gw, "weather", {"model": "open-meteo"})                 # keeps the place; offline → fallback
+    assert gateway_state(gw)["weather"]["model"] == "open-meteo" and gw.site.weather.cfg.latitude == SYD["latitude"]
+    apply(gw, "weather", {"model": "bell"})
+    assert gateway_state(gw)["weather"] is None
+
+
+def test_ctl_weather_verb():
+    from franklinwh_emulator.cli import _ctl_request
+    assert _ctl_request("weather", ["model=synthetic", "latitude=-33.87", "longitude=151.21", "sky=storm"]) == (
+        "POST", "weather", {"model": "synthetic", "latitude": -33.87, "longitude": 151.21, "sky": "storm"})
 
 
 def test_forced_solar_is_capped_by_the_sun():

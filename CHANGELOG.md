@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- `weather` action: `model` (bell, synthetic, open-meteo), `latitude` and `longitude` change a gateway's weather while it runs, also one with no `weather:` or location (the coordinates are the weather's only); `ctl <gw> weather model=.. latitude=.. longitude=..`; on the bell curve, `sky` alone now says to set a model first (#278). Docs: Weather and loads (Seeing and changing the weather while it runs), Control API.
 - Web UI: each gateway card has a `Weather:` line: the model (Open-Meteo, synthetic with its sky, bell curve), "Open-Meteo unavailable" when it fell back, and a weather event in force with its end (#277). Docs: Web UI.
 - `weather_events` (per gateway or per group): darker skies on top of the weather model, fixed (`{sky, at: "HH:MM", for, every, times}`) or random from the seed (`{sky, for: 30m..3h, chance, per: day}`); state `weather_event`, start and end in the event log, the UI weather line, checked by `validate`; example in examples/fleet.yaml (#270). Docs: Weather and loads (Weather events), Configuration, Web UI.
 - README badge row: latest release, the test and docs workflows, the Python floor and the license (#261).

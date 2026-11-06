@@ -455,10 +455,17 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
             if "refuel" in body:
                 gen.refuel(None if body["refuel"] is None else float(body["refuel"]))
         elif action == "weather":
+            if any(k in body for k in ("model", "latitude", "longitude")):     # #278
+                try:
+                    site.set_weather_model(body.get("model"), body.get("latitude"), body.get("longitude"))
+                except ValueError as e:
+                    raise ApiError(400, str(e)) from None
             if site.weather is None:
-                raise ApiError(400, "weather: this gateway has no weather model (it uses the bell "
-                                    "curve, as it has no location): add a `location` or `weather: {model: synthetic, "
-                                    "latitude: .., longitude: ..}` to its fleet entry and restart")
+                if "sky" in body or "flicker" in body:
+                    raise ApiError(400, "weather: this gateway is on the bell curve, which has no sky: "
+                                        "send model: synthetic (with latitude and longitude if it has no "
+                                        "location) first")
+                return
             for key in ("sky", "flicker"):
                 if key in body:
                     setattr(site.weather.cfg, key, body[key])

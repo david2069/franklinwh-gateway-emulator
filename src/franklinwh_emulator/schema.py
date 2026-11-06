@@ -281,9 +281,16 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "examples": [{"value": 55}],
     },
     "weather": {
-        "doc": "Change the sky (synthetic and open-meteo weather only).",
-        "fields": {"sky": _f("string", enum=sorted(SKIES)), "flicker": _f("boolean", "open-meteo: add sub-15-minute cloud edges")},
-        "examples": [{"sky": "storm"}],
+        "doc": "Change the weather model and its place (#278), or the sky (synthetic and open-meteo). "
+               "Coordinates are the weather's only; the site's time zone and location stay as configured.",
+        "fields": {"model": _f("string", "bell = the half-sine day; synthetic and open-meteo need a place",
+                               enum=["bell", "synthetic", "open-meteo"]),
+                   "latitude": _f("number", "with longitude: where the weather is (default: the site's location)", unit="°"),
+                   "longitude": _f("number", "with latitude", unit="°"),
+                   "sky": _f("string", enum=sorted(SKIES)),
+                   "flicker": _f("boolean", "open-meteo: add sub-15-minute cloud edges")},
+        "examples": [{"sky": "storm"}, {"model": "synthetic", "latitude": -33.87, "longitude": 151.21, "sky": "broken"},
+                     {"model": "bell"}],
     },
     "apower": {
         "doc": "Switch an aPower off or on at its physical switch. Off: it adds no charge or discharge "
