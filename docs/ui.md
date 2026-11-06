@@ -91,8 +91,9 @@ is drawn as one site, after board E of the canvas: the grid and the service mete
 then one row per aGate, titled with its phase (`aGate 2 · L2`), fed by its phase's line with
 that phase's amps and import; its aPowers under it; AC solar or its smart circuits and their
 loads (an unused circuit dashed) to the right; and its phase's **Home Loads**, which board E
-leaves out. The active gateway has the thicker outline; pick another member from the gateway
-picker to act on it. The tables below the diagram are the active member's.
+leaves out. The active gateway is drawn in **cyan**: its outline (thicker), its title and its
+phase line from the meter; under FORCE its outline stays orange. Pick another member from the
+gateway picker to act on it. The tables below the diagram are the active member's.
 
 ## Temperature units
 

@@ -303,7 +303,7 @@ function renderDiagram(g, _unit, all) {
 // Board E (#241): an AU three-phase site, one single-phase aGate per phase, in the design's
 // 1340-wide coordinates. One row per aGate: its phase line from the service meter, its aPowers,
 // then AC solar or its smart circuits and their loads, and its phase's Home Loads (not on the
-// board; the owner asked for them). g is the active member, shown with a thicker outline.
+// board; the owner asked for them). g is the active member: its box, title and phase line in cyan (#267).
 function renderGroupDiagram(g, members) {
   const out = [];
   const links = [];
@@ -319,7 +319,8 @@ function renderGroupDiagram(g, members) {
     const y = 540 + (i - (n - 1) / 2) * 10;
     links.push(link([[134, y], [210, y]], m.grid_w, +1));
     const T = tops[i], ym = 511 + 35 * i, yg = T + 66;
-    links.push(link(i === 1 ? [[320, ym], [420, ym]] : [[320, ym], [370, ym], [370, yg], [420, yg]], m.grid_w, +1));
+    links.push(link(i === 1 ? [[320, ym], [420, ym]] : [[320, ym], [370, ym], [370, yg], [420, yg]], m.grid_w, +1,
+                    m.id === g.id ? 'active' : ''));   // the active aGate's phase line in cyan (#267)
   });
   const gridCls = up ? '' : 'bad';
   out.push(icon('grid', 70, 518, 64, gridCls));
@@ -342,7 +343,7 @@ function renderGroupDiagram(g, members) {
     const [lx, ly, end] = i === 1 ? [370, 532, ''] : [358, i === 0 ? 372 : 712, ' end'];
     out.push(text(lx, ly, leg, 'phase' + end));
     out.push(text(lx, i === 1 ? 572 : ly + 18, (m.service ? Math.round(m.service.main_breaker_a) + ' A · ' : '') + kwText(m.grid_w), 'sub' + end));
-    out.push(text(490, T - 24, 'aGate ' + (i + 1) + ' · ' + leg, 'lbl b'));
+    out.push(text(490, T - 24, 'aGate ' + (i + 1) + ' · ' + leg, 'lbl b' + (m.id === g.id ? ' active' : '')));
     const health = typeof cardHealth === 'function' ? cardHealth(m).state : '';
     out.push(box(420, T, 140, 140, 'agate' + (m.force ? ' vpp' : '') + (m.id === g.id ? ' active' : '')),
              icon('agate', 446, T + 26, 88));

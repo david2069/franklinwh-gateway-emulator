@@ -378,5 +378,9 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
 .diagram .gv.l { font-size: 17px; text-anchor: start; }
 .diagram .pct.s { font-size: 14px; }
 .diagram .bn.s { font-size: 13px; }   /* group diagram: fits the 180-wide aPower tile (#264) */
-.diagram .box.agate.active { stroke-width: 5; }
+/* The active member of a grouped site (#267): cyan, as orange means FORCE/standby and red a fault. */
+.diagram .box.agate.active { stroke-width: 5; stroke: var(--c-cyan); }
+.diagram .box.agate.active.vpp { stroke: var(--warn); }
+.diagram .lbl.active { fill: var(--c-cyan); }
+.diagram .flow.active { stroke: var(--c-cyan); opacity: 1; }
 .diagram .box.tile.unused { stroke-dasharray: 6 4; }

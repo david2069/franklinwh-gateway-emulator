@@ -6,10 +6,14 @@
 - README badge row: latest release, the test and docs workflows, the Python floor and the license (#261).
 - `franklinwh-emulator monitor`: who is using a running emulator, from the shell: clients connected now per gateway and listener, accepted and refused counts, requests, the last client; `--history` lists each gateway's client events, `--watch N` redraws, `--json` prints the raw reply (#257).
 
+### Changed
+- Group diagram: the active aGate is drawn in cyan (outline, title and its phase line from the meter) instead of only a thicker green outline; under FORCE its outline stays orange (#267). Docs: Web UI, grouped site.
+
 ### Fixed
 - Group diagram: the aPower name was too big for its tile; it is now 13 px (#264).
 - Group diagram: on an aGate with smart circuits and AC solar, the phase's Home Loads tile overlapped the AC solar tile; it now ends before it (#263).
 - `monitor` and `ctl` with no emulator running now say so and how to start one in another terminal, instead of only "Connection refused"; the start-up output ends with the `monitor` command to run, and `monitor --help` and the docs say it needs a running emulator (#259).
+
 
 ## 0.2.3 (2026-11-02)
 

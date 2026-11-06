@@ -617,6 +617,8 @@ def test_group_diagram_draws_every_phase_with_home_loads(tmp_path):
                        "  circuits: (h.match(/>SC \\d · O/g) || []).length,\n"
                        "  unused: h.includes('>Unused<'),\n"
                        "  active: (h.match(/box agate active/g) || []).length,\n"
+                       "  activeTitle: (/class=\"lbl b active\"[^>]*>([^<]*)/.exec(h) || [])[1],\n"
+                       "  activeLines: (h.match(/class=\"flow \\w+ active\"/g) || []).length,\n"
                        "  model: /class=\"dt-model\">([^<]*)/.exec(h)[1],\n"
                        "  solo: solo.includes('FranklinWH aGate') && !solo.includes('aGate 1 · L1') }));\n")
     r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
@@ -626,6 +628,7 @@ def test_group_diagram_draws_every_phase_with_home_loads(tmp_path):
     assert r["solar"] == ["AC solar · 6 kWp"]            # only L1 has PV
     assert r["circuits"] == 4 and r["unused"]             # SC 1 + 2 on L2 and L3; L3's SC 2 is free
     assert r["active"] == 1
+    assert r["activeTitle"] == "aGate 2 · L2" and r["activeLines"] == 1   # #267: S[1] is the active one
     assert r["model"] == "3× aGate X-01-AU (one per phase) · 3× aPower X-01-AU · 40.8 kWh · PV 6 kWp"
     assert r["solo"]                                       # without the others: the single board
 
@@ -665,3 +668,11 @@ def test_group_diagram_apower_name_fits_its_tile():
     assert '<text class="bn s"' in group
     size = re.search(r"\.diagram \.bn\.s \{ font-size: (\d+)px", (STATIC / "style.css").read_text())
     assert size and int(size[1]) <= 13
+
+
+def test_active_agate_is_cyan_not_a_status_colour():
+    """#267: the active aGate's box, title and line use cyan; orange and red keep their meanings."""
+    css = (STATIC / "style.css").read_text()
+    for rule in (".diagram .box.agate.active {", ".diagram .lbl.active {", ".diagram .flow.active {"):
+        line = next(l for l in css.splitlines() if l.startswith(rule))
+        assert "var(--c-cyan)" in line, line
