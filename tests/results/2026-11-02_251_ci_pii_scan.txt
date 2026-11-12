@@ -1,0 +1,13 @@
+# #251 CI: run the PII scan with the PII_TERMS secret — 2026-11-02
+
+Branch ci-pii-scan, base main aa1223b.
+
+## Local scan
+✅ SUCCESS: No PII leaks found!
+
+## Without terms in CI (expected to fail until the secret is set)
+ERROR: No personal PII terms configured (PII_TERMS / .pii_terms / ~/.config/pii_terms): names, addresses and handles are NOT being checked. Set the PII_TERMS repository secret.
+exit 2
+
+## Full suite
+721 passed in 42.01s

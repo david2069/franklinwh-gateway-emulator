@@ -41,7 +41,7 @@ pass silently. Output labels terms by line number and never prints the term.
 |---|---|
 | Before every commit | `scripts/hooks/pre-commit`. This is the one that matters: anything caught later is already in history |
 | Before every push | `scripts/hooks/pre-push` (backstop) |
-| Every push and PR | `.github/workflows/pii-check.yml`, where present (needs the `PII_TERMS` secret) |
+| Every push and PR | the `pii` job in `.github/workflows/test.yml` (needs the `PII_TERMS` secret; PRs from forks skip it) |
 
 Enable both hooks once per clone, before the first commit: `git config core.hooksPath scripts/hooks`.
 An agent checks `git config core.hooksPath` at the start of a session and enables it if unset.
