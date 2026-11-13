@@ -883,6 +883,8 @@ class Site:
         h["fhp"] += snap.battery_w * dt
         h["load"] += snap.load_w * dt
         h["gen"] = h.get("gen", 0.0) + snap.generator_w * dt
+        h["v2l"] = h.get("v2l", 0.0) + snap.v2l_w * dt        # the cloud's energy history (#301)
+        h["soc"] = h.get("soc", 0.0) + snap.soc * dt
 
     def local_hour(self, ts: float) -> float:
         d = self.local_datetime(ts)

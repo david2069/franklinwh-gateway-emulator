@@ -77,11 +77,28 @@ Phase 1b (#299):
 | `sendMqtt` 311 | the smart circuits' names and modes (`Sw1Name`, `Sw1Mode`, `SwMerge`…) |
 | `sendMqtt` 203 | the composite's `runtimeData`; the reply's `cmdType` is 201, not 204, as the cloud answers it |
 
+Phase 1c (#301), energy history:
+
+| Call | What comes back |
+|---|---|
+| `GET api-energy/power/getFhpPowerByDay?gatewayId=&dayTime=YYYY-MM-DD` | the day's samples: `deviceTimeArray`, `socArray`, `kwhTotalArray` (energy stored), `runStatusArray` (0 idle, 1 charging, 2 discharging) and the flows in kW (`powerSolarHomeArray`, `powerSolarGirdArray`, `powerGirdHomeArray`, `powerFhpHomeArray`…; "Gird" is the cloud's spelling). Every 15 minutes; the cloud's are every 5 |
+| `GET api-energy/electric/getFhpElectricData?gatewayId=&type=` | kWh per bucket: `kwhSuArray`, `kwhUtiInArray`, `kwhUtiOutArray`, `kwhFhpChgArray`, `kwhFhpDiArray`, `kwhLoadArray`, `kwhGenArray` and the home-from and battery-from splits. Type 1 is one day (`dayTime`); 2 a week (`startDate`, its Monday); 3 a month and 4 a year (`startDate`, any day in it); 5 one bucket per year since `commissioned` |
+
+As on the cloud, a week that doesn't start on a Monday, or the wrong date key (`startDate` for
+a day, `dayTime` for the others), gives empty arrays.
+
+The history is the site's own quarter-hour record, the one Direct Connect's energy history
+reads: from when the emulator started, or `backfill`ed, up to about 105 days. Earlier days
+read as zeros. A day's totals equal Direct Connect's for that day. How the cloud splits the
+flows (how much of the solar went to the home, and so on) is not established; the emulator
+gives solar to the home first, then the battery, then the grid, and the battery to the home
+before the grid.
+
 Every reply has the cloud's envelope, `{code, message, result, success}`; `code` 200 is success
 and errors come with HTTP 200, as the cloud sends them. A path the emulator doesn't serve gets
 HTTP 404 with the envelope, and another `sendMqtt` command gets `code 400`.
 
-Still to come, in order (#295): energy history by day, week, month and year, writes (mode, reserve, TOU schedules, storm,
+Still to come, in order (#295): writes (mode, reserve, TOU schedules, storm,
 generator, off-grid), and faults (expired tokens, rate limits, an offline gateway).
 
 ## Where the replies come from
