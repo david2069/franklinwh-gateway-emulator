@@ -23,7 +23,7 @@ You describe each site in a fleet file: see [Configuration](configuration.md).
 **Not modelled** (each gateway's diagram lists these too): per-aPower SoC and power (one
 combined battery), aPower S (DC hybrid), aHub, a non-backup panel, EV battery SoC (V2L keeps its
 own, [V2L](WEATHER_AND_LOADS.md#v2l)), hot-water
-temperature, the FranklinWH Cloud API, network connectivity (Ethernet/Wi-Fi/4G). See the
+temperature, most of the FranklinWH Cloud API (login, the gateway list, composite info and smart-circuit loads are served: [FranklinWH Cloud API](cloud-api.md)), network connectivity (Ethernet/Wi-Fi/4G). See the
 [backlog](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/BACKLOG.md).
 
 ## Protocol detail

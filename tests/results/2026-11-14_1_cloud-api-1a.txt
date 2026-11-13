@@ -1,0 +1,33 @@
+#297 FranklinWH Cloud API phase 1a (part of #295). Emulator branch feat/297-cloud-api-1a (base 5d97f35).
+franklinwh-cloud 0.6.5 (PyPI) as the acceptance client, with TokenAuth (0.6.5's login ignores url_base, franklinwh-cloud#39).
+
+Full suite: 793 passed, 2 warnings in 66.30s (0:01:06)
+
+tests/test_cloud.py, 8 tests: login and wrong password (401), the token check (10009), gateway list
+(serials, countryId, the offline fault), composite info from the live site (SoC, battery power, relays,
+circuit switches, an outage), sendMqtt 353 (smart-circuit loads, reply envelope), unknown path (404),
+the fleet file's cloud: section, and franklinwh-cloud's get_home_gateway_list() and get_stats().
+
+Break check (each targeted break, then restored; all 8 pass again):
+  token check removed      -> test_calls_need_the_token fails
+  pro_load fixed [0,0,0]   -> test_composite_is_the_live_site, test_franklinwh_cloud_client_reads_the_emulator fail
+  353 not served           -> test_send_mqtt_353_is_the_smart_circuit_meter, test_franklinwh_cloud_client_reads_the_emulator fail
+
+Live, installed command: franklinwh-emulator serve --port 0 --dc-port 0 --no-control --cloud-port 18503
+agate: Modbus TCP off (factory; enable with Direct Connect 1205 sunsMdEn)  serial=<serial>  profile=agate-v12r02b60d00-candidate  grid=as4777-au-a  legs=L1  modbus_max_connections=1
+agate: Direct Connect on 127.0.0.1:62228  dc_max_connections=None
+FranklinWH Cloud API on http://127.0.0.1:18503/  account=owner@example.com  (franklinwh-cloud: url_base="http://127.0.0.1:18503/")
+curl login (account owner@example.com, MD5 of the default password): token length 32
+curl getHomeGatewayList: code 200, one entry: name agate, status 1, version V12R02B60D00_260924, countryId 3
+
+One-off, franklinwh-cloud main (1d329cc, the #39 fix, unreleased) with PasswordAuth and only url_base changed;
+HTTPS_PROXY/HTTP_PROXY set to a dead port so nothing could reach the real cloud:
+  PasswordAuth via url_base: logged in, tokens issued by the emulator: 1
+  get_stats: soc 32.4 mode Self-Consumption grid CONNECTED
+  wrong password -> InvalidCredentialsException
+
+Capacity (the current emulator, before this change; every aGate read once each 5 s, Mac17,4 10 cores):
+  N=10   start 0.1 s  peak RSS  39 MB  CPU 0.2 % of a core
+  N=100  start 0.4 s  peak RSS  95 MB  CPU 0.7 %
+  N=500  start 2.3 s  peak RSS 332 MB  CPU 2.5 %
+  N=1000 start 5.5 s  peak RSS 597 MB  CPU 4.7 %

@@ -59,6 +59,7 @@ nav:
       - Grid, codes and phases: grid.md
       - The site model: site-model.md
       - Control API and ctl: control-api.md
+      - FranklinWH Cloud API: cloud-api.md
       - Scenarios: SCENARIOS.md
       - Replaying recorded data: replay.md
   - Reference:

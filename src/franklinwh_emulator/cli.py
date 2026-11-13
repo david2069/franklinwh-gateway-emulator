@@ -57,7 +57,8 @@ DEFAULT_API = "http://127.0.0.1:8502"
 
 async def _run(gateways: list[Gateway], control_port: int | None, ui: bool = False,
                workspace: str = "emulator-workspace", fleet_file: str | None = None,
-               restore: str | None = None) -> None:
+               restore: str | None = None, cloud_port: int | None = None,
+               cloud: dict | None = None) -> None:
     for gw in gateways:
         host, port = await gw.start_async()
         p = gw.profile
@@ -97,11 +98,20 @@ async def _run(gateways: list[Gateway], control_port: int | None, ui: bool = Fal
                         print(f"  {x['gateway']} {x['do']} {x.get('with')}: {x['error']}", flush=True)
             except ApiError as e:
                 print(f"restore {restore}: {e}", flush=True)
+    cloud_api = None
+    if cloud_port is not None:
+        from .cloud import CloudApi
+        cloud_api = CloudApi({gw.config.id: gw for gw in gateways}, port=cloud_port, cloud=cloud)
+        host, port = await cloud_api.start()
+        print(f"FranklinWH Cloud API on http://{host}:{port}/  account={cloud_api.account}  "
+              f"(franklinwh-cloud: url_base=\"http://{host}:{port}/\")", flush=True)
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, stop.set)
     await stop.wait()
+    if cloud_api is not None:
+        await cloud_api.stop()
     if api is not None:
         await api.stop()
     for gw in gateways:
@@ -640,6 +650,10 @@ def main(argv: list[str] | None = None) -> int:
     u.add_argument("--restore", metavar="NAME",
                    help="replay a saved session's actions once the fleet is up")
 
+    for p in (s, f, u):
+        p.add_argument("--cloud-port", type=int, metavar="PORT",
+                       help="also serve the FranklinWH Cloud API on 127.0.0.1:PORT (e.g. 8503; "
+                            "off by default); point a cloud client's base URL at it")
     for p in (s, f):
         p.add_argument("--control-port", type=int, default=8502,
                        help="HTTP control API port on 127.0.0.1 (default 8502)")
@@ -731,7 +745,8 @@ def main(argv: list[str] | None = None) -> int:
         gateways = list(Fleet.from_dict(d).gateways.values())
         try:
             asyncio.run(_run(gateways, args.port, ui=True, workspace=args.workspace,
-                             fleet_file=args.config, restore=args.restore))
+                             fleet_file=args.config, restore=args.restore,
+                             cloud_port=args.cloud_port, cloud=d.get("cloud")))
         except KeyboardInterrupt:
             pass
         return 0
@@ -740,9 +755,11 @@ def main(argv: list[str] | None = None) -> int:
         if d is None:
             return 2
         gateways = list(Fleet.from_dict(d).gateways.values())
+    cloud = d.get("cloud") if args.cmd == "fleet" else None
 
     try:
-        asyncio.run(_run(gateways, None if args.no_control else args.control_port))
+        asyncio.run(_run(gateways, None if args.no_control else args.control_port,
+                         cloud_port=args.cloud_port, cloud=cloud))
     except KeyboardInterrupt:
         pass
     return 0

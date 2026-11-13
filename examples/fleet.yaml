@@ -17,6 +17,8 @@
 #     Direct Connect and the cloud number them differently), self_reserve, tou_reserve,
 #     initial_soc, solar_peak_w, home_base_w, pv_inputs ({proximal: 0.6, remote1: 0.4}),
 #     offgrid_floor_soc.
+# cloud: {account, password}: the FranklinWH Cloud API's account (with --cloud-port; default
+#   owner@example.com / emulator). Every gateway here belongs to it (#297).
 defaults:
   host: 127.0.0.1
   setup: in-service          # already set up, Modbus TCP on; `fresh` below is a factory aGate

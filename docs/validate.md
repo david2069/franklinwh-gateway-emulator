@@ -118,6 +118,8 @@ control API on http://127.0.0.1:58626/gateways
 | `dc_max_connections=` | Direct Connect clients served at once (`None` = no limit, the default; the aGate's limit is unmeasured) |
 | `control API on http://…/gateways` | the control API ([Control API and ctl](control-api.md)); absent with `--no-control` |
 | `UI on http://…/` | `ui` only: the web UI, on the same port as the control API |
+| `FranklinWH Cloud API on http://…/` | with `--cloud-port` only: the [FranklinWH Cloud API](cloud-api.md), then the base URL to give a cloud client |
+| `account=` | the cloud account to log in with (the fleet file's `cloud:`, default `owner@example.com`) |
 | `restored session NAME: N actions applied, M failed` | `ui … --restore NAME` only, followed by one line per failed action: `GATEWAY ACTION {fields}: error` |
 
 Log lines follow as `time LEVEL logger: message`; `-v` adds debug detail.
