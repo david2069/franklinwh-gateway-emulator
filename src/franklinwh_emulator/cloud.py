@@ -11,7 +11,8 @@ whenever a circuit is on. Phase 1b (#299): ``sendMqtt`` 203, 211 (type 1) and 31
 ``selectOffgrid``. Phase 1c (#301): energy history (``api-energy/...``, cloud_energy.py).
 Phase 2a (#303): the mode, reserve SoC, off-grid and smart-circuit writes, and the reads that
 read them back. Phase 2b (#305): TOU schedules (cloud_tou.py). Phase 2c (#307): storm,
-generator and grid-limit settings.
+generator and grid-limit settings. Phase 3 (#309): faults (``gw.cloud_faults``, the
+``cloud-faults`` action) and token expiry (``cloud: {token_ttl_s}``).
 
 Sources, not FranklinWH documentation: franklinwh-cloud's request code (auth.py, client.py,
 mixins), its ``tests/fixtures`` (login, composite info) and ``docs/franklinwh_openapi.json``
@@ -86,7 +87,7 @@ log = logging.getLogger(__name__)
 
 DEFAULT_ACCOUNT = "owner@example.com"
 DEFAULT_PASSWORD = "emulator"
-CLOUD_KEYS = {"account", "password"}
+CLOUD_KEYS = {"account", "password", "token_ttl_s"}
 PREFIX = "/hes-gateway/terminal/"
 ENERGY = {"/api-energy/power/getFhpPowerByDay": cloud_energy.power_by_day,
           "/api-energy/electric/getFhpElectricData": cloud_energy.electric_data}
@@ -109,13 +110,29 @@ V2L_RUN_STATE = {"Disabled": 0, "Standby": 1, "Active": 2}   # franklinwh-cloud 
 
 
 class CloudError(Exception):
-    def __init__(self, code: int, message: str, http: int = 200):
+    def __init__(self, code: int, message: str, http: int = 200, retry_after: int | None = None):
         super().__init__(message)
-        self.code, self.http = code, http
+        self.code, self.http, self.retry_after = code, http, retry_after
 
 
 def _envelope(result=None, code: int = 200, message: str = "Query success!") -> dict:
     return {"code": code, "message": message, "result": result, "success": code == 200}
+
+
+def _body_gateway(body: bytes) -> str | None:
+    """The gateway a JSON body names (sendMqtt's equipNo, the storm writes' equipNo, ...)."""
+    if not body or not body.lstrip().startswith(b"{"):
+        return None
+    try:
+        d = json.loads(body)
+    except ValueError:
+        return None
+    if not isinstance(d, dict):
+        return None
+    template = d.get("template")
+    sn = d.get("equipNo") or d.get("gatewayId") or (
+        template.get("gatewayId") if isinstance(template, dict) else None)
+    return sn if isinstance(sn, str) else None
 
 
 def _json(body: bytes) -> dict:
@@ -145,10 +162,13 @@ class CloudApi:
             raise ValueError(f"cloud: unknown keys {sorted(bad)}; known {sorted(CLOUD_KEYS)}")
         self.account = str(cfg.get("account", DEFAULT_ACCOUNT))
         self.password = str(cfg.get("password", DEFAULT_PASSWORD))
+        ttl = cfg.get("token_ttl_s")
+        self.token_ttl_s = None if ttl is None else float(ttl)
         self.gateways = gateways
         self.by_serial = {gw.serial: gw for gw in gateways.values()}
         self.host, self.port = host, port
-        self.tokens: set[str] = set()
+        self.tokens: dict[str, float] = {}          # token -> when it was issued
+        self._hits: dict[str, list[float]] = {}     # per gateway: request times (rate limit)
         self._payloads: dict[str, DcPayloads] = {}
         self._modes: dict[str, dict] = {}            # per gateway: what only the cloud keeps
         self._tou: dict[str, cloud_tou.TouStore] = {}
@@ -174,15 +194,19 @@ class CloudApi:
             return self.login({k: v[0] for k, v in parse_qs(body.decode("utf-8", "replace")).items()})
         if not path.startswith(PREFIX) and path not in ENERGY:
             raise CloudError(404, f"no such path: {path}", http=404)
-        if headers.get("logintoken") not in self.tokens:
+        if not self._token_ok(headers.get("logintoken")):
             raise CloudError(10009, "Token invalid, please log in again")
         if method == "GET" and path in ENERGY:
             return _envelope(ENERGY[path](self._gateway(q), q))
         name = path[len(PREFIX):]
-        sn = q.get("gatewayId") or q.get("equipNo")
+        sn = q.get("gatewayId") or q.get("equipNo") or _body_gateway(body)
         if sn in self.by_serial:
-            self._expire_backup(self.by_serial[sn])
-            self.tou(self.by_serial[sn]).sync()
+            gw = self.by_serial[sn]
+            self._rate_limit(gw)
+            self._expire_backup(gw)
+            self.tou(gw).sync()
+            if name == "getDeviceCompositeInfo" and gw.cloud_faults.empty_composite:
+                return _envelope(None)
         if method == "GET" and name == "getHomeGatewayList":
             return _envelope([self.gateway_entry(gw) for gw in self.gateways.values()])
         if method == "GET" and name == "getDeviceCompositeInfo":
@@ -256,6 +280,25 @@ class CloudApi:
             return _envelope(0)
         raise CloudError(404, f"no such path: {path}", http=404)
 
+    def _token_ok(self, token: str | None) -> bool:
+        issued = self.tokens.get(token or "")
+        if issued is None:
+            return False
+        if self.token_ttl_s is not None and time.monotonic() - issued > self.token_ttl_s:
+            del self.tokens[token]
+            return False
+        return True
+
+    def _rate_limit(self, gw: "Gateway") -> None:
+        limit = gw.cloud_faults.rate_limit_per_min
+        hits = self._hits.setdefault(gw.serial, [])
+        now = time.monotonic()
+        hits[:] = [t for t in hits if now - t < 60]
+        if limit is not None and len(hits) >= int(limit):
+            raise CloudError(429, "Too many requests", http=429,
+                             retry_after=max(1, int(60 - (now - hits[0])) + 1))
+        hits.append(now)
+
     def _gateway(self, q: dict) -> "Gateway":
         sn = q.get("gatewayId") or q.get("equipNo")
         gw = self.by_serial.get(sn or "")
@@ -268,7 +311,7 @@ class CloudApi:
         if form.get("account", "").lower() != self.account.lower() or form.get("password") != md5:
             return _envelope(None, 401, "Incorrect account or password")
         token = secrets.token_hex(16)
-        self.tokens.add(token)
+        self.tokens[token] = time.monotonic()
         return _envelope({"token": token, "userId": 1, "email": self.account, "version": None,
                           "currentType": int(form.get("type") or 0), "userTypes": [0],
                           "roles": [], "affiliateCompany": [], "passwordUpdateFlag": 0,
@@ -282,6 +325,10 @@ class CloudApi:
         except (ValueError, KeyError, TypeError):
             raise CloudError(400, "sendMqtt: the body is a command envelope with cmdType and equipNo")
         gw = self._gateway({"equipNo": sn})
+        if gw.cloud_faults.offline or gw.faults.offline:
+            raise CloudError(136, "The device is offline")
+        if gw.cloud_faults.timeout:
+            raise CloudError(102, "Device response timeout")
         area = self.command(gw, ty, _data_area(cmd.get("dataArea")))
         blob = json.dumps(area, separators=(",", ":"))
         return _envelope({"cmdType": REPLY.get(ty, ty + 1), "equipNo": sn, "type": 0, "timeStamp": int(time.time()),
@@ -436,7 +483,8 @@ class CloudApi:
     def gateway_entry(self, gw: "Gateway") -> dict:
         site = gw.site
         ibg, _ = self.payloads(gw).dc_firmware()
-        return {"id": gw.serial, "name": gw.config.id, "status": 0 if gw.faults.offline else 1,
+        offline = gw.faults.offline or gw.cloud_faults.offline
+        return {"id": gw.serial, "name": gw.config.id, "status": 0 if offline else 1,
                 "activeStatus": 1, "account": self.account, "version": ibg,
                 "zoneInfo": site.location.timezone, "countryId": COUNTRY_ID.get(site.model.region),
                 "groupFlag": 0}
@@ -481,6 +529,11 @@ class CloudApi:
                    BFPVApboxRelay=0)
         return out
 
+    def _latency(self, target: str, body: bytes) -> float:
+        q = {k: v[0] for k, v in parse_qs(urlsplit(target).query).items()}
+        gw = self.by_serial.get(q.get("gatewayId") or q.get("equipNo") or _body_gateway(body) or "")
+        return float(gw.cloud_faults.latency_s) if gw is not None else 0.0
+
     # -- HTTP ------------------------------------------------------------------------------
     async def _client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         try:
@@ -492,14 +545,19 @@ class CloudApi:
                 headers[name.strip().lower()] = value.strip()
             length = int(headers.get("content-length") or 0)
             raw = await reader.readexactly(length) if length else b""
-            status = 200
+            status, extra = 200, ""
             try:
                 payload = self.route(method.upper(), target, headers, raw)
             except CloudError as e:
                 status, payload = e.http, _envelope(None, e.code, str(e))
+                if e.retry_after is not None:
+                    extra = f"Retry-After: {e.retry_after}\r\n"
+            delay = self._latency(target, raw)
+            if delay:
+                await asyncio.sleep(delay)
             data = json.dumps(payload).encode()
-            reason = {200: "OK", 404: "Not Found"}.get(status, "Error")
-            writer.write(f"HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\n"
+            reason = {200: "OK", 404: "Not Found", 429: "Too Many Requests"}.get(status, "Error")
+            writer.write(f"HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\n{extra}"
                          f"Content-Length: {len(data)}\r\nConnection: close\r\n\r\n".encode() + data)
             await writer.drain()
         except (ValueError, asyncio.IncompleteReadError, ConnectionError) as e:

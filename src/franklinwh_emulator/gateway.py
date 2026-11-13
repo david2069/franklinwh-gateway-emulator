@@ -31,7 +31,7 @@ from .clock import Clock, ScaledClock, SystemClock
 from .control import ControlApi
 from .device import AGateDevice
 from .profiles import DEFAULT_PROFILE, get_profile
-from .server import Faults, ModbusServer
+from .server import CloudFaults, Faults, ModbusServer
 from .site import REFERENCE_COUNTERS, Site, SiteConfig
 
 _HEX = "0123456789ABCDEF"
@@ -216,6 +216,7 @@ class Gateway:
         self.server = ModbusServer(self.device, cfg.host, cfg.port, self.faults)
         self.server.clients.notify = lambda what, peer: self.events.client("Modbus TCP", what, peer)
         self.dc_faults = Faults()
+        self.cloud_faults = CloudFaults()
         self.dc = None
         is_agate = self.profile.name != "spec"          # every other profile is an aGate
         if cfg.dc_port is None and is_agate:

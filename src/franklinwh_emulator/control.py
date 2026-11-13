@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING
 
 from .monitor import ProcessMonitor
 from .schema import ACTIONS, check_body, schema
-from .server import Faults
+from .server import CloudFaults, Faults
 from . import models
 from .site import ALARMS, INV_NAMES, MODE_NAMES, RUN_NAMES
 from .weather import SKIES, sun_position
@@ -178,6 +178,7 @@ def gateway_state(gw: "Gateway") -> dict:
                                                              snap.v_ln or 0.0, snap.hz or 0.0),
         "faults": asdict(gw.faults),
         "dc_faults": asdict(gw.dc_faults),
+        "cloud_faults": asdict(gw.cloud_faults),
         "modbus_enabled": gw.modbus_enabled,
         "modbus_listening": gw.server._server is not None,   # :502 open now (lags a 1205 write ~3 s)
         "rebooting": gw.rebooting,                          # both listeners down for a 1721 reboot
@@ -517,6 +518,13 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
                 raise ApiError(400, f"unknown faults {sorted(bad)}; known {sorted(known)}")
             for k, v in body.items():
                 setattr(target, k, v)
+        elif action == "cloud-faults":
+            known = {f.name for f in fields(CloudFaults)}
+            bad = set(body) - known
+            if bad:
+                raise ApiError(400, f"unknown cloud faults {sorted(bad)}; known {sorted(known)}")
+            for k, v in body.items():
+                setattr(gw.cloud_faults, k, v)
         else:
             raise ApiError(404, f"unknown action {action!r}")
     except (KeyError, TypeError, ValueError) as e:

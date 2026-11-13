@@ -169,6 +169,16 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "fields": _fault_fields(exclude=DC_UNSUPPORTED_FAULTS),
         "examples": [{"latency_s": 0.5}],
     },
+    "cloud-faults": {
+        "doc": "FranklinWH Cloud API fault injection, on cloud requests naming this gateway.",
+        "fields": {"offline": _f("boolean", "sendMqtt code 136 (gateway offline); gateway list status 0"),
+                   "timeout": _f("boolean", "sendMqtt code 102 (device timeout)"),
+                   "rate_limit_per_min": _f("integer", "past this many requests a minute: 429 + Retry-After",
+                                            nullable=True),
+                   "latency_s": _f("number", "delay before every reply", unit="s"),
+                   "empty_composite": _f("boolean", "getDeviceCompositeInfo: HTTP 200, result null")},
+        "examples": [{"timeout": True}, {"rate_limit_per_min": 30}],
+    },
     "utility": {
         "doc": "Set the grid operator's rules (utility / DNSP / lines company), as PCS settings: "
                "export allowed, limited or prohibited, import limit, battery export. clear = none.",
@@ -416,7 +426,7 @@ GROUPS: dict[str, list[str]] = {
     "Loads": ["circuit", "appliance"],
     "Generator": ["generator", "v2l"],
     "CSIP and comms": ["csip", "der-comms", "dc-modbus", "dc-reboot", "firmware", "export"],
-    "Alarms and faults": ["alarms", "faults", "dc-faults", "range-fault", "write-reject",
+    "Alarms and faults": ["alarms", "faults", "dc-faults", "cloud-faults", "range-fault", "write-reject",
                           "addressing", "episode", "debug-mode"],
 }
 for _group, _names in GROUPS.items():

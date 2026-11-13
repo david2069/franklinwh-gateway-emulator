@@ -1,0 +1,19 @@
+Cloud API phase 3 (#309): faults
+Date: 2026-11-14
+
+Break check 1 (all source changes stashed): the fixture's cloud.token_ttl_s is refused (5 errors) and
+  ctl cloud-fault is unknown (1 failed).
+Break check 2 (only the fault handling disabled in cloud.py: 136/102 checks, empty composite, rate limit,
+  token TTL, latency): 5 failed, 1 passed (the ctl/validate test):
+  test_offline_and_timeout_raise_the_clients_exceptions, test_an_empty_composite_gives_last_known_good_marked_stale,
+  test_rate_limit_is_429_with_retry_after, test_latency_delays_the_reply, test_tokens_expire_after_the_ttl
+With the change: 6 passed.
+
+Acceptance (franklinwh-cloud 0.6.5 via url_base, TokenAuth):
+  timeout -> get_power_info raises DeviceTimeoutException; offline -> GatewayOfflineException, list status 0
+  empty_composite -> get_stats returns the last reading with is_stale True (stale_reason empty_payload)
+  rate_limit_per_min 2 -> 3rd request HTTP 429, code 429, Retry-After 1-61
+  latency_s 0.3 -> reply after >= 0.3 s
+  token_ttl_s 1 -> after 1.1 s TokenAuth call raises TokenExpiredException
+
+Full suite: 821 passed. check_pii --scan: no leaks. mkdocs build --strict: OK.

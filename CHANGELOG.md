@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- FranklinWH Cloud API, phase 3: faults. The `cloud-faults` action (`ctl <gw> cloud-fault k=v`): `offline` (code 136), `timeout` (code 102), `rate_limit_per_min` (HTTP 429 with `Retry-After`), `latency_s`, `empty_composite` (result null); state `cloud_faults`; and `cloud: {token_ttl_s}` in the fleet file expires tokens (code 10009) (#309). See docs/cloud-api.md, Configuration, Control API.
 - FranklinWH Cloud API, phase 2c: Storm Hedge settings, the generator (`selectIotGenerator`, `updateIotGenerator`, which changes the same generator block as Direct Connect) and the grid limits (`getPowerControlSetting`, `setPowerControl`: grid charging off or capped on the site) (#307). See docs/cloud-api.md.
 - FranklinWH Cloud API, phase 2b: TOU schedules, `getTouDispatchDetail` and `saveTouDispatch` with seasons and weekday/weekend day types; the site runs the season and day type for its date, with the prices; franklinwh-cloud's `set_tou_schedule`, `set_tou_schedule_multi`, `get_tou_info` and `get_mode` in TOU work against it (#305). See docs/cloud-api.md.
 - FranklinWH Cloud API, phase 2a: writes. `updateTouModeV2` and `updateSocV2` (mode and reserve, including a fixed-time emergency backup), `updateOffgrid`, and the `sendMqtt` 311 smart-circuit write, with their read-backs (`getGatewayTouListV2`, `getStormSetting`); franklinwh-cloud's `set_mode`, `get_mode`, `update_soc`, `set_grid_status` and `set_smart_circuit_state` change the site (#303). See docs/cloud-api.md.
