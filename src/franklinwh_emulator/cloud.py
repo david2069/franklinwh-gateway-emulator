@@ -8,7 +8,7 @@ forwards to the real cloud; it listens on loopback.
 Phase 1a (#297): login, the account's gateway list, each gateway's composite info, and the
 ``sendMqtt`` relay's 353 (smart-circuit loads), which franklinwh-cloud's ``get_stats`` sends
 whenever a circuit is on. Phase 1b (#299): ``sendMqtt`` 203, 211 (type 1) and 311, and
-``selectOffgrid``.
+``selectOffgrid``. Phase 1c (#301): energy history (``api-energy/...``, cloud_energy.py).
 
 Sources, not FranklinWH documentation: franklinwh-cloud's request code (auth.py, client.py,
 mixins), its ``tests/fixtures`` (login, composite info) and ``docs/franklinwh_openapi.json``
@@ -53,6 +53,7 @@ import secrets
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlsplit
 
+from . import cloud_energy
 from .dc_payloads import DcPayloads
 from .models import AUNZ, NA
 
@@ -65,6 +66,8 @@ DEFAULT_ACCOUNT = "owner@example.com"
 DEFAULT_PASSWORD = "emulator"
 CLOUD_KEYS = {"account", "password"}
 PREFIX = "/hes-gateway/terminal/"
+ENERGY = {"/api-energy/power/getFhpPowerByDay": cloud_energy.power_by_day,
+          "/api-energy/electric/getFhpElectricData": cloud_energy.electric_data}
 REPLY = {203: 201}                     # response cmdType where it is not request + 1
 _DC_STATUS = ("opt", "result", "reason")
 # franklinwh-cloud's device catalogue region ids (const/device_catalog.json): 2 US, 3 AU.
@@ -127,10 +130,12 @@ class CloudApi:
         path = url.path
         if method == "POST" and path == PREFIX + "initialize/appUserOrInstallerLogin":
             return self.login({k: v[0] for k, v in parse_qs(body.decode("utf-8", "replace")).items()})
-        if not path.startswith(PREFIX):
+        if not path.startswith(PREFIX) and path not in ENERGY:
             raise CloudError(404, f"no such path: {path}", http=404)
         if headers.get("logintoken") not in self.tokens:
             raise CloudError(10009, "Token invalid, please log in again")
+        if method == "GET" and path in ENERGY:
+            return _envelope(ENERGY[path](self._gateway(q), q))
         name = path[len(PREFIX):]
         if method == "GET" and name == "getHomeGatewayList":
             return _envelope([self.gateway_entry(gw) for gw in self.gateways.values()])
