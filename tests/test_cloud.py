@@ -1,4 +1,5 @@
-"""FranklinWH Cloud API, phase 1a (#297): login, gateway list, composite info."""
+"""FranklinWH Cloud API, phase 1a (#297): login, gateway list, composite info; phase 1b
+(#299): sendMqtt 203/211/311, selectOffgrid."""
 
 import asyncio
 import hashlib
@@ -121,11 +122,61 @@ def test_send_mqtt_353_is_the_smart_circuit_meter(fleet):
     assert res["cmdType"] == 354 and res["snno"] == 7 and res["equipNo"] == gw.serial
     loads = json.loads(res["dataArea"])
     assert loads["SW1ExpPower"] == pytest.approx(1500, abs=1) and "CarSWImpEnergy" in loads
-    other = envelope.replace('"cmdType": 353', '"cmdType": 311')
+    other = envelope.replace('"cmdType": 353', '"cmdType": 315')
     req = urllib.request.Request(req.full_url, data=other.encode(), method="POST",
                                  headers={"loginToken": token})
     with urllib.request.urlopen(req, timeout=5) as r:
-        assert json.load(r)["code"] == 400                       # not emulated yet (1b)
+        assert json.load(r)["code"] == 400                       # not emulated yet
+
+
+def _mqtt(f, token, gw, ty, area=None) -> dict:
+    envelope = {"lang": "EN_US", "cmdType": ty, "equipNo": gw.serial, "type": 0, "timeStamp": 0,
+                "snno": 1, "len": 0, "crc": "0", "dataArea": area or {}}
+    req = urllib.request.Request(_base(f) + "hes-gateway/terminal/sendMqtt",
+                                 data=json.dumps(envelope).encode(), method="POST",
+                                 headers={"loginToken": token})
+    with urllib.request.urlopen(req, timeout=5) as r:
+        return json.load(r)
+
+
+def test_send_mqtt_211_is_the_electrical_reading(fleet):
+    """#299: 211 type 1 carries Direct Connect 1412's readings; the line voltage in tenths."""
+    token = _login(fleet)[1]["result"]["token"]
+    gw = fleet["home"]
+    body = _mqtt(fleet, token, gw, 211, {"type": 1})
+    assert body["result"]["cmdType"] == 212
+    pi = json.loads(body["result"]["dataArea"])
+    s = gw.site._last
+    assert pi["gridLineVol"] == pytest.approx(s.v_ln * 10, abs=1)          # AU: line = L-N
+    assert pi["gridVol1"] == pi["gridVol2"] == pytest.approx(s.v_ln / 2, abs=0.1)
+    assert pi["gridFreq"] == pytest.approx(s.hz, abs=0.01) and pi["dspSetFreq"] == 50
+    assert {"dspRunStatus", "ibgRunStatus", "loadRelay1Stat", "evRelayStat", "BFPVApboxRelay",
+            "gridCurr1", "genVoltage", "electricity_type"} <= set(pi)
+    assert _mqtt(fleet, token, gw, 211, {"type": 2})["code"] == 400        # BMS: not emulated
+
+
+def test_send_mqtt_311_and_203(fleet):
+    token = _login(fleet)[1]["result"]["token"]
+    gw = fleet["home"]
+    body = _mqtt(fleet, token, gw, 311, {"opt": 0, "order": gw.serial})
+    info = json.loads(body["result"]["dataArea"])
+    assert body["result"]["cmdType"] == 312
+    assert info["Sw1Name"] == gw.site.circuits[1].name and info["Sw1Mode"] == 1
+    assert "SwMerge" in info and "result" not in info
+    body = _mqtt(fleet, token, gw, 203, {"opt": 1, "refreshData": 1})
+    assert body["result"]["cmdType"] == 201                    # 203 answers with 201, not 204
+    assert "main_sw" in json.loads(body["result"]["dataArea"])
+
+
+def test_select_offgrid_tells_a_request_from_an_outage(fleet):
+    token = _login(fleet)[1]["result"]["token"]
+    gw = fleet["home"]
+    path = f"hes-gateway/terminal/selectOffgrid?gatewayId={gw.serial}&type=0"
+    assert _call(fleet, "GET", path, token=token)[1]["result"] == {
+        "offgridSet": 0, "offgridSoc": pytest.approx(0, abs=100), "offgridState": 0}
+    apply(gw, "offgrid", {"on": True})
+    res = _call(fleet, "GET", path, token=token)[1]["result"]
+    assert res["offgridSet"] == 1 and res["offgridState"] == 1
 
 
 def test_unknown_path_is_404_with_the_envelope(fleet):
@@ -156,12 +207,19 @@ def test_franklinwh_cloud_client_reads_the_emulator(fleet):
         stats = await c.get_stats()
         apply(gw, "circuit", {"n": 1, "on": True, "w": 1200})
         apply(gw, "mode", {"mode": 2})                  # Modbus 15507 numbering: self-consumption
-        after = await c.get_stats()
-        return listing, stats, after
-    listing, stats, after = asyncio.run(go())
+        after = await c.get_stats(include_electrical=True)
+        seen.update(v=gw.site._last.v_ln, hz=gw.site._last.hz)
+        apply(gw, "offgrid", {"on": True})
+        islanded = await c.get_stats()
+        return listing, stats, after, islanded
+    seen = {}
+    listing, stats, after, islanded = asyncio.run(go())
     assert {r["id"] for r in listing["result"]} == {gw.serial, fleet["us"].serial}
     assert not getattr(stats, "is_stale", False)                      # a reading, not a placeholder
     assert stats.current.battery_soc == pytest.approx(gw.site._last.soc, abs=0.2)
     assert stats.current.grid_connection_state.name == "CONNECTED"
     assert after.current.work_mode_desc == "Self-Consumption"
     assert after.current.switch_1_load == pytest.approx(1200, abs=1)       # via sendMqtt 353
+    assert after.current.grid_line_voltage == pytest.approx(seen["v"], abs=0.2)  # 211
+    assert after.current.grid_frequency == pytest.approx(seen["hz"], abs=0.05)
+    assert islanded.current.grid_connection_state.name == "SIMULATED_OFF_GRID"  # selectOffgrid

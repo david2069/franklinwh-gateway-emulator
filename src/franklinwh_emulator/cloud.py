@@ -7,7 +7,8 @@ forwards to the real cloud; it listens on loopback.
 
 Phase 1a (#297): login, the account's gateway list, each gateway's composite info, and the
 ``sendMqtt`` relay's 353 (smart-circuit loads), which franklinwh-cloud's ``get_stats`` sends
-whenever a circuit is on.
+whenever a circuit is on. Phase 1b (#299): ``sendMqtt`` 203, 211 (type 1) and 311, and
+``selectOffgrid``.
 
 Sources, not FranklinWH documentation: franklinwh-cloud's request code (auth.py, client.py,
 mixins), its ``tests/fixtures`` (login, composite info) and ``docs/franklinwh_openapi.json``
@@ -27,8 +28,17 @@ those; every value is this emulator's own model.
   is not established.
 * ``sendMqtt``: the body is the command envelope (``cmdType``, ``equipNo``, ``snno``, ``crc``,
   ``dataArea``); the reply's ``result`` echoes it with ``cmdType`` + 1 and ``dataArea`` as a
-  JSON string. 353's dataArea is Direct Connect 1411's smart-circuit meter (same field names).
-  Other commands: code 400 (not emulated yet).
+  JSON string. Replies are request + 1 except 203, which the cloud answers with 201
+  (franklinwh-cloud ``MqttResponse``, matched pairs in its HAR survey). Each dataArea is the
+  Direct Connect payload whose field names match: 353 is 1411's smart-circuit meter, 311 is
+  1410's circuit names and modes, 211 type 1 is 1412's run status and electrical readings
+  (plus the client's spellings ``dspSetFreq``, ``dspRunStatus`` and the relays it reads that
+  1412 lacks), 203 is the composite's ``runtimeData`` (its shape is not established; nothing
+  in franklinwh-cloud's ``get_stats`` sends it). Other commands, and 211 types 2/3 (BMS):
+  code 400 (not emulated yet).
+* ``selectOffgrid``: ``offgridSet``/``offgridState`` as Direct Connect 1412's off-grid read;
+  ``get_stats`` asks for it when the grid relay is open, to tell a requested off-grid from an
+  outage.
 """
 
 from __future__ import annotations
@@ -55,6 +65,8 @@ DEFAULT_ACCOUNT = "owner@example.com"
 DEFAULT_PASSWORD = "emulator"
 CLOUD_KEYS = {"account", "password"}
 PREFIX = "/hes-gateway/terminal/"
+REPLY = {203: 201}                     # response cmdType where it is not request + 1
+_DC_STATUS = ("opt", "result", "reason")
 # franklinwh-cloud's device catalogue region ids (const/device_catalog.json): 2 US, 3 AU.
 # Canada and New Zealand are given their region's id: not established.
 COUNTRY_ID = {NA: 2, AUNZ: 3}
@@ -69,6 +81,16 @@ class CloudError(Exception):
 
 def _envelope(result=None, code: int = 200, message: str = "Query success!") -> dict:
     return {"code": code, "message": message, "result": result, "success": code == 200}
+
+
+def _data_area(raw) -> dict:
+    """The command's dataArea: an object, or (as franklinwh-cloud sends it) a JSON string."""
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw or "{}")
+        except ValueError:
+            raw = {}
+    return raw if isinstance(raw, dict) else {}
 
 
 class CloudApi:
@@ -114,6 +136,8 @@ class CloudApi:
             return _envelope([self.gateway_entry(gw) for gw in self.gateways.values()])
         if method == "GET" and name == "getDeviceCompositeInfo":
             return _envelope(self.composite(self._gateway(q)))
+        if method == "GET" and name == "selectOffgrid":
+            return _envelope(self._strip(self.payloads(self._gateway(q)).offgrid({})))
         if method == "POST" and name == "sendMqtt":
             return self.send_mqtt(body)
         raise CloudError(404, f"no such path: {path}", http=404)
@@ -144,15 +168,27 @@ class CloudApi:
         except (ValueError, KeyError, TypeError):
             raise CloudError(400, "sendMqtt: the body is a command envelope with cmdType and equipNo")
         gw = self._gateway({"equipNo": sn})
-        if ty == 353:
-            area = {k: v for k, v in self.payloads(gw).smart_circuit_meter({}).items()
-                    if k not in ("opt", "result", "reason")}
-        else:
-            raise CloudError(400, f"sendMqtt: cmdType {ty} is not emulated yet")
+        area = self.command(gw, ty, _data_area(cmd.get("dataArea")))
         blob = json.dumps(area, separators=(",", ":"))
-        return _envelope({"cmdType": ty + 1, "equipNo": sn, "type": 0, "timeStamp": int(time.time()),
+        return _envelope({"cmdType": REPLY.get(ty, ty + 1), "equipNo": sn, "type": 0, "timeStamp": int(time.time()),
                           "snno": cmd.get("snno", 0), "len": len(blob),
                           "crc": f"{zlib.crc32(blob.encode()):08X}", "dataArea": blob})
+
+    def command(self, gw: "Gateway", ty: int, req: dict) -> dict:
+        dc = self.payloads(gw)
+        if ty == 353:
+            return self._strip(dc.smart_circuit_meter({}))
+        if ty == 311:
+            return self._strip(dc.smart_circuits({}))
+        if ty == 211 and int(req.get("type", 1)) == 1:
+            return self.power_info(gw)
+        if ty == 203:
+            return self.composite(gw)["runtimeData"]
+        raise CloudError(400, f"sendMqtt: cmdType {ty} is not emulated yet")
+
+    @staticmethod
+    def _strip(payload: dict) -> dict:
+        return {k: v for k, v in payload.items() if k not in _DC_STATUS}
 
     # -- bodies ----------------------------------------------------------------------------
     def payloads(self, gw: "Gateway") -> DcPayloads:
@@ -188,6 +224,24 @@ class CloudApi:
         return {"currentWorkMode": work_mode, "deviceStatus": 1,
                 "solarHaveVo": {"offGridFlag": off_grid_flag, "offGridReason": runtime["offgridreason"]},
                 "runtimeData": runtime}
+
+    def power_info(self, gw: "Gateway") -> dict:
+        """211 type 1: Direct Connect 1412 (the same field names) plus the spellings
+        franklinwh-cloud reads where 1412's differ, and the relays it reads that 1412 lacks:
+        load/solar contactors closed with their circuit, the EV relay with V2L active, the
+        aPbox relay 0 (no reading)."""
+        dc = self.payloads(gw)
+        out = self._strip(dc.ibg_run_status({}))
+        site, s = gw.site, gw.site._last
+        v2l = site.v2l
+        islanded = not s.grid_connected
+        out.update(dspSetFreq=out["dspSettingFreq"], dspRunStatus=out["dspRunstatus"],
+                   loadSolarRelay1Stat=out["smartRelay1Status"],
+                   loadSolarRelay2Stat=out["smartRelay2Status"],
+                   evRelayStat=int(bool(v2l) and v2l.state(islanded, site.generator.relay_closed)
+                                   == "Active"),
+                   BFPVApboxRelay=0)
+        return out
 
     # -- HTTP ------------------------------------------------------------------------------
     async def _client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
