@@ -94,12 +94,29 @@ flows (how much of the solar went to the home, and so on) is not established; th
 gives solar to the home first, then the battery, then the grid, and the battery to the home
 before the grid.
 
+Phase 2a (#303), writes. Each changes the same site state as the Modbus, Direct Connect and
+control-API writes, so every interface reads the change:
+
+| Call | What it does |
+|---|---|
+| `POST hes-gateway/terminal/tou/getGatewayTouListV2` | reads the modes: `currendId` (the active one), `list[]` with each mode's `workMode`, `oldIndex`, `soc` (its reserve), `minSoc` 5, `maxSoc` 100; `backupForeverFlag`, `nextWorkMode`, `timerStartTime`/`timerEndTime`, `stromEn` |
+| `POST hes-gateway/terminal/tou/updateTouModeV2?workMode=&soc=…` | switches the mode (1 TOU, 2 self-consumption, 3 emergency backup) and sets that mode's reserve. Emergency backup takes `backupForeverFlag` 1 (until changed) or 2 with `durationMinute` (30–4320) and `nextWorkMode` |
+| `POST hes-gateway/terminal/tou/updateSocV2?workMode=&soc=` | sets a mode's reserve; outside 5–100 gets `code 400` |
+| `POST hes-gateway/terminal/updateOffgrid` (`{offgridSet, offgridSoc}`) | requests off-grid (or ends it) with its SoC floor |
+| `sendMqtt` 311 with `dataArea.opt` 1 | the smart-circuit write: `Sw{n}Mode` switches a circuit, `Sw{n}SocLowSet`, `Sw{n}Name` |
+| `GET hes-gateway/terminal/weather/getStormSetting?equipNo=` | `enableStorm` (as `set_mode` last sent it); storm writes come in 2c |
+| `GET hes-gateway/terminal/selectTerPushMessageUnreadCount` | 0 |
+
+The emergency-backup reserve is kept and read back but changes nothing: the site charges to
+100 % in that mode. A fixed-time emergency backup switches to `nextWorkMode` at the first cloud
+call after it ends, not by itself.
+
 Every reply has the cloud's envelope, `{code, message, result, success}`; `code` 200 is success
 and errors come with HTTP 200, as the cloud sends them. A path the emulator doesn't serve gets
 HTTP 404 with the envelope, and another `sendMqtt` command gets `code 400`.
 
-Still to come, in order (#295): writes (mode, reserve, TOU schedules, storm,
-generator, off-grid), and faults (expired tokens, rate limits, an offline gateway).
+Still to come, in order (#295): TOU schedules (2b), storm, generator and
+grid-limit settings (2c), and faults (expired tokens, rate limits, an offline gateway).
 
 ## Where the replies come from
 

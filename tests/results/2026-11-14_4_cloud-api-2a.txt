@@ -1,0 +1,20 @@
+Cloud API phase 2a (#303): mode, reserve SoC, off-grid and smart-circuit writes
+Date: 2026-11-14
+
+Break check (cloud.py at 1c, new tests/test_cloud_writes.py): 4 failed
+  test_set_mode_and_reserve_change_the_site, test_emergency_backup_for_a_fixed_time_ends_in_the_next_mode,
+  test_out_of_range_reserve_and_bad_mode_are_refused, test_off_grid_and_circuit_writes
+With the change: 4 passed.
+
+Acceptance (franklinwh-cloud 0.6.5 via url_base, TokenAuth):
+  set_mode("self_consumption", 35) -> True; site native mode Self, self_reserve 35; DC programme Self-Consumption
+  set_mode("time_of_use", 40) -> True; tou_reserve 40, self_reserve unchanged
+  get_mode() -> workMode 1, soc 40; update_soc(25, workMode=2) -> self_reserve 25; get_all_mode_soc active TOU
+  set_mode("emergency_backup", None, 2, 2, 30) -> Backup with a 30-minute timer; after expiry the next
+    cloud call switches to Self-Consumption
+  set_grid_status(OFF, 15) -> off-grid requested, floor 15; get_stats SIMULATED_OFF_GRID; NORMAL ends it
+  set_smart_circuit_state(2, False) -> circuit 2 off; get_stats switch_2_load 0
+  updateSocV2 soc 101 / 2, workMode 7 -> code 400, reserve unchanged
+Client log: one non-fatal "get_mode: get_tou_info failed" (getTouDispatchDetail is phase 2b).
+
+Full suite: 805 passed. check_pii --scan: no leaks. mkdocs build --strict: OK.
