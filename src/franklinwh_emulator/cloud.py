@@ -9,6 +9,8 @@ Phase 1a (#297): login, the account's gateway list, each gateway's composite inf
 ``sendMqtt`` relay's 353 (smart-circuit loads), which franklinwh-cloud's ``get_stats`` sends
 whenever a circuit is on. Phase 1b (#299): ``sendMqtt`` 203, 211 (type 1) and 311, and
 ``selectOffgrid``. Phase 1c (#301): energy history (``api-energy/...``, cloud_energy.py).
+Phase 2a (#303): the mode, reserve SoC, off-grid and smart-circuit writes, and the reads that
+read them back.
 
 Sources, not FranklinWH documentation: franklinwh-cloud's request code (auth.py, client.py,
 mixins), its ``tests/fixtures`` (login, composite info) and ``docs/franklinwh_openapi.json``
@@ -36,6 +38,15 @@ those; every value is this emulator's own model.
   1412 lacks), 203 is the composite's ``runtimeData`` (its shape is not established; nothing
   in franklinwh-cloud's ``get_stats`` sends it). Other commands, and 211 types 2/3 (BMS):
   code 400 (not emulated yet).
+* Modes: the cloud's ``workMode`` 1 TOU, 2 self-consumption, 3 emergency backup; its
+  ``oldIndex`` 3/2/1 is the Modbus numbering the site uses. The list item ids are
+  franklinwh-cloud's legacy ``currendId`` values (9322/9323/9324). ``soc`` of the TOU and
+  self-consumption items is the site's reserve; the emergency-backup item's is stored and
+  inert (the site fills to 100 %). An emergency backup for a fixed time
+  (``backupForeverFlag`` 2, ``durationMinute``) ends in ``nextWorkMode`` at the first cloud
+  call after it expires, not on its own.
+* ``updateOffgrid`` is Direct Connect 1412's off-grid write; ``sendMqtt`` 311 with ``opt`` 1
+  is 1410's smart-circuit write.
 * ``selectOffgrid``: ``offgridSet``/``offgridState`` as Direct Connect 1412's off-grid read;
   ``get_stats`` asks for it when the grid relay is open, to tell a requested off-grid from an
   outage.
@@ -56,6 +67,7 @@ from urllib.parse import parse_qs, urlsplit
 from . import cloud_energy
 from .dc_payloads import DcPayloads
 from .models import AUNZ, NA
+from .site import MODE_BACKUP, MODE_SELF, MODE_TOU
 
 if TYPE_CHECKING:
     from .gateway import Gateway
@@ -73,6 +85,12 @@ _DC_STATUS = ("opt", "result", "reason")
 # franklinwh-cloud's device catalogue region ids (const/device_catalog.json): 2 US, 3 AU.
 # Canada and New Zealand are given their region's id: not established.
 COUNTRY_ID = {NA: 2, AUNZ: 3}
+# cloud workMode -> (site mode = oldIndex, list item id, name). The ids are franklinwh-cloud's
+# legacy Mode.currendId values; the names its getGatewayTouListV2 handling expects.
+WORK_MODES = {1: (MODE_TOU, 9322, "Time-of-Use"), 2: (MODE_SELF, 9323, "Self-Consumption"),
+              3: (MODE_BACKUP, 9324, "Emergency Backup")}
+SITE_TO_WORK = {site_mode: wm for wm, (site_mode, _, _) in WORK_MODES.items()}
+MIN_RESERVE, MAX_RESERVE = 5, 100
 V2L_RUN_STATE = {"Disabled": 0, "Standby": 1, "Active": 2}   # franklinwh-cloud v2lRunState
 
 
@@ -84,6 +102,14 @@ class CloudError(Exception):
 
 def _envelope(result=None, code: int = 200, message: str = "Query success!") -> dict:
     return {"code": code, "message": message, "result": result, "success": code == 200}
+
+
+def _json(body: bytes) -> dict:
+    try:
+        out = json.loads(body or b"{}")
+    except ValueError:
+        raise CloudError(400, "the body must be JSON")
+    return out if isinstance(out, dict) else {}
 
 
 def _data_area(raw) -> dict:
@@ -110,6 +136,7 @@ class CloudApi:
         self.host, self.port = host, port
         self.tokens: set[str] = set()
         self._payloads: dict[str, DcPayloads] = {}
+        self._modes: dict[str, dict] = {}            # per gateway: what only the cloud keeps
         self._server: asyncio.base_events.Server | None = None
 
     async def start(self) -> tuple[str, int]:
@@ -137,6 +164,9 @@ class CloudApi:
         if method == "GET" and path in ENERGY:
             return _envelope(ENERGY[path](self._gateway(q), q))
         name = path[len(PREFIX):]
+        sn = q.get("gatewayId") or q.get("equipNo")
+        if sn in self.by_serial:
+            self._expire_backup(self.by_serial[sn])
         if method == "GET" and name == "getHomeGatewayList":
             return _envelope([self.gateway_entry(gw) for gw in self.gateways.values()])
         if method == "GET" and name == "getDeviceCompositeInfo":
@@ -145,6 +175,24 @@ class CloudApi:
             return _envelope(self._strip(self.payloads(self._gateway(q)).offgrid({})))
         if method == "POST" and name == "sendMqtt":
             return self.send_mqtt(body)
+        if method == "POST" and name == "tou/getGatewayTouListV2":
+            return _envelope(self.tou_list(self._gateway(q)))
+        if method == "POST" and name == "tou/updateTouModeV2":
+            return self.update_mode(self._gateway(q), q)
+        if method == "POST" and name == "tou/updateSocV2":
+            return self.update_soc(self._gateway(q), q)
+        if method == "POST" and name == "updateOffgrid":
+            req = _json(body)
+            gw = self._gateway({"gatewayId": req.get("gatewayId") or q.get("gatewayId")})
+            area = {"opt": 1, **{k: int(req[k]) for k in ("offgridSet", "offgridSoc") if k in req}}
+            self.payloads(gw).offgrid(area)
+            return _envelope(None, message="Operation success!")
+        if method == "GET" and name == "weather/getStormSetting":
+            return _envelope({"enableStorm": self.mode_state(self._gateway(q))["stromEn"],
+                              "advanceBackupTime": 120, "noticeEnable": 0,
+                              "stormEventVOList": [], "showEventTypeFlag": 0, "tipsMap": {}})
+        if method == "GET" and name == "selectTerPushMessageUnreadCount":
+            return _envelope(0)
         raise CloudError(404, f"no such path: {path}", http=404)
 
     def _gateway(self, q: dict) -> "Gateway":
@@ -184,12 +232,91 @@ class CloudApi:
         if ty == 353:
             return self._strip(dc.smart_circuit_meter({}))
         if ty == 311:
-            return self._strip(dc.smart_circuits({}))
+            return self._strip(dc.smart_circuits(req if req.get("opt") == 1 else {}))
         if ty == 211 and int(req.get("type", 1)) == 1:
             return self.power_info(gw)
         if ty == 203:
             return self.composite(gw)["runtimeData"]
         raise CloudError(400, f"sendMqtt: cmdType {ty} is not emulated yet")
+
+    # -- modes and reserves (#303) -----------------------------------------------------
+    def mode_state(self, gw: "Gateway") -> dict:
+        return self._modes.setdefault(gw.serial, {
+            "backup_soc": 20, "backupForeverFlag": 1, "nextWorkMode": 2, "stromEn": 0,
+            "timer": None})
+
+    def _expire_backup(self, gw: "Gateway") -> None:
+        st = self.mode_state(gw)
+        if st["timer"] and time.time() >= st["timer"][1]:
+            st["timer"] = None
+            if gw.site.native_mode == MODE_BACKUP:
+                gw.site.set_native_mode(WORK_MODES.get(st["nextWorkMode"], WORK_MODES[2])[0])
+
+    def tou_list(self, gw: "Gateway") -> dict:
+        site, st = gw.site, self.mode_state(gw)
+        current = SITE_TO_WORK[site.native_mode]
+        soc = {1: site.tou_reserve, 2: site.self_reserve, 3: st["backup_soc"]}
+        items = [{"id": mid, "oldIndex": site_mode, "name": name, "soc": float(soc[wm]),
+                  "maxSoc": MAX_RESERVE, "minSoc": MIN_RESERVE, "dischargeDepthSoc": MIN_RESERVE,
+                  "editSocFlag": 1, "multiSOCFlag": 0, "workMode": wm, "energyIncentivesType": 0,
+                  "electricityType": 1, "displayFlag": 1}
+                 for wm, (site_mode, mid, name) in WORK_MODES.items()]
+        timer = st["timer"]
+        fmt = lambda t: time.strftime("%H:%M:%S", time.localtime(t)) + ".000000"
+        return {"currendId": WORK_MODES[current][1], "list": items, "stromEn": st["stromEn"],
+                "sgipFlag": 0, "itcFlag": 0, "stopMode": 0, "gridChargeEn": 1,
+                "touSendStatus": None, "touAlertMessage": None,
+                "backupForeverFlag": st["backupForeverFlag"], "nextWorkMode": st["nextWorkMode"],
+                "timerStartTime": fmt(timer[0]) if timer else None,
+                "timerEndTime": fmt(timer[1]) if timer else None,
+                "timerStartTimeZero": None, "timerEndTimeZero": None,
+                "zoneInfo": site.location.timezone, "todayVppVo": None, "tariffSettingFlag": False,
+                "vppSocVo": None}
+
+    def _set_reserve(self, gw: "Gateway", wm: int, raw) -> None:
+        soc = int(float(raw))
+        if not MIN_RESERVE <= soc <= MAX_RESERVE:
+            raise CloudError(400, f"soc must be {MIN_RESERVE}-{MAX_RESERVE}")
+        if wm == 1:
+            gw.site.set_reserves(tou_reserve=soc)
+        elif wm == 2:
+            gw.site.set_reserves(self_reserve=soc)
+        else:
+            self.mode_state(gw)["backup_soc"] = soc
+
+    def update_mode(self, gw: "Gateway", q: dict) -> dict:
+        try:
+            wm = int(q["workMode"])
+            site_mode = WORK_MODES[wm][0]
+        except (KeyError, ValueError):
+            raise CloudError(400, "workMode must be 1, 2 or 3")
+        st = self.mode_state(gw)
+        if "soc" in q and wm != 3:
+            self._set_reserve(gw, wm, q["soc"])
+        if "stromEn" in q:
+            st["stromEn"] = int(q["stromEn"])
+        st["timer"] = None
+        if wm == 3:
+            st["backupForeverFlag"] = int(q.get("backupForeverFlag") or 1)
+            if q.get("nextWorkMode"):
+                st["nextWorkMode"] = int(q["nextWorkMode"])
+            if st["backupForeverFlag"] == 2:
+                minutes = int(q.get("durationMinute") or 0)
+                if not 30 <= minutes <= 4320:
+                    raise CloudError(400, "durationMinute must be 30-4320")
+                now = time.time()
+                st["timer"] = (now, now + minutes * 60)
+        gw.site.set_native_mode(site_mode)
+        return _envelope({"tariffSettingFlag": False}, message="Operation success!")
+
+    def update_soc(self, gw: "Gateway", q: dict) -> dict:
+        try:
+            wm = int(q["workMode"])
+            WORK_MODES[wm]
+            self._set_reserve(gw, wm, q["soc"])
+        except (KeyError, ValueError):
+            raise CloudError(400, "workMode (1-3) and soc are required")
+        return _envelope(None, message="Operation success!")
 
     @staticmethod
     def _strip(payload: dict) -> dict:
@@ -226,7 +353,8 @@ class CloudApi:
             offGridFlag=off_grid_flag,
         )
         _, _, work_mode = self.payloads(gw).programme()
-        return {"currentWorkMode": work_mode, "deviceStatus": 1,
+        return {"currentWorkMode": work_mode, "deviceStatus": 1, "valid": 1,
+                "currentAlarmVOList": [],
                 "solarHaveVo": {"offGridFlag": off_grid_flag, "offGridReason": runtime["offgridreason"]},
                 "runtimeData": runtime}
 
