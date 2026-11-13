@@ -26,6 +26,7 @@ battery and both ports always agree. It runs one gateway or a **fleet**, with an
 - [Grid, grid codes, export limits and phases](grid.md)
 - [The site model](site-model.md): TOU, energy, location and time, weather, loads, generator
 - [Control API and `ctl`](control-api.md)
+- [FranklinWH Cloud API](cloud-api.md): the cloud's REST API, served from the same gateways
 - [Scenarios](SCENARIOS.md) and [replaying recorded data](replay.md)
 - [Direct Connect](DIRECT_CONNECT.md), [design](DESIGN.md), [calibration](CALIBRATION.md),
   [findings](FINDINGS.md), [weather and loads](WEATHER_AND_LOADS.md)

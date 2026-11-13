@@ -90,7 +90,7 @@ def test_cli_serve_location_flags():
     from franklinwh_emulator import cli
     captured = {}
 
-    def fake_run(gateways, control_port):
+    def fake_run(gateways, control_port, **kw):
         captured["site"] = gateways[0].site
         async def done():
             return None

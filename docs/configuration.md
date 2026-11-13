@@ -53,6 +53,10 @@ A grid event (outage, voltage, frequency) on any member reaches the whole group,
 `GET /groups` reports the site's three-phase meter ([Control API](control-api.md)). The web UI
 draws the group as one site ([Web UI](ui.md#energy-diagram)).
 
+`cloud:` is the account for the [FranklinWH Cloud API](cloud-api.md) (served with
+`--cloud-port`): `{account, password}`, default `{account: owner@example.com, password:
+emulator}`. Every gateway in the file belongs to it.
+
 ## A complete example
 
 ```yaml

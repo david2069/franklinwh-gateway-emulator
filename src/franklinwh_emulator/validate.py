@@ -21,7 +21,7 @@ from .gateway import Gateway, GatewayConfig, expand_groups, fix_bool_keys, mock_
 from .schema import ACTIONS, check_body
 from .site import SiteConfig
 
-FLEET_KEYS = ("defaults", "groups", "gateways")
+FLEET_KEYS = ("defaults", "groups", "gateways", "cloud")
 
 # One line per gateway key. Shorthands first, then GatewayConfig, then SiteConfig.
 DOCS: dict[str, str] = {
@@ -177,6 +177,14 @@ def validate_fleet(d: Any, *, prefix: str = "", at: float | None = None) -> list
     d = fix_bool_keys(d)
     out = [_problem(f"{prefix}{k}", f"unknown key; known {list(FLEET_KEYS)}")
            for k in d if k not in FLEET_KEYS]
+    cloud = d.get("cloud")
+    if cloud is not None:                              # the Cloud API's account (#297)
+        from .cloud import CLOUD_KEYS
+        if not isinstance(cloud, dict):
+            out.append(_problem(f"{prefix}cloud", "must be a mapping, e.g. {account: owner@example.com, password: emulator}"))
+        else:
+            out += [_problem(f"{prefix}cloud.{k}", f"unknown key; known {sorted(CLOUD_KEYS)}")
+                    for k in cloud if k not in CLOUD_KEYS]
     known = config_schema()
     entries, group_problems = expand_groups(d)
     out += [_problem(f"{prefix}{p}", m) for p, m in group_problems]

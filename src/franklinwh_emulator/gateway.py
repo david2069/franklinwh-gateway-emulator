@@ -550,7 +550,8 @@ def expand_groups(d: dict) -> tuple[list[dict], list[tuple[str, str]]]:
 
 
 class Fleet:
-    def __init__(self, configs: list[GatewayConfig], *, clock: Clock | None = None):
+    def __init__(self, configs: list[GatewayConfig], *, clock: Clock | None = None,
+                 cloud: dict | None = None):
         ids = [c.id for c in configs]
         if len(set(ids)) != len(ids):
             raise ValueError(f"duplicate gateway ids: {ids}")
@@ -568,6 +569,8 @@ class Fleet:
             for gw in members:
                 gw.group_members = members
         self.control: ControlApi | None = None
+        self.cloud_config = cloud                # the fleet file's `cloud:` (#297)
+        self.cloud = None                        # CloudApi once started with cloud_port
         self._loop: _LoopThread | None = None
 
     @classmethod
@@ -575,7 +578,7 @@ class Fleet:
         entries, problems = expand_groups(d)
         if problems:
             raise ValueError("; ".join(f"{p}: {m}" for p, m in problems))
-        return cls([GatewayConfig.from_dict(g) for g in entries], clock=clock)
+        return cls([GatewayConfig.from_dict(g) for g in entries], clock=clock, cloud=d.get("cloud"))
 
     @classmethod
     def from_yaml(cls, path: str) -> "Fleet":
@@ -585,10 +588,11 @@ class Fleet:
         return self.gateways[gw_id]
 
     def start(self, control_port: int | None = None, control_host: str = "127.0.0.1",
-              *, ui: bool = False, workspace: str = "emulator-workspace") -> dict[str, tuple[str, int]]:
+              *, ui: bool = False, workspace: str = "emulator-workspace",
+              cloud_port: int | None = None) -> dict[str, tuple[str, int]]:
         """Start every gateway; with ``control_port`` (0 = ephemeral) also the HTTP
         control API, reachable afterwards as ``fleet.control.port``. ``ui``: serve the web UI
-        on that port too."""
+        on that port too. ``cloud_port``: the FranklinWH Cloud API (#297), as ``fleet.cloud``."""
         self._loop = self._loop or _LoopThread("franklinwh-emulator-fleet")
         addresses = {gid: gw.start(self._loop) for gid, gw in self.gateways.items()}
         if control_port is not None and self.control is None:
@@ -598,12 +602,19 @@ class Fleet:
             else:
                 self.control = ControlApi(self.gateways, control_host, control_port, workspace=workspace)
             self._loop.run(self.control.start())
+        if cloud_port is not None and self.cloud is None:
+            from .cloud import CloudApi
+            self.cloud = CloudApi(self.gateways, control_host, cloud_port, self.cloud_config)
+            self._loop.run(self.cloud.start())
         return addresses
 
     def stop(self) -> None:
         if self.control is not None and self._loop is not None:
             self._loop.run(self.control.stop())
             self.control = None
+        if self.cloud is not None and self._loop is not None:
+            self._loop.run(self.cloud.stop())
+            self.cloud = None
         for gw in self.gateways.values():
             gw.stop()
         if self._loop is not None:
