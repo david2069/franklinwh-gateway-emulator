@@ -65,6 +65,17 @@ class Faults:
 DC_UNSUPPORTED_FAULTS = ("range_fault",)
 
 
+@dataclass
+class CloudFaults:
+    """FranklinWH Cloud API faults for one gateway (#309), on the requests that name it. The
+    codes are franklinwh-cloud's (client.py): 136 gateway offline, 102 device timeout, 429."""
+    offline: bool = False                   # sendMqtt code 136; gateway list status 0
+    timeout: bool = False                   # sendMqtt code 102
+    rate_limit_per_min: int | None = None   # past N requests a minute: 429 + Retry-After
+    latency_s: float = 0.0                  # delay before every reply
+    empty_composite: bool = False           # getDeviceCompositeInfo: HTTP 200, result null
+
+
 class ModbusServer:
     def __init__(self, device: AGateDevice, host: str = "127.0.0.1", port: int = 0,
                  faults: Faults | None = None):

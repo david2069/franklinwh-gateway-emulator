@@ -322,13 +322,13 @@ def _ctl_request(verb: str, args: list[str]) -> tuple[str, str, dict]:
                 body["duration_s"] = float(rest[1])
             return "POST", "csip", body
         raise SystemExit(f"unknown csip sub-command {sub!r}")
-    if verb in ("fault", "dc-fault"):
+    if verb in ("fault", "dc-fault", "cloud-fault"):
         need(1)
         body = {}
         for a in args:
             k, _, v = a.partition("=")
             body[k] = _parse_value(v)
-        return "POST", "faults" if verb == "fault" else "dc-faults", body
+        return "POST", {"fault": "faults", "dc-fault": "dc-faults", "cloud-fault": "cloud-faults"}[verb], body
     raise SystemExit(f"unknown ctl verb {verb!r}")
 
 

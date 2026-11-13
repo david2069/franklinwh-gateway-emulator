@@ -53,7 +53,8 @@ cloud: {account: owner@example.com, password: emulator}   # these are the defaul
 ```
 
 Login takes the account and the password's MD5, as the app sends them. A wrong account or
-password gets `code 401`. Tokens don't expire. Every other call needs the token in the
+password gets `code 401`. Tokens don't expire unless the fleet file sets `cloud: {token_ttl_s:
+N}`. Every other call needs the token in the
 `loginToken` header; without a valid one the reply is `code 10009`, which franklinwh-cloud
 answers by logging in again.
 
@@ -139,11 +140,32 @@ On `manuSw`: the emulator's generator treats it as Direct Connect 1902's mode (1
 2 manual). franklinwh-cloud saw the cloud treat it as a start/stop command; neither is
 established.
 
+## Faults
+
+Phase 3 (#309). Per gateway, the `cloud-faults` action (`ctl <gw> cloud-fault k=v`, or
+`POST /gateways/<gw>/cloud-faults`) acts on the cloud requests that name that gateway, next to
+`faults` (Modbus TCP) and `dc-faults` (Direct Connect):
+
+| Fault | What the client sees |
+|---|---|
+| `offline=true` | `sendMqtt` answers `code 136`; the gateway list shows `status` 0 (the Modbus `offline` fault does both too). franklinwh-cloud raises `GatewayOfflineException` |
+| `timeout=true` | `sendMqtt` answers `code 102`; franklinwh-cloud raises `DeviceTimeoutException` |
+| `rate_limit_per_min=N` | past N requests in a minute, HTTP 429 with `code 429` and `Retry-After` (seconds until the oldest request leaves the minute) |
+| `latency_s=S` | every reply waits S seconds |
+| `empty_composite=true` | `getDeviceCompositeInfo` answers HTTP 200 with `result: null`; franklinwh-cloud's `get_stats` returns its last reading marked `is_stale` |
+
+Token expiry is account-wide: `cloud: {token_ttl_s: N}` in the fleet file. An expired token gets
+`code 10009`, as an unknown one does; franklinwh-cloud logs in again, or with `TokenAuth` raises
+`TokenExpiredException`.
+
+The codes are franklinwh-cloud's (its client.py). The real cloud's rate limits, `Retry-After`
+values and timeouts are not known, so they are settings here.
+
 Every reply has the cloud's envelope, `{code, message, result, success}`; `code` 200 is success
 and errors come with HTTP 200, as the cloud sends them. A path the emulator doesn't serve gets
 HTTP 404 with the envelope, and another `sendMqtt` command gets `code 400`.
 
-Still to come (#295): faults (expired tokens, rate limits, an offline gateway).
+Every phase in #295 is in. Older history comes with #296.
 
 ## Where the replies come from
 

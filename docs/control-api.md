@@ -13,6 +13,7 @@ franklinwh-emulator ctl agate outage
 franklinwh-emulator ctl agate restore
 franklinwh-emulator ctl agate solar 6000          # or: solar auto
 franklinwh-emulator ctl agate fault session_held=true
+franklinwh-emulator ctl agate cloud-fault timeout=true   # Cloud API faults (docs: FranklinWH Cloud API)
 franklinwh-emulator ctl agate weather model=synthetic latitude=-33.87 longitude=151.21
 franklinwh-emulator ctl agate circuit 2 on w=7000      # 7 kW on smart circuit 2; w=auto hands it back
 franklinwh-emulator ctl agate v2l on soc=70             # V2L (with `v2l:` in the fleet entry)
