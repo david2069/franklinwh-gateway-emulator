@@ -53,7 +53,9 @@ array irradiance is used as it is. The built-in model stays the default.
   `~/.cache/franklinwh-emulator/open-meteo/` (or `cache_dir`, or the
   `FRANKLINWH_EMULATOR_CACHE` environment variable). `offline: true` never fetches; the
   `FRANKLINWH_EMULATOR_OFFLINE=1` environment variable sets it for every site (the test suite
-  does). A local day spans two UTC days, so both get fetched.
+  does). A local day spans two UTC days, so both get fetched. Fetches run in the background:
+  the simulation, start-up and Ctrl-C never wait on the network, and a day runs on the
+  `synthetic` sky (or the copy already held) until its data arrives (#291).
 - **Refresh:** a past day is fetched once and kept. Today and later can still change, so a
   copy older than `refresh_h` hours (default 2) is fetched again, by a running site too, and
   today's request also brings tomorrow. If a refresh fails, the older copy is used.
@@ -65,7 +67,9 @@ array irradiance is used as it is. The built-in model stays the default.
   that day runs on the `synthetic` sky instead (the site's `sky`, default `broken`), with no
   measured ambient temperature. The emulator logs it once, adds a `weather` event to the
   gateway's event log, shows `weather.fallback` (the reason) in the state and "Open-Meteo
-  unavailable · synthetic … sky" in the UI, and tries the fetch again after 10 minutes.
+  unavailable · synthetic … sky" in the UI, and tries the fetch again after 10 minutes. A
+  network failure (a timeout, no route) pauses fetching for every site for those 10 minutes,
+  so a fleet logs one warning, not one per site and day; each site still shows the fallback.
 - **Repeatable runs:** real weather differs from day to day. Set `weather: {model: bell}` or
   `synthetic` when a run must give the same numbers every time; the built-in scenarios do.
 - **Bundled data:** Sydney (−33.87, 151.21, tilt 20, azimuth 180) for 2026-01-14 and

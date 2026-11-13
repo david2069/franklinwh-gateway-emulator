@@ -340,3 +340,76 @@ def test_weather_action_reaches_every_aGate_in_a_group():
     with pytest.raises(ApiError, match="sky must be one of"):
         apply(f["a"], "weather", {"model": "synthetic", "sky": "fog"})
     assert [gateway_state(f[g])["weather"] for g in "abc"] == [None] * 3   # refused: nothing changed
+
+
+def test_a_slow_open_meteo_never_holds_up_the_simulation(tmp_path, monkeypatch):
+    """#291: the fetch runs in the background; the site runs on the synthetic sky meanwhile and
+    picks the real day up once it lands."""
+    import threading
+    import time as _t
+    from franklinwh_emulator import weather as wmod
+    monkeypatch.setattr(wmod, "_start", lambda fn: threading.Thread(target=fn, daemon=True).start(), raising=False)
+    release = threading.Event()
+    calls = []
+
+    def slow(cfg, day):
+        calls.append(day)
+        release.wait(5)
+        return _om_answer([day])
+    monkeypatch.setattr(wmod, "fetch_open_meteo_day", slow)
+    w = weather(model="open-meteo", cache_dir=str(tmp_path), offline=False)
+    syn = weather(model="synthetic")
+    t0 = _t.monotonic()
+    assert w.solar_w(NOON_AEST) == pytest.approx(syn.solar_w(NOON_AEST))   # synthetic for now
+    w.solar_w(NOON_AEST + 60)
+    assert _t.monotonic() - t0 < 1 and len(calls) == 1                      # no wait, one fetch
+    release.set()
+    for _ in range(100):
+        if w._results:
+            break
+        _t.sleep(0.02)
+    w.solar_w(NOON_AEST)
+    day = _t.strftime("%Y-%m-%d", _t.gmtime(NOON_AEST))
+    assert day in w._days and w.fallback is None
+
+
+def test_a_network_failure_pauses_every_site_with_one_warning(tmp_path, monkeypatch, caplog):
+    """#291: one site's failed fetch pauses fetching for all of them for RETRY_S; only the site
+    that tried logs it, and every site still reports the fallback."""
+    from franklinwh_emulator import weather as wmod
+    calls = []
+
+    def down(cfg, day):
+        calls.append(day)
+        raise OSError("handshake timed out")
+    monkeypatch.setattr(wmod, "fetch_open_meteo_day", down)
+    sites = [weather(model="open-meteo", cache_dir=str(tmp_path), offline=False, latitude=-33.87 + i)
+             for i in range(3)]
+    with caplog.at_level("WARNING", logger="franklinwh_emulator.weather"):
+        for w in sites:
+            w.solar_w(NOON_AEST); w.solar_w(NOON_AEST - 86400)
+    assert len(calls) == 1
+    assert len([r for r in caplog.records if "unavailable" in r.getMessage()]) == 1
+    assert all(w.fallback and "unavailable" in w.fallback for w in sites)
+
+
+def test_sites_fetching_together_log_one_network_failure(tmp_path, monkeypatch, caplog):
+    """#291: at start-up every site starts its fetch before any fails; the failures that land
+    while the pause is on are not logged again."""
+    from franklinwh_emulator import weather as wmod
+    pending = []
+    monkeypatch.setattr(wmod, "_start", pending.append, raising=False)   # hold the fetches
+    monkeypatch.setattr(wmod, "fetch_open_meteo_day",
+                        lambda cfg, day: (_ for _ in ()).throw(OSError("timed out")))
+    sites = [weather(model="open-meteo", cache_dir=str(tmp_path), offline=False, latitude=-33.87 + i)
+             for i in range(3)]
+    for w in sites:
+        w.solar_w(NOON_AEST)
+    assert len(pending) == 3                               # all three in flight together
+    for run in pending:
+        run()
+    with caplog.at_level("WARNING", logger="franklinwh_emulator.weather"):
+        for w in sites:
+            w.solar_w(NOON_AEST)
+    assert len([r for r in caplog.records if "unavailable" in r.getMessage()]) == 1
+    assert all(w.fallback and "unavailable" in w.fallback for w in sites)

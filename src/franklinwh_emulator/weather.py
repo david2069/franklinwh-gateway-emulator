@@ -16,6 +16,9 @@ Models (``SiteConfig.weather = {"model": ...}``):
                  A day that can't be fetched (no network, an API error, or ``offline`` with
                  nothing cached) falls back to ``synthetic`` for that day; the fetch is tried
                  again after ``RETRY_S``. ``FRANKLINWH_EMULATOR_OFFLINE=1`` sets ``offline``.
+                 Fetches run in a background thread, so the simulation (and start-up, and
+                 Ctrl-C) never waits on the network; a network failure pauses fetching for
+                 every site for ``RETRY_S`` (#291).
 
 Array geometry uses Open-Meteo's convention: ``tilt`` degrees from horizontal, ``azimuth``
 0 = south, −90 = east, 90 = west, ±180 = north. A Sydney roof facing north is
@@ -31,6 +34,7 @@ import json
 import logging
 import math
 import os
+import threading
 import time
 import urllib.parse
 import urllib.request
@@ -47,6 +51,17 @@ TIMEOUT_S = 20
 RETRY_S = 600                   # after a failed fetch, use synthetic and try again this much later
 
 log = logging.getLogger(__name__)
+
+# #291: Open-Meteo is fetched off the simulation thread. One host for every site, so a network
+# failure pauses fetching for all of them; one fetch per cache file at a time.
+_down_until = 0.0
+_down_reason = ""
+_inflight: set[str] = set()
+_lock = threading.Lock()
+
+
+def _start(fn) -> None:
+    threading.Thread(target=fn, name="open-meteo", daemon=True).start()
 
 # Synthetic skies: mean cloud cover, cloud opacity, and an overall haze transmittance.
 SKIES = {
@@ -239,6 +254,14 @@ def _split_by_day(raw: dict, days: list[str]) -> dict[str, dict]:
     return out
 
 
+def _cached(cfg: WeatherConfig, day: str) -> dict | None:
+    """The day from disk when no fetch is due (offline, a past day, or a fresh copy)."""
+    path = _cache_path(cfg, day)
+    if path.exists() and (cfg.offline or not _stale(cfg, path, day)):
+        return json.loads(path.read_text())
+    return None
+
+
 def fetch_open_meteo_day(cfg: WeatherConfig, day: str) -> dict:
     """Raw Open-Meteo JSON for one UTC day, cached on disk. A past day is fetched once; today
     and later are fetched again once their copy is ``refresh_h`` old, and today's request also
@@ -288,37 +311,86 @@ class Weather:
         self._loaded_at: dict[str, float] = {}    # day → when it was read (real time, #269)
         self._window_means: dict[tuple, float] = {}
         self._retry_at: dict[str, float] = {}     # day → when to try fetching it again (#268)
+        self._results: dict[str, dict | Exception] = {}   # day → a background fetch's outcome (#291)
         self.fallback: str | None = None          # why the last day fell back to synthetic
         self.on_fallback = None                   # (text) -> None: the gateway's event log
         self.clear_sky = clear_sky_poa           # pvlib's when pv: {model: pvlib} (#112)
 
     # Open-Meteo radiation values are the mean over the *preceding* 15 minutes.
     def _day(self, ts: float) -> OpenMeteoDay | None:
-        """That UTC day's Open-Meteo data, or None while it can't be had (synthetic instead)."""
+        """That UTC day's Open-Meteo data, or None while it can't be had (synthetic instead).
+        Never waits on the network (#291): a due fetch starts in the background and the day
+        stays synthetic (or keeps the copy held) until it lands."""
+        global _down_until, _down_reason
         day = time.strftime("%Y-%m-%d", time.gmtime(ts))
         if day in self._days and not (_is_current(day) and not self.cfg.offline
                                       and time.time() - self._loaded_at[day] > self.cfg.refresh_h * 3600):
             return self._days[day]
-        if time.time() < self._retry_at.get(day, 0):
-            return None
+        result = self._results.pop(day, None)          # a background fetch finished
+        if result is None and (self.cfg.offline or time.time() >= self._retry_at.get(day, 0)):
+            try:
+                raw = _cached(self.cfg, day)
+                if raw is None and self.cfg.offline:
+                    fetch_open_meteo_day(self.cfg, day)    # raises the offline miss
+                result = raw
+            except (OSError, ValueError, KeyError, RuntimeError) as e:
+                result = e
+        if result is None:
+            if time.time() < self._retry_at.get(day, 0):
+                return self._days.get(day)
+            if time.time() < _down_until:              # another site's fetch just failed
+                return self._fail(day, _down_reason, logged=False)
+            self._fetch(day)
+            result = self._results.pop(day, None)      # set already if the fetch ran inline
+            if result is None:
+                return self._days.get(day)             # the older copy, or synthetic for now
+        if isinstance(result, Exception):
+            reason = f"Open-Meteo {day} unavailable ({result.__class__.__name__}: {result}); synthetic sky until it is"
+            logged = True
+            if isinstance(result, OSError) and not self.cfg.offline:
+                logged = time.time() >= _down_until    # sites fetching together: one warning
+                _down_until, _down_reason = time.time() + RETRY_S, reason
+            return self._fail(day, reason, logged=logged)
         try:
-            self._days[day] = OpenMeteoDay(fetch_open_meteo_day(self.cfg, day))
-            self._loaded_at[day] = time.time()
-        except (OSError, ValueError, KeyError, RuntimeError) as e:   # URLError, timeout, offline miss
-            if day in self._days:                  # a refresh failed: keep what we have
-                self._loaded_at[day] = time.time()
-                return self._days[day]
-            self._retry_at[day] = time.time() + RETRY_S
-            reason = f"Open-Meteo {day} unavailable ({e.__class__.__name__}: {e}); synthetic sky until it is"
-            if reason != self.fallback:
-                log.warning("weather: %s", reason)
-                if self.on_fallback:
-                    self.on_fallback(reason)
-            self.fallback = reason
-            return None
+            self._days[day] = OpenMeteoDay(result)
+        except (ValueError, KeyError) as e:
+            return self._fail(day, f"Open-Meteo {day} unreadable ({e.__class__.__name__}: {e}); synthetic sky")
+        self._loaded_at[day] = time.time()
         self._retry_at.pop(day, None)
         self.fallback = None
         return self._days[day]
+
+    def _fetch(self, day: str) -> None:
+        """Fetch ``day`` in the background; the result is picked up by the next ``_day``."""
+        key = str(_cache_path(self.cfg, day))
+        with _lock:
+            if key in _inflight:                       # a site at the same spot is fetching it
+                return
+            _inflight.add(key)
+        cfg = self.cfg
+
+        def run():
+            try:
+                self._results[day] = fetch_open_meteo_day(cfg, day)
+            except (OSError, ValueError, KeyError, RuntimeError) as e:   # URLError, timeout, API error
+                self._results[day] = e
+            finally:
+                with _lock:
+                    _inflight.discard(key)
+        _start(run)
+
+    def _fail(self, day: str, reason: str, logged: bool = True) -> OpenMeteoDay | None:
+        if day in self._days:                          # a refresh failed: keep what we have
+            self._loaded_at[day] = time.time()
+            return self._days[day]
+        self._retry_at[day] = time.time() + RETRY_S
+        if reason != self.fallback:
+            if logged:
+                log.warning("weather: %s", reason)
+            if self.on_fallback:
+                self.on_fallback(reason)
+        self.fallback = reason
+        return None
 
     def _synthetic_poa(self, ts: float) -> float:
         c = self.cfg
