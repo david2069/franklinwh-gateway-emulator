@@ -14,6 +14,16 @@ from franklinwh_emulator.site import SiteConfig
 NOON_UTC = 1_767_225_600 + 12 * 3600      # 2026-01-01 12:00 UTC
 
 
+@pytest.fixture(autouse=True)
+def _weather_fetch_inline(monkeypatch):
+    """#291: Open-Meteo fetches run in a thread; tests run them inline (one test uses a real
+    thread) and start with no network pause left by another test."""
+    from franklinwh_emulator import weather as wmod
+    monkeypatch.setattr(wmod, "_start", lambda fn: fn(), raising=False)
+    monkeypatch.setattr(wmod, "_down_until", 0.0, raising=False)
+    getattr(wmod, "_inflight", set()).clear()
+
+
 @pytest.fixture
 def clock():
     return ManualClock(NOON_UTC)
