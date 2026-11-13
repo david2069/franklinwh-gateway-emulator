@@ -44,7 +44,8 @@ client under its listener. Add gateway ids to show only those, `--history` for e
 client events (connected, left, refused, with the address and a repeat count; they share the
 1000-entry event log, so a long run can push old ones out, and the output says how many were
 dropped), `--watch 5` to redraw every 5 s until Ctrl-C, and `--json` for the raw reply.
-Read-only.
+Read-only. An emulator that is running but doesn't answer within 5 s gets a message saying so
+(`ctl` too); under `--watch` the message replaces the table and the next round tries again (#293).
 
 ```bash
 franklinwh-emulator monitor

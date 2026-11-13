@@ -188,6 +188,48 @@ def test_ctl_without_an_emulator_says_what_to_do(capsys):
     assert "No emulator is running" in err and "franklinwh-emulator ui examples/fleet.yaml" in err
 
 
+@pytest.fixture
+def silent_api(monkeypatch):
+    """A control API that accepts the connection and never answers (#293)."""
+    import socket
+    from franklinwh_emulator import cli
+    monkeypatch.setattr(cli, "API_TIMEOUT_S", 0.3, raising=False)
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    s.listen(8)                                             # never accepted: no reply comes
+    yield f"http://127.0.0.1:{s.getsockname()[1]}"
+    s.close()
+
+
+def test_monitor_and_ctl_say_when_the_emulator_does_not_answer(silent_api, capsys):
+    """#293: a timeout reading the reply is a message, not a traceback."""
+    from franklinwh_emulator.cli import main
+    assert main(["monitor", "--api", silent_api]) == 1
+    err = capsys.readouterr().err
+    assert f"The emulator at {silent_api} didn't answer within 0.3 s" in err and "Traceback" not in err
+    assert main(["ctl", "--api", silent_api, "site", "status"]) == 1
+    assert "didn't answer within 0.3 s" in capsys.readouterr().err
+
+
+def test_monitor_watch_keeps_going_through_a_timeout_and_stops_on_ctrl_c(silent_api, capsys, monkeypatch):
+    """#293: --watch shows the timeout and tries again; Ctrl-C ends it quietly, even mid-request."""
+    from franklinwh_emulator import cli
+    sleeps = []
+
+    def sleep(s):
+        sleeps.append(s)
+        if len(sleeps) == 2:
+            raise KeyboardInterrupt
+    monkeypatch.setattr("time.sleep", sleep)
+    assert cli.main(["monitor", "--api", silent_api, "--watch", "1"]) == 0
+    assert capsys.readouterr().out.count("didn't answer") == 2   # two rounds, then Ctrl-C
+
+    def interrupted(api, path):
+        raise KeyboardInterrupt
+    monkeypatch.setattr(cli, "_get", interrupted)
+    assert cli.main(["monitor", "--api", silent_api, "--watch", "1"]) == 0
+
+
 def test_startup_output_names_the_monitor_command(capsys):
     """#259: the start-up lines say how to see who is connected."""
     import asyncio

@@ -1,0 +1,15 @@
+#293 monitor/ctl: a control API that doesn't answer gives a message, not a traceback. Branch fix/293-monitor-timeout (base b9164b8).
+
+Break check (src/ stashed): both new tests fail with 'TimeoutError: timed out' (the traceback the owner saw):
+  test_monitor_and_ctl_say_when_the_emulator_does_not_answer
+  test_monitor_watch_keeps_going_through_a_timeout_and_stops_on_ctrl_c
+
+Full suite: 785 passed in 64.26s (0:01:04)
+
+Live, installed command against a loopback socket that accepts and never replies:
+$ franklinwh-emulator monitor --api <silent> -> rc 1 after 5.2 s
+The emulator at http://127.0.0.1:<port> didn't answer within 5 s (timed out).
+It is running but not answering; its terminal may say why. Try again in a moment.
+$ franklinwh-emulator ctl site status --api <silent> -> rc 1 after 5.2 s
+The emulator at http://127.0.0.1:<port> didn't answer within 5 s (timed out).
+It is running but not answering; its terminal may say why. Try again in a moment.

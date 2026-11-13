@@ -374,7 +374,7 @@ def ctl(api: str, gateway: str, verb: str, args: list[str], as_json: bool) -> in
     req = urllib.request.Request(url, data=data, method=method,
                                  headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=API_TIMEOUT_S) as resp:
             state = json.load(resp)
     except urllib.error.HTTPError as e:
         print(json.load(e).get("error", e), file=sys.stderr)
@@ -382,8 +382,14 @@ def ctl(api: str, gateway: str, verb: str, args: list[str], as_json: bool) -> in
     except urllib.error.URLError as e:
         print(_unreachable(api, e.reason), file=sys.stderr)
         return 1
+    except TimeoutError as e:
+        print(_no_answer(api, e), file=sys.stderr)
+        return 1
     print(json.dumps(state, indent=1) if as_json else _summary(state))
     return 0
+
+
+API_TIMEOUT_S = 5.0                 # monitor and ctl: how long to wait for the control API
 
 
 def _unreachable(api: str, reason) -> str:
@@ -393,8 +399,14 @@ def _unreachable(api: str, reason) -> str:
             "then run this command again here. If the emulator uses another port, add --api http://127.0.0.1:<port>.")
 
 
+def _no_answer(api: str, reason) -> str:
+    """A timeout reading the reply: something is listening there, but it didn't answer (#293)."""
+    return (f"The emulator at {api} didn't answer within {API_TIMEOUT_S:g} s ({reason or 'timed out'}).\n"
+            "It is running but not answering; its terminal may say why. Try again in a moment.")
+
+
 def _get(api: str, path: str):
-    with urllib.request.urlopen(f"{api.rstrip('/')}{path}", timeout=5) as resp:
+    with urllib.request.urlopen(f"{api.rstrip('/')}{path}", timeout=API_TIMEOUT_S) as resp:
         return json.load(resp)
 
 
@@ -472,13 +484,21 @@ def monitor(api: str, gateways: list[str], watch: float | None, history: bool, a
         except urllib.error.URLError as e:
             print(_unreachable(api, e.reason), file=sys.stderr)
             return 1
-        if as_json:
-            if hist is not None:
-                m["history"] = {gid: [e for e in ev["events"] if e["kind"] == "client"]
-                                for gid, ev in hist.items()}
-            out = json.dumps(m, indent=1)
+        except TimeoutError as e:
+            if watch is None:
+                print(_no_answer(api, e), file=sys.stderr)
+                return 1
+            out = _no_answer(api, e)                   # keep watching (#293)
+        except KeyboardInterrupt:
+            return 0
         else:
-            out = _monitor_text(m, hist)
+            if as_json:
+                if hist is not None:
+                    m["history"] = {gid: [e for e in ev["events"] if e["kind"] == "client"]
+                                    for gid, ev in hist.items()}
+                out = json.dumps(m, indent=1)
+            else:
+                out = _monitor_text(m, hist)
         if watch is None:
             print(out)
             return 0
