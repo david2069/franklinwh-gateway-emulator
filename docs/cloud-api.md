@@ -111,12 +111,26 @@ The emergency-backup reserve is kept and read back but changes nothing: the site
 100 % in that mode. A fixed-time emergency backup switches to `nextWorkMode` at the first cloud
 call after it ends, not by itself.
 
+Phase 2b (#305), TOU schedules:
+
+| Call | What it does |
+|---|---|
+| `GET hes-gateway/terminal/tou/getTouDispatchDetail` | the schedule: `template`, `strategyList` (seasons by `month`, then `dayTypeVoList`: `dayType` 3 every day, or 1 weekdays and 2 weekends, each with its `detailVoList` blocks and its `eleticRate*`/`eleticSell*` prices), and `detailDefaultVo.touDispatchList` (the dispatch codes) |
+| `POST hes-gateway/terminal/tou/saveTouDispatch` | replaces the schedule (`{template, strategyList, …}`) and returns `result.id`. Each month in one season at most, each season `dayType` 3 or both 1 and 2, blocks as for the control API's `tou` (`code 400` otherwise). It doesn't switch the mode: switch to TOU with `updateTouModeV2`, as with current firmware |
+| `POST hes-gateway/terminal/tou/getPcsHintInfo` | an empty hint; franklinwh-cloud's `set_tou_schedule` asks for it before saving |
+
+The site runs one 24-hour schedule, so the emulator gives it the blocks and prices of the
+season and day type for the site's date: at the save, and at a later cloud call once the date
+moves into another one. A schedule set through the control API reads back as one everyday
+season. Prices map by `waveType`: 0 `Valley`, 1 `Shoulder`, 2 `Peak`, 4 `SuperOffPeak`;
+`Sharp` has no `waveType`, so it is kept for the read-back but not used.
+
 Every reply has the cloud's envelope, `{code, message, result, success}`; `code` 200 is success
 and errors come with HTTP 200, as the cloud sends them. A path the emulator doesn't serve gets
 HTTP 404 with the envelope, and another `sendMqtt` command gets `code 400`.
 
-Still to come, in order (#295): TOU schedules (2b), storm, generator and
-grid-limit settings (2c), and faults (expired tokens, rate limits, an offline gateway).
+Still to come, in order (#295): storm, generator and grid-limit settings (2c),
+and faults (expired tokens, rate limits, an offline gateway).
 
 ## Where the replies come from
 

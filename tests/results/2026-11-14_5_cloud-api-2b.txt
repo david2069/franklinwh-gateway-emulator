@@ -1,0 +1,19 @@
+Cloud API phase 2b (#305): TOU schedules
+Date: 2026-11-14
+
+Break check (cloud.py without the TOU routes, new tests/test_cloud_tou.py): 4 failed
+  test_the_site_schedule_reads_back_as_one_everyday_season, test_set_tou_schedule_changes_the_site_and_not_the_mode,
+  test_seasons_follow_the_date (set_tou_schedule_multi: saveTouDispatch 404), test_bad_schedules_are_refused
+With the change: 4 passed; franklinwh-cloud logged no warnings across tests/test_cloud*.py.
+
+Acceptance (franklinwh-cloud 0.6.5 via url_base, TokenAuth):
+  get_tou_dispatch_detail: the site schedule as one everyday season; a control-API change reads back
+  set_tou_schedule("CUSTOM", 01:00-05:00 GRID_CHARGE, rates off_peak 0.12 / peak 0.45): site blocks
+    00:00-01:00 SELF, 01:00-05:00 GRID_CHARGE, ...; off-peak buy 0.12; mode unchanged (Self)
+  get_mode(1): no "get_tou_info failed" warning (2a's warning gone)
+  set_tou_schedule_multi: this month weekday/weekend + an everyday season for the rest: the site runs
+    today's day type; with the date moved 40 days on, sync gives the other season; get_tou_info(1) finds a block
+  saveTouDispatch with no seasons, month 13, dayType 1 alone, a month in two seasons, dispatchId 99: code 400,
+    site schedule unchanged
+
+Full suite: 809 passed. check_pii --scan: no leaks. mkdocs build --strict: OK.
