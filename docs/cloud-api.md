@@ -104,7 +104,7 @@ control-API writes, so every interface reads the change:
 | `POST hes-gateway/terminal/tou/updateSocV2?workMode=&soc=` | sets a mode's reserve; outside 5–100 gets `code 400` |
 | `POST hes-gateway/terminal/updateOffgrid` (`{offgridSet, offgridSoc}`) | requests off-grid (or ends it) with its SoC floor |
 | `sendMqtt` 311 with `dataArea.opt` 1 | the smart-circuit write: `Sw{n}Mode` switches a circuit, `Sw{n}SocLowSet`, `Sw{n}Name` |
-| `GET hes-gateway/terminal/weather/getStormSetting?equipNo=` | `enableStorm` (as `set_mode` last sent it); storm writes come in 2c |
+| `GET hes-gateway/terminal/weather/getStormSetting?equipNo=` | the Storm Hedge settings (2c below); `set_mode` reads `enableStorm` |
 | `GET hes-gateway/terminal/selectTerPushMessageUnreadCount` | 0 |
 
 The emergency-backup reserve is kept and read back but changes nothing: the site charges to
@@ -125,12 +125,25 @@ moves into another one. A schedule set through the control API reads back as one
 season. Prices map by `waveType`: 0 `Valley`, 1 `Shoulder`, 2 `Peak`, 4 `SuperOffPeak`;
 `Sharp` has no `waveType`, so it is kept for the read-back but not used.
 
+Phase 2c (#307), settings:
+
+| Call | What it does |
+|---|---|
+| `POST hes-gateway/terminal/weather/switchStorm`, `setAdvanceBackupTime`, `setStormNotice` (`{equipNo, …}`) | Storm Hedge on or off, its lead time (30–300 min), the notice (`stormNoticeEn`, `advanceTime` 5–30 min); read back by `getStormSetting`. `getStormList` and `getProgressingStormList` are empty: no storms are emulated, so Storm Hedge never starts a backup |
+| `GET hes-gateway/terminal/selectIotGenerator` | the generator block and its live state, as Direct Connect 1902 |
+| `POST hes-gateway/terminal/updateIotGenerator` | sets the keys it carries (`charge{n}En`, `charge{n}StartTime`/`EndTime`, `manuSw`, `genStartElec`…) in that block, so the generator runs on them |
+| `GET hes-gateway/terminal/tou/getPowerControlSetting` | `globalGridChargeMax` and `globalGridDischargeMax`, kW (-1 unlimited, 0 off) |
+| `POST hes-gateway/terminal/tou/setPowerControl` | grid charging: 0 stops it, a kW value caps it (the site's `utility` `grid_charge` and `grid_charge_max_w`). Battery to grid: 0 stops it (`battery_export`); a kW cap is kept and read back but not enforced |
+
+On `manuSw`: the emulator's generator treats it as Direct Connect 1902's mode (1 auto,
+2 manual). franklinwh-cloud saw the cloud treat it as a start/stop command; neither is
+established.
+
 Every reply has the cloud's envelope, `{code, message, result, success}`; `code` 200 is success
 and errors come with HTTP 200, as the cloud sends them. A path the emulator doesn't serve gets
 HTTP 404 with the envelope, and another `sendMqtt` command gets `code 400`.
 
-Still to come, in order (#295): storm, generator and grid-limit settings (2c),
-and faults (expired tokens, rate limits, an offline gateway).
+Still to come (#295): faults (expired tokens, rate limits, an offline gateway).
 
 ## Where the replies come from
 
