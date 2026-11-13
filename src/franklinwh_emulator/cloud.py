@@ -10,7 +10,7 @@ Phase 1a (#297): login, the account's gateway list, each gateway's composite inf
 whenever a circuit is on. Phase 1b (#299): ``sendMqtt`` 203, 211 (type 1) and 311, and
 ``selectOffgrid``. Phase 1c (#301): energy history (``api-energy/...``, cloud_energy.py).
 Phase 2a (#303): the mode, reserve SoC, off-grid and smart-circuit writes, and the reads that
-read them back.
+read them back. Phase 2b (#305): TOU schedules (cloud_tou.py).
 
 Sources, not FranklinWH documentation: franklinwh-cloud's request code (auth.py, client.py,
 mixins), its ``tests/fixtures`` (login, composite info) and ``docs/franklinwh_openapi.json``
@@ -64,7 +64,7 @@ import secrets
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlsplit
 
-from . import cloud_energy
+from . import cloud_energy, cloud_tou
 from .dc_payloads import DcPayloads
 from .models import AUNZ, NA
 from .site import MODE_BACKUP, MODE_SELF, MODE_TOU
@@ -137,6 +137,7 @@ class CloudApi:
         self.tokens: set[str] = set()
         self._payloads: dict[str, DcPayloads] = {}
         self._modes: dict[str, dict] = {}            # per gateway: what only the cloud keeps
+        self._tou: dict[str, cloud_tou.TouStore] = {}
         self._server: asyncio.base_events.Server | None = None
 
     async def start(self) -> tuple[str, int]:
@@ -167,6 +168,7 @@ class CloudApi:
         sn = q.get("gatewayId") or q.get("equipNo")
         if sn in self.by_serial:
             self._expire_backup(self.by_serial[sn])
+            self.tou(self.by_serial[sn]).sync()
         if method == "GET" and name == "getHomeGatewayList":
             return _envelope([self.gateway_entry(gw) for gw in self.gateways.values()])
         if method == "GET" and name == "getDeviceCompositeInfo":
@@ -191,6 +193,18 @@ class CloudApi:
             return _envelope({"enableStorm": self.mode_state(self._gateway(q))["stromEn"],
                               "advanceBackupTime": 120, "noticeEnable": 0,
                               "stormEventVOList": [], "showEventTypeFlag": 0, "tipsMap": {}})
+        if method == "GET" and name == "tou/getTouDispatchDetail":
+            return _envelope(self.tou(self._gateway(q)).detail())
+        if method == "POST" and name == "tou/saveTouDispatch":
+            req = _json(body)
+            gw = self._gateway({"gatewayId": q.get("gatewayId")
+                                or (req.get("template") or {}).get("gatewayId")})
+            try:
+                return _envelope({"id": self.tou(gw).save(req)}, message="Operation success!")
+            except cloud_tou.TouError as e:
+                raise CloudError(400, str(e))
+        if method == "POST" and name == "tou/getPcsHintInfo":
+            return _envelope({"tipMsg": None, "hintFlag": 0})
         if method == "GET" and name == "selectTerPushMessageUnreadCount":
             return _envelope(0)
         raise CloudError(404, f"no such path: {path}", http=404)
@@ -244,6 +258,11 @@ class CloudApi:
         return self._modes.setdefault(gw.serial, {
             "backup_soc": 20, "backupForeverFlag": 1, "nextWorkMode": 2, "stromEn": 0,
             "timer": None})
+
+    def tou(self, gw: "Gateway") -> cloud_tou.TouStore:
+        if gw.serial not in self._tou:
+            self._tou[gw.serial] = cloud_tou.TouStore(gw)
+        return self._tou[gw.serial]
 
     def _expire_backup(self, gw: "Gateway") -> None:
         st = self.mode_state(gw)
