@@ -10,7 +10,8 @@ Phase 1a (#297): login, the account's gateway list, each gateway's composite inf
 whenever a circuit is on. Phase 1b (#299): ``sendMqtt`` 203, 211 (type 1) and 311, and
 ``selectOffgrid``. Phase 1c (#301): energy history (``api-energy/...``, cloud_energy.py).
 Phase 2a (#303): the mode, reserve SoC, off-grid and smart-circuit writes, and the reads that
-read them back. Phase 2b (#305): TOU schedules (cloud_tou.py).
+read them back. Phase 2b (#305): TOU schedules (cloud_tou.py). Phase 2c (#307): storm,
+generator and grid-limit settings.
 
 Sources, not FranklinWH documentation: franklinwh-cloud's request code (auth.py, client.py,
 mixins), its ``tests/fixtures`` (login, composite info) and ``docs/franklinwh_openapi.json``
@@ -47,6 +48,14 @@ those; every value is this emulator's own model.
   call after it expires, not on its own.
 * ``updateOffgrid`` is Direct Connect 1412's off-grid write; ``sendMqtt`` 311 with ``opt`` 1
   is 1410's smart-circuit write.
+* Storm Hedge (#307): the settings are kept and read back; no storm events are emulated, so
+  it never acts. The generator: ``selectIotGenerator`` is Direct Connect 1902's block and live
+  state; ``updateIotGenerator`` merges the keys sent into that block (the cloud's write is
+  partial, Direct Connect's is the full block). franklinwh-cloud's DEF-GEN-MODE-WRITES-MANUSW
+  saw the cloud treat ``manuSw`` as a start/stop command; the generator model reads it as
+  1902's mode. Grid limits (``getPowerControlSetting``/``setPowerControl``, kW, -1 unlimited,
+  0 off): the charge limit is the site's utility ``grid_charge``/``grid_charge_max_w``; a
+  discharge limit of 0 turns battery export off, and other values are kept, not enforced.
 * ``selectOffgrid``: ``offgridSet``/``offgridState`` as Direct Connect 1412's off-grid read;
   ``get_stats`` asks for it when the grid relay is open, to tell a requested off-grid from an
   outage.
@@ -55,6 +64,7 @@ those; every value is this emulator's own model.
 from __future__ import annotations
 
 import asyncio
+from dataclasses import asdict
 import hashlib
 import json
 import time
@@ -91,6 +101,10 @@ WORK_MODES = {1: (MODE_TOU, 9322, "Time-of-Use"), 2: (MODE_SELF, 9323, "Self-Con
               3: (MODE_BACKUP, 9324, "Emergency Backup")}
 SITE_TO_WORK = {site_mode: wm for wm, (site_mode, _, _) in WORK_MODES.items()}
 MIN_RESERVE, MAX_RESERVE = 5, 100
+# Storm Hedge writes: path -> {key: allowed range} (franklinwh-cloud set_storm_settings' ranges).
+STORM_WRITES = {"weather/switchStorm": {"stormEn": (0, 1)},
+                "weather/setAdvanceBackupTime": {"advanceBackupTime": (30, 300)},
+                "weather/setStormNotice": {"stormNoticeEn": (0, 1), "advanceTime": (5, 30)}}
 V2L_RUN_STATE = {"Disabled": 0, "Standby": 1, "Active": 2}   # franklinwh-cloud v2lRunState
 
 
@@ -190,9 +204,42 @@ class CloudApi:
             self.payloads(gw).offgrid(area)
             return _envelope(None, message="Operation success!")
         if method == "GET" and name == "weather/getStormSetting":
-            return _envelope({"enableStorm": self.mode_state(self._gateway(q))["stromEn"],
-                              "advanceBackupTime": 120, "noticeEnable": 0,
+            st = self.mode_state(self._gateway(q))
+            return _envelope({"enableStorm": st["stromEn"], "advanceBackupTime": st["advanceBackupTime"],
+                              "noticeEnable": st["stormNoticeEn"], "advanceTime": st["advanceTime"],
                               "stormEventVOList": [], "showEventTypeFlag": 0, "tipsMap": {}})
+        if method == "GET" and name in ("weather/getStormList", "weather/getProgressingStormList"):
+            self._gateway(q)
+            return _envelope([])
+        if method == "POST" and name in STORM_WRITES:
+            req = _json(body)
+            st = self.mode_state(self._gateway({"equipNo": req.get("equipNo")}))
+            for key, (lo, hi) in STORM_WRITES[name].items():
+                if key in req:
+                    v = int(req[key])
+                    if not lo <= v <= hi:
+                        raise CloudError(400, f"{key} must be {lo}-{hi}")
+                    st["stromEn" if key == "stormEn" else key] = v
+            return _envelope(None, message="Operation success!")
+        if method == "GET" and name == "selectIotGenerator":
+            return _envelope(self.generator(self._gateway(q)))
+        if method == "POST" and name == "updateIotGenerator":
+            req = _json(body)
+            gw = self._gateway({"gatewayId": req.get("gatewayId") or q.get("gatewayId")})
+            block = gw.site.generator.block
+            with gw.site.lock:
+                gw.site.step()
+                for k, v in req.items():
+                    if k in block:
+                        block[k] = v
+            return _envelope(None, message="Operation success!")
+        if method == "GET" and name == "tou/getPowerControlSetting":
+            return _envelope(self.power_control(self._gateway(q)))
+        if method == "POST" and name == "tou/setPowerControl":
+            req = _json(body)
+            gw = self._gateway({"gatewayId": req.get("gatewayId") or q.get("gatewayId")})
+            self.set_power_control(gw, req)
+            return _envelope({"powerControlTipMsg": None}, message="Operation success!")
         if method == "GET" and name == "tou/getTouDispatchDetail":
             return _envelope(self.tou(self._gateway(q)).detail())
         if method == "POST" and name == "tou/saveTouDispatch":
@@ -257,7 +304,46 @@ class CloudApi:
     def mode_state(self, gw: "Gateway") -> dict:
         return self._modes.setdefault(gw.serial, {
             "backup_soc": 20, "backupForeverFlag": 1, "nextWorkMode": 2, "stromEn": 0,
-            "timer": None})
+            "timer": None, "advanceBackupTime": 120, "stormNoticeEn": 0, "advanceTime": 15,
+            "discharge_max_kw": -1.0})
+
+    # -- generator and grid limits (#307) --------------------------------------------------
+    def generator(self, gw: "Gateway") -> dict:
+        out = self._strip(self.payloads(gw).generator({}))
+        v2l = gw.site.v2l
+        out.update(generatorAlarmFlag=0, v2lModeEnable=int(bool(v2l and v2l.enabled)))
+        return out
+
+    def power_control(self, gw: "Gateway") -> dict:
+        u = gw.site.utility_rules
+        if u is not None and not u.grid_charge:
+            charge = 0.0
+        elif u is not None and u.grid_charge_max_w is not None:
+            charge = round(float(u.grid_charge_max_w) / 1000, 2)
+        else:
+            charge = -1.0
+        discharge = self.mode_state(gw)["discharge_max_kw"]
+        if not gw.site.battery_export():
+            discharge = 0.0
+        return {"globalGridDischargeMax": discharge, "globalGridChargeMax": charge,
+                "globalSettingStatus": 0, "solarTipMsg": None, "sgipFlag": 0, "itcFlag": 0,
+                "isNem3": 0, "vppAndPcsTip": None, "bonusTipMsg": None, "isCalifornia": 0,
+                "countryId": COUNTRY_ID.get(gw.site.model.region), "gridFlag": 1}
+
+    def set_power_control(self, gw: "Gateway", req: dict) -> None:
+        try:
+            dis = float(req.get("globalGridDischargeMax", self.power_control(gw)["globalGridDischargeMax"]))
+            chg = float(req.get("globalGridChargeMax", self.power_control(gw)["globalGridChargeMax"]))
+        except (TypeError, ValueError):
+            raise CloudError(400, "globalGridDischargeMax and globalGridChargeMax are kW, -1 or 0")
+        if dis < 0 and dis != -1 or chg < 0 and chg != -1:
+            raise CloudError(400, "a limit is kW, -1 (unlimited) or 0 (off)")
+        u = asdict(gw.site.utility_rules) if gw.site.utility_rules is not None else {}
+        u["grid_charge"] = chg != 0
+        u["grid_charge_max_w"] = chg * 1000 if chg > 0 else None
+        u["battery_export"] = False if dis == 0 else (True if dis > 0 else None)
+        gw.site.set_utility(u)
+        self.mode_state(gw)["discharge_max_kw"] = dis if dis != 0 else -1.0
 
     def tou(self, gw: "Gateway") -> cloud_tou.TouStore:
         if gw.serial not in self._tou:
