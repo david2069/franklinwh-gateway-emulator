@@ -27,6 +27,7 @@
 - Group diagram: the active aGate is drawn in cyan (outline, title and its phase line from the meter) instead of only a thicker green outline; under FORCE its outline stays orange (#267). Docs: Web UI, grouped site.
 
 ### Fixed
+- UI: the Cloud API showed as off (card, detail, Monitor) when the emulator was started from the command line with `--cloud-port`; it was set only when started from Python (#318).
 - `monitor` and `ctl`: a running emulator that doesn't answer within 5 s now gets a message saying so instead of a Python traceback; `monitor --watch` shows it and tries again at the next round, and Ctrl-C ends `--watch` quietly even mid-request (#293). Docs: Control API.
 - Weather (open-meteo): with Open-Meteo unreachable, start-up waited 20 s per site and day before opening any listener, the running emulator stalled (the control API and `monitor` timed out) and Ctrl-C was ignored until a fetch gave up; fetches now run in the background, the site runs on the synthetic sky until the data arrives, and a network failure pauses fetching for every site for 10 minutes with one warning (#291). Docs: Weather and loads.
 - examples/fleet.yaml: the au-3phase site now follows board E: L1 has no smart circuits (solar only), L2 has aircon and hot water + induction on smart circuits 1 and 2, L3 the EV on smart circuit 1 with the generator module fitted (V2L not modelled); before, every aGate had both circuits and no loads on them (#285). Docs: Testing the UI.

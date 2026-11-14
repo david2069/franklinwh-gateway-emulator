@@ -611,8 +611,6 @@ class Fleet:
             from .cloud import CloudApi
             self.cloud = CloudApi(self.gateways, control_host, cloud_port, self.cloud_config)
             self._loop.run(self.cloud.start())
-            for gw in self.gateways.values():
-                gw.cloud_api = self.cloud
         return addresses
 
     def stop(self) -> None:
@@ -622,8 +620,6 @@ class Fleet:
         if self.cloud is not None and self._loop is not None:
             self._loop.run(self.cloud.stop())
             self.cloud = None
-            for gw in self.gateways.values():
-                gw.cloud_api = None
         for gw in self.gateways.values():
             gw.stop()
         if self._loop is not None:

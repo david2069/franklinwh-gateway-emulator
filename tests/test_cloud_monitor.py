@@ -105,3 +105,19 @@ def test_without_cloud_port_the_column_says_not_listening():
         assert gateway_state(f["a"])["cloud_address"] is None
     finally:
         f.stop()
+
+
+def test_a_cloud_api_started_as_the_cli_does_shows_in_the_ui():
+    """#318: cli._run builds CloudApi itself, not through Fleet.start."""
+    from franklinwh_emulator.cloud import CloudApi
+    f = Fleet.from_dict({"gateways": [{"id": "a", "port": 0, "dc_port": 0, "seed": 3}]})
+    gw = f["a"]
+
+    async def go():
+        api = CloudApi({"a": gw}, port=0)
+        await api.start()
+        on = gateway_state(gw)["cloud_address"]
+        await api.stop()
+        return api.port, on, gateway_state(gw)["cloud_address"]
+    port, on, off = asyncio.run(go())
+    assert on == ["127.0.0.1", port] and off is None
