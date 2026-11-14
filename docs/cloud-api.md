@@ -5,7 +5,7 @@ The emulator can also serve the FranklinWH Cloud API: the REST API the FranklinW
 the same gateways as Modbus TCP and Direct Connect, so a cloud client, a Modbus client and a
 Direct Connect client all see one site. The fleet is one cloud account holding every gateway.
 
-It never calls or forwards to the real cloud, and it listens on 127.0.0.1 only.
+It never calls or forwards to the real cloud, and it listens on 127.0.0.1 only unless you choose another address with `--cloud-host`.
 
 ## Start it
 
@@ -22,6 +22,18 @@ FranklinWH Cloud API on http://127.0.0.1:8503/  account=owner@example.com  (fran
 ```
 
 From Python: `Fleet.start(cloud_port=0)` (0 = any free port), then `fleet.cloud.port`.
+
+It listens on loopback (127.0.0.1) only, unless `--cloud-host` names another address (#316),
+for example the Mac's Tailscale address so that HTTP Toolkit on another machine can forward
+the official app to it. `Fleet.start(cloud_host=…)` does the same from Python. On any address
+other than loopback the start-up output warns:
+
+```text
+warning: the Cloud API listens on 0.0.0.0, not loopback: anyone who can reach it and knows the account can read and change the emulated gateways
+```
+
+The account in `cloud:` is the only protection (there is no HTTPS), so use it only on a
+network you trust.
 
 ## Point a client at it
 
