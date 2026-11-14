@@ -12,7 +12,10 @@ whenever a circuit is on. Phase 1b (#299): ``sendMqtt`` 203, 211 (type 1) and 31
 Phase 2a (#303): the mode, reserve SoC, off-grid and smart-circuit writes, and the reads that
 read them back. Phase 2b (#305): TOU schedules (cloud_tou.py). Phase 2c (#307): storm,
 generator and grid-limit settings. Phase 3 (#309): faults (``gw.cloud_faults``, the
-``cloud-faults`` action) and token expiry (``cloud: {token_ttl_s}``).
+``cloud-faults`` action) and token expiry (``cloud: {token_ttl_s}``). #311: broken replies
+below the envelope (``bad_reply``: hangs, resets, truncated or non-JSON bodies, HTML error
+pages, broken ``sendMqtt`` replies) and an account-wide rate limit
+(``cloud: {rate_limit_per_min}``).
 
 Sources, not FranklinWH documentation: franklinwh-cloud's request code (auth.py, client.py,
 mixins), its ``tests/fixtures`` (login, composite info) and ``docs/franklinwh_openapi.json``
@@ -71,6 +74,7 @@ import json
 import time
 import zlib
 import logging
+import random
 import secrets
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlsplit
@@ -78,16 +82,18 @@ from urllib.parse import parse_qs, urlsplit
 from . import cloud_energy, cloud_tou
 from .dc_payloads import DcPayloads
 from .models import AUNZ, NA
+from .server import MQTT_BAD_REPLIES
 from .site import MODE_BACKUP, MODE_SELF, MODE_TOU
 
 if TYPE_CHECKING:
     from .gateway import Gateway
 
 log = logging.getLogger(__name__)
+_rng = random.Random(311)               # which requests get a bad_reply_p < 1: repeatable
 
 DEFAULT_ACCOUNT = "owner@example.com"
 DEFAULT_PASSWORD = "emulator"
-CLOUD_KEYS = {"account", "password", "token_ttl_s"}
+CLOUD_KEYS = {"account", "password", "token_ttl_s", "rate_limit_per_min"}
 PREFIX = "/hes-gateway/terminal/"
 ENERGY = {"/api-energy/power/getFhpPowerByDay": cloud_energy.power_by_day,
           "/api-energy/electric/getFhpElectricData": cloud_energy.electric_data}
@@ -164,6 +170,8 @@ class CloudApi:
         self.password = str(cfg.get("password", DEFAULT_PASSWORD))
         ttl = cfg.get("token_ttl_s")
         self.token_ttl_s = None if ttl is None else float(ttl)
+        limit = cfg.get("rate_limit_per_min")
+        self.rate_limit_per_min = None if limit is None else int(limit)   # all gateways together
         self.gateways = gateways
         self.by_serial = {gw.serial: gw for gw in gateways.values()}
         self.host, self.port = host, port
@@ -173,6 +181,7 @@ class CloudApi:
         self._modes: dict[str, dict] = {}            # per gateway: what only the cloud keeps
         self._tou: dict[str, cloud_tou.TouStore] = {}
         self._server: asyncio.base_events.Server | None = None
+        self._hung: set[asyncio.StreamWriter] = set()   # bad_reply "hang": held until stop
 
     async def start(self) -> tuple[str, int]:
         self._server = await asyncio.start_server(self._client, self.host, self.port)
@@ -180,6 +189,8 @@ class CloudApi:
         return self.host, self.port
 
     async def stop(self) -> None:
+        for writer in list(self._hung):
+            writer.transport.abort()
         if self._server is not None:
             self._server.close()
             await self._server.wait_closed()
@@ -196,6 +207,7 @@ class CloudApi:
             raise CloudError(404, f"no such path: {path}", http=404)
         if not self._token_ok(headers.get("logintoken")):
             raise CloudError(10009, "Token invalid, please log in again")
+        self._rate_limit(None)
         if method == "GET" and path in ENERGY:
             return _envelope(ENERGY[path](self._gateway(q), q))
         name = path[len(PREFIX):]
@@ -289,9 +301,10 @@ class CloudApi:
             return False
         return True
 
-    def _rate_limit(self, gw: "Gateway") -> None:
-        limit = gw.cloud_faults.rate_limit_per_min
-        hits = self._hits.setdefault(gw.serial, [])
+    def _rate_limit(self, gw: "Gateway | None") -> None:
+        """One gateway's limit, or (gw None) the account's."""
+        limit = self.rate_limit_per_min if gw is None else gw.cloud_faults.rate_limit_per_min
+        hits = self._hits.setdefault("" if gw is None else gw.serial, [])
         now = time.monotonic()
         hits[:] = [t for t in hits if now - t < 60]
         if limit is not None and len(hits) >= int(limit):
@@ -529,10 +542,44 @@ class CloudApi:
                    BFPVApboxRelay=0)
         return out
 
-    def _latency(self, target: str, body: bytes) -> float:
+    def _named(self, target: str, body: bytes) -> "Gateway | None":
+        """The gateway a request names, for its faults."""
         q = {k: v[0] for k, v in parse_qs(urlsplit(target).query).items()}
-        gw = self.by_serial.get(q.get("gatewayId") or q.get("equipNo") or _body_gateway(body) or "")
-        return float(gw.cloud_faults.latency_s) if gw is not None else 0.0
+        return self.by_serial.get(q.get("gatewayId") or q.get("equipNo") or _body_gateway(body) or "")
+
+    @staticmethod
+    def _bad_reply(gw: "Gateway | None", target: str) -> str | None:
+        """This request's bad_reply, if it gets one (counting it down)."""
+        f = gw.cloud_faults if gw is not None else None
+        if f is None or not f.bad_reply:
+            return None
+        if f.bad_reply in MQTT_BAD_REPLIES and not urlsplit(target).path.endswith("/sendMqtt"):
+            return None
+        if f.bad_reply_p < 1 and _rng.random() >= f.bad_reply_p:
+            return None
+        kind = f.bad_reply
+        if f.bad_reply_count > 0:
+            f.bad_reply_count -= 1
+            if f.bad_reply_count == 0:
+                f.bad_reply = None
+        return kind
+
+    @staticmethod
+    def _spoil(kind: str, payload: dict) -> dict:
+        """The envelope-level bad replies: the reply as routed, made wrong."""
+        res = payload.get("result")
+        if kind == "not_envelope":
+            return {"status": "ok", "data": res}
+        if kind == "success_false":
+            return {**payload, "success": False}
+        if payload.get("code") == 200 and isinstance(res, dict):
+            if kind == "wrong_cmd_type":
+                return {**payload, "result": {**res, "cmdType": int(res.get("cmdType", 0)) + 100}}
+            if kind == "bad_crc":
+                return {**payload, "result": {**res, "crc": "00000000"}}
+            if kind == "bad_data_area":
+                return {**payload, "result": {**res, "dataArea": str(res.get("dataArea", ""))[:-1] or "{"}}
+        return payload
 
     # -- HTTP ------------------------------------------------------------------------------
     async def _client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
@@ -552,13 +599,40 @@ class CloudApi:
                 status, payload = e.http, _envelope(None, e.code, str(e))
                 if e.retry_after is not None:
                     extra = f"Retry-After: {e.retry_after}\r\n"
-            delay = self._latency(target, raw)
-            if delay:
-                await asyncio.sleep(delay)
-            data = json.dumps(payload).encode()
-            reason = {200: "OK", 404: "Not Found", 429: "Too Many Requests"}.get(status, "Error")
-            writer.write(f"HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\n{extra}"
-                         f"Content-Length: {len(data)}\r\nConnection: close\r\n\r\n".encode() + data)
+            gw = self._named(target, raw)
+            if gw is not None and gw.cloud_faults.latency_s:
+                await asyncio.sleep(float(gw.cloud_faults.latency_s))
+            kind = self._bad_reply(gw, target)
+            if kind == "hang":
+                self._hung.add(writer)
+                try:
+                    await reader.read()                    # until the client gives up
+                finally:
+                    self._hung.discard(writer)
+                return
+            if kind == "reset":
+                writer.transport.abort()
+                return
+            ctype = "application/json"
+            if kind == "not_json":
+                data = b"upstream error: not JSON"
+            elif kind and kind.startswith("html_"):
+                status, ctype = int(kind[5:]), "text/html"
+                data = (f"<html><head><title>{status} Error</title></head><body><h1>{status} Error</h1>"
+                        "<p>The request could not be satisfied.</p></body></html>").encode()
+            else:
+                data = json.dumps(self._spoil(kind, payload) if kind else payload).encode()
+            reason = {200: "OK", 404: "Not Found", 429: "Too Many Requests", 500: "Internal Server Error",
+                      502: "Bad Gateway", 503: "Service Unavailable",
+                      504: "Gateway Timeout"}.get(status, "Error")
+            head = (f"HTTP/1.1 {status} {reason}\r\nContent-Type: {ctype}\r\n{extra}"
+                    f"Content-Length: {len(data)}\r\nConnection: close\r\n\r\n").encode()
+            if kind == "truncate":
+                writer.write(head + data[:len(data) // 2])
+                await writer.drain()
+                writer.transport.abort()
+                return
+            writer.write(head + data)
             await writer.drain()
         except (ValueError, asyncio.IncompleteReadError, ConnectionError) as e:
             log.debug("cloud api: bad request: %s", e)

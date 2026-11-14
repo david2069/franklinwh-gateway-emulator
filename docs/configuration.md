@@ -54,9 +54,10 @@ A grid event (outage, voltage, frequency) on any member reaches the whole group,
 draws the group as one site ([Web UI](ui.md#energy-diagram)).
 
 `cloud:` is the account for the [FranklinWH Cloud API](cloud-api.md) (served with
-`--cloud-port`): `{account, password, token_ttl_s}`, default `{account: owner@example.com,
-password: emulator}`; `token_ttl_s` expires login tokens after that many seconds (default:
-never). Every gateway in the file belongs to it.
+`--cloud-port`): `{account, password, token_ttl_s, rate_limit_per_min}`, default
+`{account: owner@example.com, password: emulator}`; `token_ttl_s` expires login tokens after
+that many seconds (default: never); `rate_limit_per_min` answers HTTP 429 past that many
+requests a minute from the whole account (default: no limit). Every gateway in the file belongs to it.
 
 ## A complete example
 
