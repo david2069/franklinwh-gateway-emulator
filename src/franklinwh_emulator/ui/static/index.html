@@ -94,6 +94,9 @@
           <div x-text="g.dc_address ? 'Direct Connect ' + addr(g.dc_address) : 'Direct Connect off'"
                :class="{ off: !g.dc_address }"
                :title="g.dc_address ? '' : 'No directconnect: entry for this gateway in the fleet file'"></div>
+          <div x-text="g.cloud_address ? 'Cloud API ' + addr(g.cloud_address) : 'Cloud API off'"
+               :class="{ off: !g.cloud_address }"
+               :title="g.cloud_address ? 'The FranklinWH Cloud API: one listener for the whole fleet' : 'Start with --cloud-port'"></div>
         </div>
         <dl class="flows">
           <div><dt>Solar</dt><dd x-text="kw(g.solar_w)"></dd></div>
@@ -109,6 +112,7 @@
                 title="A Modbus M704 setpoint is active. Direct Connect 1707 reads 9, which the FranklinWH app shows as VPP Mode."></span>
           <template x-for="a in g.alarm_names" :key="a"><span class="tag bad" x-text="a"></span></template>
           <template x-for="f in faultList(g)" :key="f"><span class="tag warn" x-text="'fault: ' + f"></span></template>
+          <template x-for="f in cloudFaultList(g)" :key="'c' + f"><span class="tag warn" x-text="'cloud: ' + f" title="FranklinWH Cloud API fault (Alarms and faults → cloud-faults)"></span></template>
           <template x-for="o in overrideList(g)" :key="o"><span class="tag warn" x-text="o"></span></template>
           <span class="tag" x-show="g.episode_phase" x-text="'episode: ' + g.episode_phase"></span>
           <template x-for="n in g.apower_off" :key="'ap' + n"><span class="tag warn" x-text="'aPower ' + n + ' switched off'"></span></template>
@@ -157,6 +161,8 @@
           <button type="button" x-show="current.dc_address" :disabled="busy === 'dc-reboot' || current.rebooting" @click="dcReboot()"
                   :title="'Sends a Direct Connect 1721 reboot to ' + addr(current.dc_address)"
                   x-text="busy === 'dc-reboot' ? 'Sending…' : 'Reboot via Direct Connect'"></button>
+          <span class="comms-state cloud" :class="{ off: !current.cloud_address }" x-text="cloudText(current)"
+                title="The FranklinWH Cloud API: one listener for every gateway in the fleet"></span>
           <span class="empty" x-show="!current.dc_address">No Direct Connect listener, so no 1205 write or 1721 reboot.</span>
           <template x-for="a in ['dc-modbus', 'dc-reboot']" :key="a">
             <p class="result" x-show="result(a)" :class="result(a) && (result(a).ok ? 'ok' : 'bad')"
@@ -356,13 +362,14 @@
         <div class="mon">
           <p class="mon-line" x-text="monProcess(mon.process)"></p>
           <table class="mon-table">
-            <thead><tr><th scope="col">Gateway</th><th scope="col">Modbus TCP clients</th><th scope="col">Direct Connect clients</th></tr></thead>
+            <thead><tr><th scope="col">Gateway</th><th scope="col">Modbus TCP clients</th><th scope="col">Direct Connect clients</th><th scope="col">Cloud API clients</th></tr></thead>
             <tbody>
               <template x-for="r in mon.gateways" :key="r.id">
                 <tr :class="{ cur: r.id === active }">
                   <th scope="row"><button type="button" class="linkish" @click="select(r.id)" x-text="r.id"></button></th>
                   <td x-text="monListener(r.modbus)"></td>
                   <td x-text="monListener(r.dc)"></td>
+                  <td x-text="monListener(r.cloud)"></td>
                 </tr>
               </template>
             </tbody>

@@ -465,6 +465,11 @@ def test_card_health(tmp_path):
         "episode": {**clean, "episode_phase": "down"},
         "offgrid": {**clean, "episode_phase": "offgrid"},
         "mb_off": {**clean, "faults": {**clean["faults"], "offline": True}},
+        "cloud_ok": {**clean, "cloud_faults": {"offline": False, "rate_limit_per_min": None, "latency_s": 0,
+                                               "bad_reply": None, "bad_reply_count": 0, "bad_reply_p": 1.0}},
+        "cloud_bad": {**clean, "cloud_faults": {"bad_reply": "html_503", "bad_reply_p": 1.0,
+                                                "rate_limit_per_min": None}},
+        "cloud_off": {**clean, "cloud_faults": {"offline": True, "rate_limit_per_min": 0}},
         "bare": {},
     }
     harness = tmp_path / "health.js"
@@ -478,6 +483,9 @@ def test_card_health(tmp_path):
     assert r["dc_exc"] == {"state": "fault", "why": "Direct Connect fault exception"}
     assert r["reboot"] == {"state": "offline", "why": "rebooting · alarm OVER_TEMP"}
     assert r["episode"]["state"] == "offline" and r["mb_off"]["why"] == "Modbus TCP offline"
+    assert r["cloud_ok"] == r["ok"]                                   # #314: defaults are no fault
+    assert r["cloud_bad"] == {"state": "fault", "why": "Cloud API fault bad_reply"}
+    assert r["cloud_off"] == {"state": "offline", "why": "Cloud API offline · Cloud API fault rate_limit_per_min"}
 
 
 # -- card model text with SKUs (#191) -------------------------------------------------------------

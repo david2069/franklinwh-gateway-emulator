@@ -18,6 +18,7 @@ import time
 from collections import deque
 
 REFUSED_WINDOW_S = 3600.0
+SESSION_IDLE_S = 300.0                   # a Cloud API session leaves after this long without a request
 
 
 class ClientTable:
@@ -84,6 +85,43 @@ class ClientTable:
                 "peer": self.last["peer"], "ago_s": round(now - self.last["left"], 1),
                 "stayed_s": round(self.last["stayed_s"], 1), "requests": self.last["requests"]},
         }
+
+
+class SessionTable(ClientTable):
+    """Cloud API clients of one gateway (#314). Each HTTP request is its own connection, so a
+    client is a login session (its token): it connects with its first request for this gateway
+    and leaves after ``SESSION_IDLE_S`` without one. The peer is the host only (the port changes
+    with every request); ``app`` is the version the client claims (its ``softwareversion``
+    header). Refused: answered 429."""
+
+    def __init__(self):
+        super().__init__()
+        self._by_token: dict[str, dict] = {}
+
+    def seen(self, token: str, host: str, app: str | None) -> None:
+        self.sweep()
+        e = self._by_token.get(token)
+        if e is None:
+            e = self.open(host)
+            e["app"] = app
+            self._by_token[token] = e
+        elif app:
+            e["app"] = app
+        self.request(e)
+
+    def sweep(self, now: float | None = None) -> None:
+        now = time.time() if now is None else now
+        for token, e in list(self._by_token.items()):
+            if now - (e["last"] or e["since"]) >= SESSION_IDLE_S:
+                del self._by_token[token]
+                self.close(e)
+
+    def snapshot(self, now: float | None = None) -> dict:
+        self.sweep(now)
+        snap = super().snapshot(now)
+        for c, e in zip(snap["clients"], self._open.values()):
+            c["app"] = e.get("app")
+        return snap
 
 
 def _peer(peer) -> str:
