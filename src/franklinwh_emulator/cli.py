@@ -58,7 +58,7 @@ DEFAULT_API = "http://127.0.0.1:8502"
 async def _run(gateways: list[Gateway], control_port: int | None, ui: bool = False,
                workspace: str = "emulator-workspace", fleet_file: str | None = None,
                restore: str | None = None, cloud_port: int | None = None,
-               cloud: dict | None = None) -> None:
+               cloud: dict | None = None, cloud_host: str = "127.0.0.1") -> None:
     for gw in gateways:
         host, port = await gw.start_async()
         p = gw.profile
@@ -101,10 +101,13 @@ async def _run(gateways: list[Gateway], control_port: int | None, ui: bool = Fal
     cloud_api = None
     if cloud_port is not None:
         from .cloud import CloudApi
-        cloud_api = CloudApi({gw.config.id: gw for gw in gateways}, port=cloud_port, cloud=cloud)
+        cloud_api = CloudApi({gw.config.id: gw for gw in gateways}, host=cloud_host, port=cloud_port, cloud=cloud)
         host, port = await cloud_api.start()
         print(f"FranklinWH Cloud API on http://{host}:{port}/  account={cloud_api.account}  "
               f"(franklinwh-cloud: url_base=\"http://{host}:{port}/\")", flush=True)
+        if not cloud_api.loopback:
+            print(f"warning: the Cloud API listens on {host}, not loopback: anyone who can reach it and "
+                  "knows the account can read and change the emulated gateways", flush=True)
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -655,8 +658,12 @@ def main(argv: list[str] | None = None) -> int:
 
     for p in (s, f, u):
         p.add_argument("--cloud-port", type=int, metavar="PORT",
-                       help="also serve the FranklinWH Cloud API on 127.0.0.1:PORT (e.g. 8503; "
+                       help="also serve the FranklinWH Cloud API on PORT (e.g. 8503; "
                             "off by default); point a cloud client's base URL at it")
+        p.add_argument("--cloud-host", default="127.0.0.1", metavar="HOST",
+                       help="the address the Cloud API listens on (default 127.0.0.1, loopback only); "
+                            "e.g. a Tailscale address so HTTP Toolkit on another machine can forward "
+                            "the official app to it (#316)")
     for p in (s, f):
         p.add_argument("--control-port", type=int, default=8502,
                        help="HTTP control API port on 127.0.0.1 (default 8502)")
@@ -749,7 +756,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             asyncio.run(_run(gateways, args.port, ui=True, workspace=args.workspace,
                              fleet_file=args.config, restore=args.restore,
-                             cloud_port=args.cloud_port, cloud=d.get("cloud")))
+                             cloud_port=args.cloud_port, cloud=d.get("cloud"), cloud_host=args.cloud_host))
         except KeyboardInterrupt:
             pass
         return 0
@@ -762,7 +769,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         asyncio.run(_run(gateways, None if args.no_control else args.control_port,
-                         cloud_port=args.cloud_port, cloud=cloud))
+                         cloud_port=args.cloud_port, cloud=cloud, cloud_host=args.cloud_host))
     except KeyboardInterrupt:
         pass
     return 0

@@ -1,0 +1,11 @@
+2026-11-14 #316 step 1: --cloud-host
+Branch cloud-host, base 63900e6. Python 3.12.
+
+== tests/test_cloud_host.py
+============================== 2 passed in 7.55s ===============================
+
+== Break check (src reverted, tests kept): 2 failed
+== Full suite: 839 passed in 155.27s (0:02:35) (before the test address change to 192.0.2.10; that file re-run: 2 passed)
+== check_pii --scan: no leaks (after replacing a CGNAT example address). mkdocs --strict: ok
+
+Listening on 0.0.0.0 happened only inside the tests, on ephemeral ports, for under a second each.

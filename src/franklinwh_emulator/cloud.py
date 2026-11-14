@@ -3,7 +3,7 @@ served from the fleet's gateways.
 
 A client is pointed here by its base URL and nothing else, e.g. franklinwh-cloud's
 ``Client(auth, serial, url_base="http://127.0.0.1:8503/")``. The emulator never calls or
-forwards to the real cloud; it listens on loopback.
+forwards to the real cloud; it listens on loopback unless ``--cloud-host`` says otherwise (#316).
 
 Phase 1a (#297): login, the account's gateway list, each gateway's composite info, and the
 ``sendMqtt`` relay's 353 (smart-circuit loads), which franklinwh-cloud's ``get_stats`` sends
@@ -70,6 +70,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import asdict
 import hashlib
+import ipaddress
 import json
 import time
 import zlib
@@ -119,6 +120,14 @@ class CloudError(Exception):
     def __init__(self, code: int, message: str, http: int = 200, retry_after: int | None = None):
         super().__init__(message)
         self.code, self.http, self.retry_after = code, http, retry_after
+
+
+def _is_ip(host: str) -> bool:
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        return False
 
 
 def _envelope(result=None, code: int = 200, message: str = "Query success!") -> dict:
@@ -175,6 +184,7 @@ class CloudApi:
         self.gateways = gateways
         self.by_serial = {gw.serial: gw for gw in gateways.values()}
         self.host, self.port = host, port
+        self.loopback = ipaddress.ip_address(host).is_loopback if _is_ip(host) else host == "localhost"
         self.tokens: dict[str, float] = {}          # token -> when it was issued
         self._hits: dict[str, list[float]] = {}     # per gateway: request times (rate limit)
         self._payloads: dict[str, DcPayloads] = {}
