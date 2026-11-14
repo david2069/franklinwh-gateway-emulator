@@ -182,6 +182,8 @@ class CloudApi:
         self._tou: dict[str, cloud_tou.TouStore] = {}
         self._server: asyncio.base_events.Server | None = None
         self._hung: set[asyncio.StreamWriter] = set()   # bad_reply "hang": held until stop
+        self.logins = 0                                  # for the Monitor (#314)
+        self.requests = 0
 
     async def start(self) -> tuple[str, int]:
         self._server = await asyncio.start_server(self._client, self.host, self.port)
@@ -324,6 +326,7 @@ class CloudApi:
         if form.get("account", "").lower() != self.account.lower() or form.get("password") != md5:
             return _envelope(None, 401, "Incorrect account or password")
         token = secrets.token_hex(16)
+        self.logins += 1
         self.tokens[token] = time.monotonic()
         return _envelope({"token": token, "userId": 1, "email": self.account, "version": None,
                           "currentType": int(form.get("type") or 0), "userTypes": [0],
@@ -542,6 +545,17 @@ class CloudApi:
                    BFPVApboxRelay=0)
         return out
 
+    def _seen(self, gw: "Gateway | None", writer: asyncio.StreamWriter, headers: dict, status: int) -> None:
+        """The Monitor's view (#314): a request from a logged-in session, or a 429."""
+        if gw is None:
+            return
+        peer = writer.get_extra_info("peername")
+        host = peer[0] if isinstance(peer, (tuple, list)) else str(peer)
+        if status == 429:
+            gw.cloud_clients.refuse(host)
+        elif headers.get("logintoken") in self.tokens:
+            gw.cloud_clients.seen(headers["logintoken"], host, headers.get("softwareversion"))
+
     def _named(self, target: str, body: bytes) -> "Gateway | None":
         """The gateway a request names, for its faults."""
         q = {k: v[0] for k, v in parse_qs(urlsplit(target).query).items()}
@@ -593,6 +607,7 @@ class CloudApi:
             length = int(headers.get("content-length") or 0)
             raw = await reader.readexactly(length) if length else b""
             status, extra = 200, ""
+            self.requests += 1
             try:
                 payload = self.route(method.upper(), target, headers, raw)
             except CloudError as e:
@@ -600,6 +615,7 @@ class CloudApi:
                 if e.retry_after is not None:
                     extra = f"Retry-After: {e.retry_after}\r\n"
             gw = self._named(target, raw)
+            self._seen(gw, writer, headers, status)
             if gw is not None and gw.cloud_faults.latency_s:
                 await asyncio.sleep(float(gw.cloud_faults.latency_s))
             kind = self._bad_reply(gw, target)

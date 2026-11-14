@@ -44,6 +44,25 @@ stats = await client.get_stats()
     With them, get a token from the emulator yourself and use `TokenAuth(token)`; see
     `tests/test_cloud.py`.
 
+## Seeing it in the UI
+
+#314. The Cloud API shows the way Modbus TCP and Direct Connect do:
+
+* **Card and detail:** `Cloud API 127.0.0.1:8503` under the other two listeners, or `Cloud API
+  off` without `--cloud-port`. A cloud fault adds a `cloud: …` badge and colours the card's
+  border, as the other listeners' faults do.
+* **Monitor:** a "Cloud API clients" column. Each HTTP request is its own connection, so a client
+  here is a login session (a token). It connects with its first request for the gateway and
+  leaves after 5 minutes without one. It is listed by host and by the app version it claims (its
+  `softwareversion` header; franklinwh-cloud sends `APP2.4.1` unless told otherwise). A 429
+  counts as refused. Login and the gateway list name no gateway, so they count only in the
+  totals line (`Cloud API N logins, M requests`). `franklinwh-emulator monitor` prints the same.
+* **Events:** `Cloud API client <host> connected`, `left` and `refused`, in the gateway's event
+  log.
+
+The emulator answers every app version the same way, since differences between versions aren't
+established.
+
 ## The account
 
 The fleet file's `cloud:` sets it:

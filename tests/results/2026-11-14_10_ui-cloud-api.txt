@@ -1,0 +1,26 @@
+2026-11-14 #314 Cloud API connectivity in the UI, Monitor and events
+Branch ui-cloud-api-connectivity, base 250796b. Python 3.12, franklinwh-cloud 0.6.5. Own emulator on ephemeral ports; the owner's 8502/8503 not touched.
+
+== New and changed tests
+============================== 5 passed in 0.70s ===============================
+
+== Break check: _seen returns at once; cardHealth ignores cloud_faults
+3 failed (both session tests, test_card_health), 46 passed
+
+== franklinwh-emulator monitor text after one franklinwh-cloud get_stats (ports elided)
+process 9150 · up 6 s · CPU 2.8 % · memory 28.0 MB (peak 62.3) · loop lag 64.8 ms
+all: 1 gateways, 1 with clients · 1 connected now · 1 accepted since start · 0 refused in the last hour · 0.0 req/s · Cloud API <port> logins, 3 requests
+
+gateway          listener        port now accepted  requests  req/s refused 1h  last client
+home             Modbus TCP       off   0        0         0    0.0          0  -
+home             Direct Connect <port>   0        0         0    0.0          0  -
+home             Cloud API <port>   1        1         2    0.0          0  -
+                   ↳ 127.0.0.1 APP2.4.1 connected 6 s, 2 requests, idle 6 s
+
+== Headless Chrome screenshot of the UI (not committed): card shows 'Cloud API 127.0.0.1:<port>',
+   badge 'cloud: html_503 x2', fault border; detail shows 'Cloud API on · 127.0.0.1:<port>'.
+
+== Full suite
+836 passed
+
+== check_pii --scan: no leaks. mkdocs build --strict: ok

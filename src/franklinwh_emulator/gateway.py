@@ -217,6 +217,10 @@ class Gateway:
         self.server.clients.notify = lambda what, peer: self.events.client("Modbus TCP", what, peer)
         self.dc_faults = Faults()
         self.cloud_faults = CloudFaults()
+        from .monitor import SessionTable
+        self.cloud_clients = SessionTable()              # Cloud API sessions naming this gateway (#314)
+        self.cloud_clients.notify = lambda what, peer: self.events.client("Cloud API", what, peer)
+        self.cloud_api = None                            # the fleet's CloudApi while it runs
         self.dc = None
         is_agate = self.profile.name != "spec"          # every other profile is an aGate
         if cfg.dc_port is None and is_agate:
@@ -607,6 +611,8 @@ class Fleet:
             from .cloud import CloudApi
             self.cloud = CloudApi(self.gateways, control_host, cloud_port, self.cloud_config)
             self._loop.run(self.cloud.start())
+            for gw in self.gateways.values():
+                gw.cloud_api = self.cloud
         return addresses
 
     def stop(self) -> None:
@@ -616,6 +622,8 @@ class Fleet:
         if self.cloud is not None and self._loop is not None:
             self._loop.run(self.cloud.stop())
             self.cloud = None
+            for gw in self.gateways.values():
+                gw.cloud_api = None
         for gw in self.gateways.values():
             gw.stop()
         if self._loop is not None:

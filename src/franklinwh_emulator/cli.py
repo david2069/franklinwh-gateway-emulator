@@ -440,12 +440,14 @@ def _monitor_text(m: dict, history: dict[str, dict] | None = None) -> str:
              f"memory {p['rss_mb']} MB (peak {p['peak_rss_mb']}) · loop lag {p['loop_lag_ms']} ms",
              f"all: {t['gateways']} gateways, {t['with_clients']} with clients · {t['connections']} connected now · "
              f"{t['accepted']} accepted since start · {t['refused_1h']} refused in the last hour · "
-             f"{t['requests_per_s']} req/s", "",
+             f"{t['requests_per_s']} req/s"
+             + (f" · Cloud API {m['cloud']['logins']} logins, {m['cloud']['requests']} requests" if m.get("cloud") else ""),
+             "",
              f"{'gateway':16} {'listener':14} {'port':>5} {'now':>3} {'accepted':>8} {'requests':>9} "
              f"{'req/s':>6} {'refused 1h':>10}  last client"]
     for g in m["gateways"]:
-        for name, label in (("modbus", "Modbus TCP"), ("dc", "Direct Connect")):
-            s = g[name]
+        for name, label in (("modbus", "Modbus TCP"), ("dc", "Direct Connect"), ("cloud", "Cloud API")):
+            s = g.get(name)
             if s is None:
                 continue
             last = s["last_client"]
@@ -455,7 +457,8 @@ def _monitor_text(m: dict, history: dict[str, dict] | None = None) -> str:
             lines.append(f"{g['id']:16} {label:14} {port:>5} {len(s['clients']):>3} {s['accepted']:>8} "
                          f"{s['requests']:>9} {s['requests_per_s']:>6} {s['refused_1h']:>10}  {last}")
             for c in s["clients"]:
-                lines.append(f"{'':16}   ↳ {c['peer']} connected {_dur(c['connected_s'])}, "
+                app = f" {c['app']}" if c.get("app") else ""
+                lines.append(f"{'':16}   ↳ {c['peer']}{app} connected {_dur(c['connected_s'])}, "
                              f"{c['requests']} requests, idle {_dur(c['idle_s'])}")
             if s["last_refused"]:
                 r = s["last_refused"]

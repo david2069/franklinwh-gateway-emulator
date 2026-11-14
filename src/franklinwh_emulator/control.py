@@ -85,6 +85,7 @@ def _weather_event(site, ts: float) -> dict | None:
 
 def gateway_state(gw: "Gateway") -> dict:
     snap = gw.site.step()
+    gw.cloud_clients.sweep()                              # idle Cloud API sessions leave (#314)
     site = gw.site
     state = asdict(snap)
     state["alarm_names"] = [n for n, b in ALARMS.items() if snap.alarms & (1 << b)]
@@ -93,6 +94,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "serial": gw.serial,
         "address": list(gw.address),
         "dc_address": list(gw.dc_address) if gw.dc_address else None,
+        "cloud_address": [gw.cloud_api.host, gw.cloud_api.port] if gw.cloud_api else None,
         "profile": gw.profile.name,
         "firmware": gw.profile.firmware + (" (candidate)" if gw.profile.name.endswith("-candidate") else "")
                     if gw.profile.name != "spec" else "SunSpec DER (spec)",
@@ -613,13 +615,16 @@ class ControlApi:
         rows, conns, refused, rate, accepted = [], 0, 0, 0.0, 0
         for gid, gw in self.gateways.items():
             row = {"id": gid}
-            for name, srv, listening in (("modbus", gw.server, gw.server._server is not None),
-                                         ("dc", gw.dc, gw.dc is not None and gw.dc._server is not None)):
-                if srv is None:
+            cloud = gw.cloud_api
+            for name, table, port, listening in (
+                    ("modbus", gw.server.clients, gw.server.port, gw.server._server is not None),
+                    ("dc", gw.dc and gw.dc.clients, gw.dc and gw.dc.port, gw.dc is not None and gw.dc._server is not None),
+                    ("cloud", gw.cloud_clients, cloud and cloud.port, cloud is not None)):
+                if table is None:
                     row[name] = None
                     continue
-                snap = srv.clients.snapshot()
-                snap.update(listening=listening, port=srv.port,
+                snap = table.snapshot()
+                snap.update(listening=listening, port=port,
                             requests_per_s=self._rate(gid, name, snap["requests"]))
                 conns += len(snap["clients"])
                 accepted += snap["accepted"]
@@ -627,8 +632,11 @@ class ControlApi:
                 rate += snap["requests_per_s"]
                 row[name] = snap
             rows.append(row)
-        active = sum(1 for r in rows if (r["modbus"] and r["modbus"]["clients"]) or (r["dc"] and r["dc"]["clients"]))
+        active = sum(1 for r in rows if any(r[n] and r[n]["clients"] for n in ("modbus", "dc", "cloud")))
+        cloud = next((gw.cloud_api for gw in self.gateways.values() if gw.cloud_api), None)
         return {"process": self.process.snapshot(),
+                "cloud": None if cloud is None else {"address": [cloud.host, cloud.port],
+                                                     "logins": cloud.logins, "requests": cloud.requests},
                 "totals": {"gateways": len(rows), "with_clients": active, "connections": conns,
                            "accepted": accepted, "refused_1h": refused, "requests_per_s": round(rate, 2)},
                 "gateways": rows}

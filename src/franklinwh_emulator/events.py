@@ -188,7 +188,7 @@ class EventLog:
 
     # -- clients ---------------------------------------------------------------------------------
     def client(self, listener: str, what: str, peer) -> None:
-        """``what``: connected | left | refused, on ``listener`` (Modbus TCP | Direct Connect)."""
+        """``what``: connected | left | refused, on ``listener`` (Modbus TCP | Direct Connect | Cloud API)."""
         if not self.on:
             return
         host, port = (peer[0], peer[1]) if isinstance(peer, (tuple, list)) and len(peer) >= 2 else (str(peer), None)
