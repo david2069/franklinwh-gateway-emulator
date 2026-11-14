@@ -188,9 +188,14 @@ class CloudApi:
     async def start(self) -> tuple[str, int]:
         self._server = await asyncio.start_server(self._client, self.host, self.port)
         self.port = self._server.sockets[0].getsockname()[1]
+        for gw in self.gateways.values():               # the UI and Monitor read it (#314, #318)
+            gw.cloud_api = self
         return self.host, self.port
 
     async def stop(self) -> None:
+        for gw in self.gateways.values():
+            if gw.cloud_api is self:
+                gw.cloud_api = None
         for writer in list(self._hung):
             writer.transport.abort()
         if self._server is not None:
