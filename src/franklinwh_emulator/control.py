@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING
 
 from .monitor import ProcessMonitor
 from .schema import ACTIONS, check_body, schema
-from .server import CloudFaults, Faults
+from .server import BAD_REPLIES, CloudFaults, Faults
 from . import models
 from .site import ALARMS, INV_NAMES, MODE_NAMES, RUN_NAMES
 from .weather import SKIES, sun_position
@@ -523,6 +523,8 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
             bad = set(body) - known
             if bad:
                 raise ApiError(400, f"unknown cloud faults {sorted(bad)}; known {sorted(known)}")
+            if body.get("bad_reply") not in (None, *BAD_REPLIES):
+                raise ApiError(400, f"cloud-faults: bad_reply must be one of {list(BAD_REPLIES)}")
             for k, v in body.items():
                 setattr(gw.cloud_faults, k, v)
         else:

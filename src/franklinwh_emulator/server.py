@@ -64,6 +64,23 @@ class Faults:
 # Faults that only make sense on Modbus TCP: ranges are register addresses (#170).
 DC_UNSUPPORTED_FAULTS = ("range_fault",)
 
+# CloudFaults.bad_reply (#311): a failure below the cloud's envelope. The request is still
+# carried out; what comes back is broken. The last three are for sendMqtt replies only.
+BAD_REPLIES = {
+    "hang": "read the request, never answer (the client's own timeout fires)",
+    "reset": "close the connection without a reply",
+    "truncate": "full Content-Length, half the body, then close",
+    "not_json": "HTTP 200, a body that isn't JSON",
+    "not_envelope": "HTTP 200, JSON without code, message, result or success",
+    "html_500": "HTTP 500, an HTML error page", "html_502": "HTTP 502, an HTML error page",
+    "html_503": "HTTP 503, an HTML error page", "html_504": "HTTP 504, an HTML error page",
+    "success_false": "the reply as usual with success false (code 200)",
+    "wrong_cmd_type": "sendMqtt: the reply's cmdType is not the one asked for",
+    "bad_crc": "sendMqtt: the reply's crc doesn't match dataArea",
+    "bad_data_area": "sendMqtt: dataArea is not valid JSON",
+}
+MQTT_BAD_REPLIES = ("wrong_cmd_type", "bad_crc", "bad_data_area")
+
 
 @dataclass
 class CloudFaults:
@@ -74,6 +91,9 @@ class CloudFaults:
     rate_limit_per_min: int | None = None   # past N requests a minute: 429 + Retry-After
     latency_s: float = 0.0                  # delay before every reply
     empty_composite: bool = False           # getDeviceCompositeInfo: HTTP 200, result null
+    bad_reply: str | None = None            # one of BAD_REPLIES (#311)
+    bad_reply_count: int = 0                # only the next N (then bad_reply clears); 0 = every one
+    bad_reply_p: float = 1.0                # the chance each request gets it
 
 
 class ModbusServer:

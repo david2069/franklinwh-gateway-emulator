@@ -12,7 +12,7 @@ from dataclasses import fields
 from typing import Any
 
 from .profiles import PROFILES
-from .server import DC_UNSUPPORTED_FAULTS, Faults
+from .server import BAD_REPLIES, DC_UNSUPPORTED_FAULTS, Faults
 from .site import ALARMS, MODE_NAMES, PV_INPUTS
 from .weather import SKIES
 
@@ -176,8 +176,13 @@ ACTIONS: dict[str, dict[str, Any]] = {
                    "rate_limit_per_min": _f("integer", "past this many requests a minute: 429 + Retry-After",
                                             nullable=True),
                    "latency_s": _f("number", "delay before every reply", unit="s"),
-                   "empty_composite": _f("boolean", "getDeviceCompositeInfo: HTTP 200, result null")},
-        "examples": [{"timeout": True}, {"rate_limit_per_min": 30}],
+                   "empty_composite": _f("boolean", "getDeviceCompositeInfo: HTTP 200, result null"),
+                   "bad_reply": _f("string", "a broken reply below the envelope", enum=list(BAD_REPLIES),
+                                   labels=BAD_REPLIES, nullable=True),
+                   "bad_reply_count": _f("integer", "only the next N replies; 0 = every one"),
+                   "bad_reply_p": _f("number", "the chance each request gets it (0-1)")},
+        "examples": [{"timeout": True}, {"rate_limit_per_min": 30},
+                     {"bad_reply": "html_503", "bad_reply_count": 2}],
     },
     "utility": {
         "doc": "Set the grid operator's rules (utility / DNSP / lines company), as PCS settings: "

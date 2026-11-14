@@ -154,6 +154,33 @@ Phase 3 (#309). Per gateway, the `cloud-faults` action (`ctl <gw> cloud-fault k=
 | `latency_s=S` | every reply waits S seconds |
 | `empty_composite=true` | `getDeviceCompositeInfo` answers HTTP 200 with `result: null`; franklinwh-cloud's `get_stats` returns its last reading marked `is_stale` |
 
+### Broken replies
+
+#311. `bad_reply=<kind>` breaks the replies below the envelope. The request is still carried
+out (a write still changes the site); what comes back is broken. `bad_reply_count=N` breaks
+only the next N (then `bad_reply` clears; 0, the default, breaks every one) and
+`bad_reply_p=P` breaks each with chance P (repeatable from run to run).
+
+| `bad_reply` | The reply | franklinwh-cloud 0.6.5 |
+|---|---|---|
+| `hang` | none: the connection is held until the client gives up (or the emulator stops) | its 30 s timeout: `FranklinWHTimeoutError` |
+| `reset` | the connection closes without a reply | `httpx.RemoteProtocolError` |
+| `truncate` | the full `Content-Length`, half the body, then the connection closes | `httpx.RemoteProtocolError` |
+| `not_json` | HTTP 200, a body that isn't JSON | `InvalidResponseError` (status 200) |
+| `not_envelope` | HTTP 200, JSON without `code`, `message`, `result` or `success` | `sendMqtt`: `FranklinWHError` with code None; other reads return the body as it is |
+| `html_500`, `html_502`, `html_503`, `html_504` | that status, an HTML error page (as a CDN would send) | `InvalidResponseError` with the status and the page |
+| `success_false` | the usual reply with `success: false` | accepted: the client reads `code` only |
+| `wrong_cmd_type` | `sendMqtt` only: `cmdType` 100 past the right one | accepted: not checked |
+| `bad_crc` | `sendMqtt` only: `crc` 00000000 | accepted: not checked |
+| `bad_data_area` | `sendMqtt` only: `dataArea` that isn't valid JSON | `json.JSONDecodeError` |
+
+The three `sendMqtt` kinds leave other requests alone (and aren't counted on them). What the
+real cloud sends in these cases is not established; each is a setting, not a claim.
+
+Rate limits: `rate_limit_per_min` above counts one gateway's requests; `cloud:
+{rate_limit_per_min: N}` in the fleet file counts every request the account makes after login,
+for any gateway, with the same 429 reply.
+
 Token expiry is account-wide: `cloud: {token_ttl_s: N}` in the fleet file. An expired token gets
 `code 10009`, as an unknown one does; franklinwh-cloud logs in again, or with `TokenAuth` raises
 `TokenExpiredException`.
