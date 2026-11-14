@@ -351,7 +351,9 @@ function running() {
     },
     monTotals(m) {
       const t = m.totals;
-      const c = m.cloud ? ' · Cloud API ' + m.cloud.logins + ' logins, ' + m.cloud.requests + ' requests' : '';
+      const n = m.cloud ? Object.values(m.cloud.unserved || {}).reduce((a, b) => a + b, 0) : 0;
+      const c = m.cloud ? ' · Cloud API ' + m.cloud.logins + ' logins, ' + m.cloud.requests + ' requests' +
+                          (n ? ', ' + n + ' not emulated' : '') : '';
       return t.connections + ' connected · ' + t.accepted + ' seen since start · ' + t.refused_1h + ' refused in the last hour · ' + t.requests_per_s + ' req/s' + c;
     },
     monProcess(p) {
@@ -376,7 +378,12 @@ function running() {
       if (l.accepted) parts.push(l.accepted + ' since start');
       if (l.refused_1h) parts.push(l.refused_1h + ' refused, last ' + l.last_refused.peer + ' ' + Math.round(l.last_refused.ago_s) + ' s ago');
       if (l.requests_per_s) parts.push(l.requests_per_s + ' req/s');
+      const un = Object.keys(l.unserved || {}).length;
+      if (un) parts.push(un + (un === 1 ? ' call' : ' calls') + ' not emulated');
       return parts.join(' · ');
+    },
+    unservedRows(m) {                       // #316: the Cloud API calls not emulated yet, most first
+      return Object.entries((m.cloud && m.cloud.unserved) || {}).sort((a, b) => b[1] - a[1]);
     },
 
     // The emulator restarted, or now runs other code: this page (and its state) is out of date.

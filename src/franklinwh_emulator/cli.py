@@ -466,6 +466,10 @@ def _monitor_text(m: dict, history: dict[str, dict] | None = None) -> str:
             if s["last_refused"]:
                 r = s["last_refused"]
                 lines.append(f"{'':16}   ↳ refused {r['peer']} {_dur(r['ago_s'])} ago")
+    unserved = (m.get("cloud") or {}).get("unserved") or {}
+    if unserved:
+        lines += ["", "Cloud API calls not emulated yet:"]
+        lines += [f"  {n:5d}  {call}" for call, n in sorted(unserved.items(), key=lambda x: -x[1])]
     if history is not None:
         lines += ["", "client history (site time, oldest first)"]
         for gid, ev in history.items():
