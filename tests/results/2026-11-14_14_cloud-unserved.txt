@@ -1,0 +1,15 @@
+2026-11-14 #316 step 2: Cloud API calls not emulated yet
+Branch cloud-unserved, base 5a5224e. Python 3.12. Own instance on ephemeral ports.
+
+== tests/test_cloud_unserved.py
+============================== 2 passed in 0.15s ===============================
+== Break check (src reverted, tests kept): 2 failed
+
+== franklinwh-emulator monitor text after one unserved call (tail)
+
+Cloud API calls not emulated yet:
+      1  GET /hes-gateway/terminal/chargePowerDetails
+
+== Headless Chrome: the page renders with the edited app.js (cards, status line);
+   the Monitor panel was closed, so its unserved list was not seen on screen.
+== Full suite: 841 passed in 123.41s (0:02:03). check_pii: clean. mkdocs --strict: ok

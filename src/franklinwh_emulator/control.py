@@ -636,7 +636,8 @@ class ControlApi:
         cloud = next((gw.cloud_api for gw in self.gateways.values() if gw.cloud_api), None)
         return {"process": self.process.snapshot(),
                 "cloud": None if cloud is None else {"address": [cloud.host, cloud.port],
-                                                     "logins": cloud.logins, "requests": cloud.requests},
+                                                     "logins": cloud.logins, "requests": cloud.requests,
+                                                     "unserved": dict(cloud.unserved)},
                 "totals": {"gateways": len(rows), "with_clients": active, "connections": conns,
                            "accepted": accepted, "refused_1h": refused, "requests_per_s": round(rate, 2)},
                 "gateways": rows}

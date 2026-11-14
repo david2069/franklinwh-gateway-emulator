@@ -92,11 +92,13 @@ class SessionTable(ClientTable):
     client is a login session (its token): it connects with its first request for this gateway
     and leaves after ``SESSION_IDLE_S`` without one. The peer is the host only (the port changes
     with every request); ``app`` is the version the client claims (its ``softwareversion``
-    header). Refused: answered 429."""
+    header). Refused: answered 429. ``unserved``: the calls naming this gateway that the
+    emulator doesn't answer yet, with counts (#316)."""
 
     def __init__(self):
         super().__init__()
         self._by_token: dict[str, dict] = {}
+        self.unserved: dict[str, int] = {}
 
     def seen(self, token: str, host: str, app: str | None) -> None:
         self.sweep()
@@ -121,6 +123,7 @@ class SessionTable(ClientTable):
         snap = super().snapshot(now)
         for c, e in zip(snap["clients"], self._open.values()):
             c["app"] = e.get("app")
+        snap["unserved"] = dict(self.unserved)
         return snap
 
 

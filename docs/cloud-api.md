@@ -71,6 +71,12 @@ stats = await client.get_stats()
   totals line (`Cloud API N logins, M requests`). `franklinwh-emulator monitor` prints the same.
 * **Events:** `Cloud API client <host> connected`, `left` and `refused`, in the gateway's event
   log.
+* **Calls not emulated yet** (#316): each path the emulator doesn't serve (HTTP 404) and each
+  `sendMqtt` command it doesn't handle (`code 400`) is counted. The Monitor lists them under the
+  table, most-called first, and each gateway's column says how many. A gateway's event log
+  shows `Cloud API call not emulated: GET /hes-gateway/terminal/…`, with repeats folded.
+  `franklinwh-emulator monitor` lists them too. Point the official app at the emulator and this
+  list is what the app asked for that isn't served yet.
 
 The emulator answers every app version the same way, since differences between versions aren't
 established.

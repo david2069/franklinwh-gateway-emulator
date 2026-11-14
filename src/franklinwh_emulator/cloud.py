@@ -117,9 +117,11 @@ V2L_RUN_STATE = {"Disabled": 0, "Standby": 1, "Active": 2}   # franklinwh-cloud 
 
 
 class CloudError(Exception):
-    def __init__(self, code: int, message: str, http: int = 200, retry_after: int | None = None):
+    def __init__(self, code: int, message: str, http: int = 200, retry_after: int | None = None,
+                 unserved: str | None = None):
         super().__init__(message)
         self.code, self.http, self.retry_after = code, http, retry_after
+        self.unserved = unserved        # a call the emulator doesn't answer yet (#316): "GET /path"
 
 
 def _is_ip(host: str) -> bool:
@@ -194,6 +196,7 @@ class CloudApi:
         self._hung: set[asyncio.StreamWriter] = set()   # bad_reply "hang": held until stop
         self.logins = 0                                  # for the Monitor (#314)
         self.requests = 0
+        self.unserved: dict[str, int] = {}               # calls not answered yet, all gateways (#316)
 
     async def start(self) -> tuple[str, int]:
         self._server = await asyncio.start_server(self._client, self.host, self.port)
@@ -221,7 +224,7 @@ class CloudApi:
         if method == "POST" and path == PREFIX + "initialize/appUserOrInstallerLogin":
             return self.login({k: v[0] for k, v in parse_qs(body.decode("utf-8", "replace")).items()})
         if not path.startswith(PREFIX) and path not in ENERGY:
-            raise CloudError(404, f"no such path: {path}", http=404)
+            raise CloudError(404, f"no such path: {path}", http=404, unserved=f"{method} {path}")
         if not self._token_ok(headers.get("logintoken")):
             raise CloudError(10009, "Token invalid, please log in again")
         self._rate_limit(None)
@@ -307,7 +310,7 @@ class CloudApi:
             return _envelope({"tipMsg": None, "hintFlag": 0})
         if method == "GET" and name == "selectTerPushMessageUnreadCount":
             return _envelope(0)
-        raise CloudError(404, f"no such path: {path}", http=404)
+        raise CloudError(404, f"no such path: {path}", http=404, unserved=f"{method} {path}")
 
     def _token_ok(self, token: str | None) -> bool:
         issued = self.tokens.get(token or "")
@@ -376,7 +379,7 @@ class CloudApi:
             return self.power_info(gw)
         if ty == 203:
             return self.composite(gw)["runtimeData"]
-        raise CloudError(400, f"sendMqtt: cmdType {ty} is not emulated yet")
+        raise CloudError(400, f"sendMqtt: cmdType {ty} is not emulated yet", unserved=f"sendMqtt cmdType {ty}")
 
     # -- modes and reserves (#303) -----------------------------------------------------
     def mode_state(self, gw: "Gateway") -> dict:
@@ -571,6 +574,13 @@ class CloudApi:
         elif headers.get("logintoken") in self.tokens:
             gw.cloud_clients.seen(headers["logintoken"], host, headers.get("softwareversion"))
 
+    def _unserved(self, gw: "Gateway | None", call: str) -> None:
+        """#316: count a call the emulator doesn't answer, and log it on the gateway it names."""
+        self.unserved[call] = self.unserved.get(call, 0) + 1
+        if gw is not None:
+            gw.cloud_clients.unserved[call] = gw.cloud_clients.unserved.get(call, 0) + 1
+            gw.events.add("cloud", f"Cloud API call not emulated: {call}", fold=call)
+
     def _named(self, target: str, body: bytes) -> "Gateway | None":
         """The gateway a request names, for its faults."""
         q = {k: v[0] for k, v in parse_qs(urlsplit(target).query).items()}
@@ -623,14 +633,17 @@ class CloudApi:
             raw = await reader.readexactly(length) if length else b""
             status, extra = 200, ""
             self.requests += 1
+            unserved = None
             try:
                 payload = self.route(method.upper(), target, headers, raw)
             except CloudError as e:
-                status, payload = e.http, _envelope(None, e.code, str(e))
+                status, payload, unserved = e.http, _envelope(None, e.code, str(e)), e.unserved
                 if e.retry_after is not None:
                     extra = f"Retry-After: {e.retry_after}\r\n"
             gw = self._named(target, raw)
             self._seen(gw, writer, headers, status)
+            if unserved:
+                self._unserved(gw, unserved)
             if gw is not None and gw.cloud_faults.latency_s:
                 await asyncio.sleep(float(gw.cloud_faults.latency_s))
             kind = self._bad_reply(gw, target)

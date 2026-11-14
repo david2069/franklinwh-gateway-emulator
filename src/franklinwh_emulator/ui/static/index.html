@@ -374,6 +374,12 @@
               </template>
             </tbody>
           </table>
+          <template x-if="unservedRows(mon).length">
+            <div class="mon-unserved">
+              <p class="mon-line">Cloud API calls not emulated yet (each answered 404, or code 400 for a sendMqtt command):</p>
+              <ul><template x-for="[call, n] in unservedRows(mon)" :key="call"><li x-text="call + ' ×' + n"></li></template></ul>
+            </div>
+          </template>
         </div>
       </template>
     </details>
