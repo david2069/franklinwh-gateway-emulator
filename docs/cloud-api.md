@@ -37,7 +37,8 @@ network you trust.
 
 ## Point a client at it
 
-Change the base URL and nothing else. With franklinwh-cloud:
+Change the base URL and nothing else. For a client with no base URL setting, or the official
+app, see [Cloud API clients](cloud-clients.md). With franklinwh-cloud:
 
 ```python
 from franklinwh_cloud.auth import PasswordAuth
@@ -113,8 +114,8 @@ c = richo.Client(richo.TokenFetcher("owner@example.com", "emulator"), "<serial>"
 stats = await c.get_stats()
 ```
 
-The Home Assistant integration has no base URL setting, so it can't be pointed at the emulator
-without changing its code. `get_controllable_loads` (`selectTerGatewayControlLoadByGatewayId`),
+The Home Assistant integration has no base URL setting: it reaches the emulator through DNS and
+a TLS front instead (not tried yet); see [Cloud API clients](cloud-clients.md). `get_controllable_loads` (`selectTerGatewayControlLoadByGatewayId`),
 which richo's library lists among its unknown methods, isn't served: it isn't in the app's
 captures.
 

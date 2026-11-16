@@ -1,0 +1,18 @@
+#327: the commands in docs/cloud-clients.md, run as written (2026-11-17, macOS, Python 3)
+
+Extracted from the page: the openssl block (bash) and tls_front.py (python), into an empty
+scratch folder.
+
+openssl block: ca.key ca.pem ca.srl energy.csr energy.key energy.pem ext.cnf created.
+
+Test emulator: Fleet one gateway, cloud_port 0 (loopback). tls_front.py <cloud port> 8449.
+Client: ssl context trusting only ca.pem, TLS to 127.0.0.1:8449 with
+server_hostname=energy.franklinwh.com, GET /hes-gateway/terminal/getHomeGatewayList (no token).
+
+  tls on 127.0.0.1:8449 -> emulator 127.0.0.1:<port>
+  ('127.0.0.1', <port>): connected -> 127.0.0.1:<port>
+  200 {'code': 401, 'message': 'Please enter a valid user authorization token!', 'success': False}
+
+The certificate verifies as energy.franklinwh.com against the test CA, and the front carries
+the request to the emulator. Not run here: DNS, Home Assistant, the official app (the page says
+which are untested). No real cloud contacted (the client connected to 127.0.0.1 only).
