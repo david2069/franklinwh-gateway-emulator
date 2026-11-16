@@ -1,0 +1,32 @@
+2026-11-16 #323: a missing or stale loginToken is code 401, not 10009
+Branch cloud-token-401 off main c034ef6.
+
+Evidence (the owner's HTTP Toolkit HARs of the official app, 42 captures 2025-02 to 2026-03,
+counted on the mini PC over SSH; only counts and the server's message text came back):
+  non-200 codes by loginToken state:
+    144 present  code 102
+     84 empty    code 401
+     75 present  code 401
+     25 present  code 500
+     11 present  code 181
+      9 present  code 400
+      9 present  code 136
+      8 present  code 4094
+      4 present  code 4091
+  every code-401 reply (159): HTTP 200,
+    {"code": 401, "message": "Please enter a valid user authorization token!", "success": false}
+    (keys code, message, success; no result)
+  code 10009: none.
+
+Effect before the fix: richo's franklinwh 2026.3 starts with an empty token and logs in only on
+code 401; against the emulator it got 10009 and failed:
+  AssertionError: 10009: Token invalid, please log in again   (found while testing #322)
+
+Break check (src/ stashed, tests kept):
+  tests/test_cloud.py::test_calls_need_the_token FAILED
+  tests/test_cloud_host.py::test_loopback_by_default_and_any_address_when_asked FAILED
+  2 failed, 1 passed
+With the fix: tests/test_cloud.py tests/test_cloud_host.py 13 passed.
+
+Full suite: 841 passed.
+scripts/check_pii.py --scan: no PII. mkdocs build --strict: OK.

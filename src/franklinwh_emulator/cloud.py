@@ -24,7 +24,8 @@ those; every value is this emulator's own model.
 
 * Envelope: ``{code, message, result, success}``; ``code`` 200 is success. Errors are in the
   body with HTTP 200, as franklinwh-cloud reads them: 401 wrong account or password (login),
-  10009 a missing or unknown ``loginToken``. An unknown path is HTTP 404 with the envelope
+  and 401 for a missing, empty, unknown or expired ``loginToken``, without ``result``, as the
+  app's captures show (#323). An unknown path is HTTP 404 with the envelope
   (the emulator's own choice; the real cloud's answer is not established).
 * Login: a form POST with ``account``, ``password`` (MD5 hex of the password) and ``type``;
   the account and password come from the fleet file's ``cloud:`` (defaults below). Tokens
@@ -132,6 +133,9 @@ def _is_ip(host: str) -> bool:
         return False
 
 
+TOKEN_INVALID = "Please enter a valid user authorization token!"   # app HARs, 159 replies (#323)
+
+
 def _envelope(result=None, code: int = 200, message: str = "Query success!") -> dict:
     return {"code": code, "message": message, "result": result, "success": code == 200}
 
@@ -226,7 +230,7 @@ class CloudApi:
         if not path.startswith(PREFIX) and path not in ENERGY:
             raise CloudError(404, f"no such path: {path}", http=404, unserved=f"{method} {path}")
         if not self._token_ok(headers.get("logintoken")):
-            raise CloudError(10009, "Token invalid, please log in again")
+            raise CloudError(401, TOKEN_INVALID)
         self._rate_limit(None)
         if method == "GET" and path in ENERGY:
             return _envelope(ENERGY[path](self._gateway(q), q))
@@ -638,6 +642,8 @@ class CloudApi:
                 payload = self.route(method.upper(), target, headers, raw)
             except CloudError as e:
                 status, payload, unserved = e.http, _envelope(None, e.code, str(e)), e.unserved
+                if e.code == 401:
+                    del payload["result"]                        # the cloud's reply has none
                 if e.retry_after is not None:
                     extra = f"Retry-After: {e.retry_after}\r\n"
             gw = self._named(target, raw)

@@ -20,7 +20,7 @@ def test_loopback_by_default_and_any_address_when_asked():
         assert f.cloud.host == "0.0.0.0"
         with urllib.request.urlopen(f"http://127.0.0.1:{f.cloud.port}/hes-gateway/terminal/getHomeGatewayList",
                                     timeout=5) as r:
-            assert json.load(r)["code"] == 10009           # reachable; no token
+            assert json.load(r)["code"] == 401           # reachable; no token
     finally:
         f.stop()
     f = Fleet.from_dict({"gateways": [{"id": "a", "port": 0, "dc_port": 0, "seed": 3}]})
