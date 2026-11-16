@@ -96,6 +96,28 @@ N}`. Every other call needs the token in the
 authorization token!` and no `result`, as the app's captures show (#323). franklinwh-cloud and
 richo's franklinwh library answer it by logging in again.
 
+### richo's franklinwh library (homeassistant-franklinwh)
+
+richo's [franklinwh](https://github.com/richo/franklinwh-python) library, the client of the
+[homeassistant-franklinwh](https://github.com/richo/homeassistant-franklinwh) integration, works
+against the emulator too (#322). Every call franklinwh 2026.3 makes is served. But its `Client`
+takes a `url_base`, and login, `sendMqtt`, `getHomeGatewayList` and `updateTouMode` ignore it:
+they always go to `https://energy.franklinwh.com/`. Point those at the emulator as well:
+
+```python
+from franklinwh import client as richo
+
+richo.DEFAULT_URL_BASE = "http://127.0.0.1:8503/"     # before the first call
+c = richo.Client(richo.TokenFetcher("owner@example.com", "emulator"), "<serial>",
+                 url_base=richo.DEFAULT_URL_BASE)
+stats = await c.get_stats()
+```
+
+The Home Assistant integration has no base URL setting, so it can't be pointed at the emulator
+without changing its code. `get_controllable_loads` (`selectTerGatewayControlLoadByGatewayId`),
+which richo's library lists among its unknown methods, isn't served: it isn't in the app's
+captures.
+
 ## What it serves
 
 Phase 1a (#297):
@@ -113,7 +135,7 @@ Phase 1b (#299):
 |---|---|
 | `GET hes-gateway/terminal/selectOffgrid?gatewayId=` | `offgridSet` (off-grid requested), `offgridState` (islanded), `offgridSoc`; `get_stats` asks for it when the grid relay is open, so a requested off-grid reads `SIMULATED_OFF_GRID` and an outage `OUTAGE` |
 | `sendMqtt` 211, `dataArea {"type": 1}` | the electrical readings for `get_stats(include_electrical=True)` and `get_power_info()`: `gridLineVol` (tenths of a volt), `gridVol1`/`gridVol2` (half the line each on a 230 V site, as the aGate reports them), currents, `gridFreq`, `dspSetFreq`, relays and run states. Types 2 and 3 (BMS) get `code 400` |
-| `sendMqtt` 311 | the smart circuits' names and modes (`Sw1Name`, `Sw1Mode`, `SwMerge`…) |
+| `sendMqtt` 311 | the smart circuits' names and modes (`Sw1Name`, `Sw1Mode`, `SwMerge`…) and the cloud's own keys (#322): `opt`, `order` (the serial), `result` 0, `modeChoose` 14, `runingMode` (the active mode's id, as `currendId`), `touMinSoc` 0, `selfMinSoc` 5, `backupMaxSoc` 100, `BBBackupSoc` 20, `GridChargeEn`, `genStartSoc`, `genStopSoc`, `stopMode`, `stromEn`, `custom`. Those values are the app's captures' (one site, never changing there), not this site's reserves |
 | `sendMqtt` 203 | the composite's `runtimeData`; the reply's `cmdType` is 201, not 204, as the cloud answers it |
 
 Phase 1c (#301), energy history:
@@ -142,7 +164,7 @@ control-API writes, so every interface reads the change:
 | `POST hes-gateway/terminal/tou/updateTouModeV2?workMode=&soc=…` | switches the mode (1 TOU, 2 self-consumption, 3 emergency backup) and sets that mode's reserve. Emergency backup takes `backupForeverFlag` 1 (until changed) or 2 with `durationMinute` (30–4320) and `nextWorkMode` |
 | `POST hes-gateway/terminal/tou/updateSocV2?workMode=&soc=` | sets a mode's reserve; outside 5–100 gets `code 400` |
 | `POST hes-gateway/terminal/updateOffgrid` (`{offgridSet, offgridSoc}`) | requests off-grid (or ends it) with its SoC floor |
-| `sendMqtt` 311 with `dataArea.opt` 1 | the smart-circuit write: `Sw{n}Mode` switches a circuit, `Sw{n}SocLowSet`, `Sw{n}Name` |
+| `sendMqtt` 311 with `dataArea.opt` 1 | the smart-circuit write: `Sw{n}Mode` switches a circuit, `Sw{n}SocLowSet`, `Sw{n}Name`. The reply is the whole block as it now stands, as the cloud's is |
 | `GET hes-gateway/terminal/weather/getStormSetting?equipNo=` | the Storm Hedge settings (2c below); `set_mode` reads `enableStorm` |
 | `GET hes-gateway/terminal/selectTerPushMessageUnreadCount` | 0 |
 
@@ -171,12 +193,21 @@ Phase 2c (#307), settings:
 | `POST hes-gateway/terminal/weather/switchStorm`, `setAdvanceBackupTime`, `setStormNotice` (`{equipNo, …}`) | Storm Hedge on or off, its lead time (30–300 min), the notice (`stormNoticeEn`, `advanceTime` 5–30 min); read back by `getStormSetting`. `getStormList` and `getProgressingStormList` are empty: no storms are emulated, so Storm Hedge never starts a backup |
 | `GET hes-gateway/terminal/selectIotGenerator` | the generator block and its live state, as Direct Connect 1902 |
 | `POST hes-gateway/terminal/updateIotGenerator` | sets the keys it carries (`charge{n}En`, `charge{n}StartTime`/`EndTime`, `manuSw`, `genStartElec`…) in that block, so the generator runs on them |
-| `GET hes-gateway/terminal/tou/getPowerControlSetting` | `globalGridChargeMax` and `globalGridDischargeMax`, kW (-1 unlimited, 0 off) |
+| `GET hes-gateway/terminal/tou/getPowerControlSetting` | `globalGridChargeMax` and `globalGridDischargeMax`, kW (-1 unlimited, 0 off); the export mode `gridFeedMaxFlag` (1 solar only, 2 solar and aPower, 3 no export), `gridFeedMax` (the export limit, kW, -1 none), `gridMax` (the import limit, kW, -1 none) and `gridMaxFlag` (1 none, 2 limited), from the site's `utility` settings (#322) |
 | `POST hes-gateway/terminal/tou/setPowerControl` | grid charging: 0 stops it, a kW value caps it (the site's `utility` `grid_charge` and `grid_charge_max_w`). Battery to grid: 0 stops it (`battery_export`); a kW cap is kept and read back but not enforced |
 
 On `manuSw`: the emulator's generator treats it as Direct Connect 1902's mode (1 auto,
 2 manual). franklinwh-cloud saw the cloud treat it as a start/stop command; neither is
 established.
+
+Phase 2d (#322), the calls richo's franklinwh library makes. The app makes the first three too:
+
+| Call | What it does |
+|---|---|
+| `GET hes-gateway/common/getAccessoryList?gatewayId=` | the accessory modules fitted (`accessories:` in the fleet file): `accessoryType` 3 generator module, 4 Smart Circuits (richo's numbering; the app's captures show 4 on a site with Smart Circuits), `id`, `sn`, `createTime` (the `commissioned` date), `loadOption`, `gerOption`, and `total`. Without `gatewayId`, as richo's library sends it, every gateway's. `id` and `sn` are made up: their real formats aren't known |
+| `POST hes-gateway/terminal/tou/setPowerControlV2` (`{gatewayId, gridFeedMaxFlag, gridFeedMax, gridMax, gridMaxFlag}`) | sets the export mode and limits in the site's `utility` settings: flag 1 `export: allowed` without the battery, 2 with it, 3 `prohibited`; a `gridFeedMax` of 0 or more makes it `limited`; `gridMax` is the import limit. `globalGridDischargeMax` and `globalGridChargeMax`, when sent too (richo's library posts back the whole setting), apply as for `setPowerControl`, before the export mode |
+| `POST hes-gateway/terminal/tou/updateTouMode` | as `updateTouModeV2`, with the parameters in the query (the app) or a form body (richo's library); `result` null |
+| `GET hes-gateway/manage/getEquipmentList?gatewayId=`, `GET hes-gateway/terminal/getIotAccessoryList?gatewayId=` | the same list as `getAccessoryList`. Neither is in the app's captures, so their real shape isn't known |
 
 ## Faults
 

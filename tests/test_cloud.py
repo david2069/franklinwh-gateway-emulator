@@ -163,7 +163,12 @@ def test_send_mqtt_311_and_203(fleet):
     info = json.loads(body["result"]["dataArea"])
     assert body["result"]["cmdType"] == 312
     assert info["Sw1Name"] == gw.site.circuits[1].name and info["Sw1Mode"] == 1
-    assert "SwMerge" in info and "result" not in info
+    assert "SwMerge" in info and "reason" not in info
+    assert {k: info[k] for k in ("opt", "order", "result", "modeChoose", "runingMode", "touMinSoc",
+                                 "selfMinSoc", "backupMaxSoc")} == {
+        "opt": 0, "order": gw.serial, "result": 0, "modeChoose": 14, "runingMode": fleet.cloud.tou_list(gw)["currendId"],
+        "touMinSoc": 0,
+        "selfMinSoc": 5, "backupMaxSoc": 100}                  # the app's captures' keys (#322)
     body = _mqtt(fleet, token, gw, 203, {"opt": 1, "refreshData": 1})
     assert body["result"]["cmdType"] == 201                    # 203 answers with 201, not 204
     assert "main_sw" in json.loads(body["result"]["dataArea"])

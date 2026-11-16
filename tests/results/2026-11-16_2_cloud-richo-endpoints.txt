@@ -1,0 +1,41 @@
+2026-11-16 #322: richo's franklinwh library against the Cloud API
+Branch cloud-richo-endpoints on main d83ed48 (#323's 401 fix, which this needs).
+Client: franklinwh 2026.3.0 from PyPI (homeassistant-franklinwh's manifest pins franklinwh==2026.3.*).
+
+Evidence: the owner's HTTP Toolkit HARs of the official app, 42 captures 2025-02 to 2026-03, read
+on the mini PC over SSH. Only field structure came back: key names, types, small non-id ints.
+No strings, ids, serials, tokens or bodies.
+
+  common/getAccessoryList   217 calls, GET, query gatewayId, lang
+    result[]: accessoryType int=4, createTime str, gerOption None, id str, loadOption None, sn str
+    total int=0/1
+  tou/setPowerControlV2     3 calls, POST, query gatewayId, JSON body
+    gatewayId str, gridFeedMax float, gridFeedMaxFlag int=2/3, gridMax float=-1.0, gridMaxFlag int=1
+    reply result.powerControlTipMsg str
+  tou/updateTouMode         3 calls, POST, all parameters in the query:
+    backupForeverFlag currendId electricityType gatewayId lang oldIndex soc stromEn workMode
+    reply code 200/400, result None
+  tou/getPowerControlSetting 63 calls; result adds bbDischargePower None, bonusEnable None,
+    gridFeedMax float, gridFeedMaxFlag int=1/2/3, gridMax float=-1.0, gridMaxFlag int=1/2,
+    notControlExportSolar True, peakDemandGridMax None, pvSplitCtEn int=0, solarFlag True
+  manage/getEquipmentList, terminal/getIotAccessoryList: not in any capture
+  sendMqtt 311: 226 reads (opt 0), 52 writes (opt 1). Read and write replies carry the 1410
+    keys plus opt, order (str), result int=0, modeChoose int=14, runingMode int,
+    touMinSoc int=0, selfMinSoc int=5, backupMaxSoc int=100, BBBackupSoc int=20,
+    GridChargeEn int=0, genStartSoc int=0, genStopSoc int=0, stopMode int=0,
+    stromEn int=0/1, custom str. A write's reply is the whole block, opt 1.
+
+Probe, every franklinwh 2026.3.0 client call against the emulator before the change
+(DEFAULT_URL_BASE patched): 
+  FAIL get_mode KeyError 'runingMode'
+  FAIL set_smart_switch_state KeyError 'modeChoose'
+  FAIL get_export_settings KeyError 'gridFeedMaxFlag'  (before getPowerControlSetting gained it)
+  404  getAccessoryList, getEquipmentList, getIotAccessoryList, setPowerControlV2, updateTouMode
+After: every call ok except get_controllable_loads (selectTerGatewayControlLoadByGatewayId:
+  richo's UnknownMethodsClient; not in the app's captures; not served).
+The integration itself calls get_stats, get_smart_switch_state and set_smart_switch_state.
+
+Break check (src/ stashed, tests kept):
+  6 failed, 1 passed (test_cloud_richo.py all 5; test_cloud.py::test_send_mqtt_311_and_203)
+Full suite with the change: 846 passed.
+scripts/check_pii.py --scan: no PII. mkdocs build --strict: OK.

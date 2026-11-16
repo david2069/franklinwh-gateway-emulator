@@ -99,6 +99,12 @@ CLOUD_KEYS = {"account", "password", "token_ttl_s", "rate_limit_per_min"}
 PREFIX = "/hes-gateway/terminal/"
 ENERGY = {"/api-energy/power/getFhpPowerByDay": cloud_energy.power_by_day,
           "/api-energy/electric/getFhpElectricData": cloud_energy.electric_data}
+# Outside /terminal/: accessories (#322)
+ACCESSORY_PATHS = ("/hes-gateway/common/getAccessoryList", "/hes-gateway/manage/getEquipmentList")
+# accessoryType: richo's franklinwh AccessoryType; app HARs show 4 on a site with Smart Circuits
+ACCESSORY_TYPES = {"generator_module": 3, "smart_circuits": 4}
+# gridFeedMaxFlag: richo's franklinwh ExportMode; the app sends 2 and 3 (HARs)
+FEED_FLAGS = {1: ("allowed", False), 2: ("allowed", True), 3: ("prohibited", False)}
 REPLY = {203: 201}                     # response cmdType where it is not request + 1
 _DC_STATUS = ("opt", "result", "reason")
 # franklinwh-cloud's device catalogue region ids (const/device_catalog.json): 2 US, 3 AU.
@@ -227,13 +233,16 @@ class CloudApi:
         path = url.path
         if method == "POST" and path == PREFIX + "initialize/appUserOrInstallerLogin":
             return self.login({k: v[0] for k, v in parse_qs(body.decode("utf-8", "replace")).items()})
-        if not path.startswith(PREFIX) and path not in ENERGY:
+        if not path.startswith(PREFIX) and path not in ENERGY and path not in ACCESSORY_PATHS:
             raise CloudError(404, f"no such path: {path}", http=404, unserved=f"{method} {path}")
         if not self._token_ok(headers.get("logintoken")):
             raise CloudError(401, TOKEN_INVALID)
         self._rate_limit(None)
         if method == "GET" and path in ENERGY:
             return _envelope(ENERGY[path](self._gateway(q), q))
+        if method == "GET" and path in ACCESSORY_PATHS:
+            items = self.accessories(q)
+            return {**_envelope(items), "total": len(items)}
         name = path[len(PREFIX):]
         sn = q.get("gatewayId") or q.get("equipNo") or _body_gateway(body)
         if sn in self.by_serial:
@@ -255,6 +264,13 @@ class CloudApi:
             return _envelope(self.tou_list(self._gateway(q)))
         if method == "POST" and name == "tou/updateTouModeV2":
             return self.update_mode(self._gateway(q), q)
+        if method == "POST" and name == "tou/updateTouMode":       # the older call: the app puts it
+            form = {k: v[0] for k, v in parse_qs(body.decode("utf-8", "replace")).items()}
+            q = {**form, **q}                                     # in the query, richo in a form
+            self.update_mode(self._gateway(q), q)
+            return _envelope(None, message="Operation success!")
+        if method == "GET" and name == "getIotAccessoryList":
+            return _envelope(self.accessories(q))
         if method == "POST" and name == "tou/updateSocV2":
             return self.update_soc(self._gateway(q), q)
         if method == "POST" and name == "updateOffgrid":
@@ -299,6 +315,13 @@ class CloudApi:
             req = _json(body)
             gw = self._gateway({"gatewayId": req.get("gatewayId") or q.get("gatewayId")})
             self.set_power_control(gw, req)
+            return _envelope({"powerControlTipMsg": None}, message="Operation success!")
+        if method == "POST" and name == "tou/setPowerControlV2":
+            req = _json(body)
+            gw = self._gateway({"gatewayId": req.get("gatewayId") or q.get("gatewayId")})
+            if {"globalGridDischargeMax", "globalGridChargeMax"} & set(req):   # richo posts them back
+                self.set_power_control(gw, req)
+            self.set_grid_limits(gw, req)                                       # then the export mode
             return _envelope({"powerControlTipMsg": None}, message="Operation success!")
         if method == "GET" and name == "tou/getTouDispatchDetail":
             return _envelope(self.tou(self._gateway(q)).detail())
@@ -378,12 +401,30 @@ class CloudApi:
         if ty == 353:
             return self._strip(dc.smart_circuit_meter({}))
         if ty == 311:
-            return self._strip(dc.smart_circuits(req if req.get("opt") == 1 else {}))
+            return self.switch_block(gw, req)
         if ty == 211 and int(req.get("type", 1)) == 1:
             return self.power_info(gw)
         if ty == 203:
             return self.composite(gw)["runtimeData"]
         raise CloudError(400, f"sendMqtt: cmdType {ty} is not emulated yet", unserved=f"sendMqtt cmdType {ty}")
+
+    def switch_block(self, gw: "Gateway", req: dict) -> dict:
+        """sendMqtt 311: Direct Connect's 1410 block plus the cloud's own keys, read (opt 0) or
+        written back whole (opt 1), the reply then being the block as it now stands. The keys
+        and their values are the app's captures' (HARs, 278 replies, one site, #322): there
+        touMinSoc, selfMinSoc, backupMaxSoc and BBBackupSoc never changed, so they are those
+        values here, not this site's reserves. runingMode is the active mode's id, as
+        getGatewayTouListV2's currendId."""
+        write = req.get("opt") == 1
+        dc = self.payloads(gw)
+        if write:
+            dc.smart_circuits(req)
+        st = self.mode_state(gw)
+        return {**self._strip(dc.smart_circuits({})), "opt": int(write), "order": gw.serial, "result": 0,
+                "modeChoose": 14, "runingMode": WORK_MODES[SITE_TO_WORK[gw.site.native_mode]][1],
+                "touMinSoc": 0, "selfMinSoc": 5, "backupMaxSoc": 100, "BBBackupSoc": 20,
+                "GridChargeEn": 0, "genStartSoc": 0, "genStopSoc": 0, "stopMode": 0,
+                "stromEn": st["stromEn"], "custom": ""}
 
     # -- modes and reserves (#303) -----------------------------------------------------
     def mode_state(self, gw: "Gateway") -> dict:
@@ -410,10 +451,58 @@ class CloudApi:
         discharge = self.mode_state(gw)["discharge_max_kw"]
         if not gw.site.battery_export():
             discharge = 0.0
+        if u is not None and u.export == "prohibited":
+            feed_flag = 3
+        else:
+            feed_flag = 2 if gw.site.battery_export() else 1
+        feed = u.export_limit_w if u is not None and u.export == "limited" else None
+        grid = u.import_limit_w if u is not None else None
         return {"globalGridDischargeMax": discharge, "globalGridChargeMax": charge,
                 "globalSettingStatus": 0, "solarTipMsg": None, "sgipFlag": 0, "itcFlag": 0,
                 "isNem3": 0, "vppAndPcsTip": None, "bonusTipMsg": None, "isCalifornia": 0,
-                "countryId": COUNTRY_ID.get(gw.site.model.region), "gridFlag": 1}
+                "countryId": COUNTRY_ID.get(gw.site.model.region), "gridFlag": 1,
+                "solarFlag": True, "notControlExportSolar": True, "pvSplitCtEn": 0,
+                "gridFeedMaxFlag": feed_flag,
+                "gridFeedMax": 0.0 if feed_flag == 3 else (-1.0 if feed is None else round(feed / 1000, 2)),
+                "gridMaxFlag": 1 if grid is None else 2,
+                "gridMax": -1.0 if grid is None else round(grid / 1000, 2),
+                "peakDemandGridMax": None, "bbDischargePower": None, "bonusEnable": None}
+
+    def set_grid_limits(self, gw: "Gateway", req: dict) -> None:
+        """setPowerControlV2's export mode and limits (#322). gridMaxFlag is echoed by the app
+        with gridMax -1.0 in every capture; here gridMax alone decides (kW, -1 = no limit)."""
+        try:
+            flag = int(req.get("gridFeedMaxFlag", self.power_control(gw)["gridFeedMaxFlag"]))
+            feed = float(req.get("gridFeedMax", -1.0))
+            grid = float(req.get("gridMax", -1.0))
+        except (TypeError, ValueError):
+            raise CloudError(400, "gridFeedMaxFlag is 1-3; gridFeedMax and gridMax are kW or -1")
+        if flag not in FEED_FLAGS or feed < 0 and feed != -1 or grid < 0 and grid != -1:
+            raise CloudError(400, "gridFeedMaxFlag is 1-3; gridFeedMax and gridMax are kW or -1")
+        u = asdict(gw.site.utility_rules) if gw.site.utility_rules is not None else {}
+        u["export"], u["battery_export"] = FEED_FLAGS[flag]
+        u["export_limit_w"] = feed * 1000 if flag != 3 and feed >= 0 else None
+        if u["export"] == "allowed" and u["export_limit_w"] is not None:
+            u["export"] = "limited"
+        u["export_per_phase_w"] = None
+        u["import_limit_w"] = grid * 1000 if grid >= 0 else None
+        gw.site.set_utility(u)
+
+    def accessories(self, q: dict) -> list[dict]:
+        """Accessory modules fitted, one entry each (#322): the gateway named, else every
+        gateway on the account. The shape is getAccessoryList's (app HARs); getEquipmentList and
+        getIotAccessoryList answer the same list, as no capture shows theirs. id and sn are
+        made up from the gateway serial: the real formats aren't known."""
+        gws = [self._gateway(q)] if q.get("gatewayId") else list(self.gateways.values())
+        out = []
+        for gw in gws:
+            day = gw.config.commissioned or "2024-01-01"
+            for key, ty in ACCESSORY_TYPES.items():
+                if gw.site.accessories.get(key):
+                    out.append({"id": f"{zlib.crc32(f'{gw.serial}{ty}'.encode()):d}", "sn": f"{gw.serial}A{ty}",
+                                "accessoryType": ty, "createTime": f"{day} 00:00:00",
+                                "loadOption": None, "gerOption": None})
+        return out
 
     def set_power_control(self, gw: "Gateway", req: dict) -> None:
         try:
