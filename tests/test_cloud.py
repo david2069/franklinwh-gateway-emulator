@@ -40,7 +40,7 @@ def _base(f) -> str:
 def _call(f, method: str, path: str, *, form: dict | None = None, token: str | None = None):
     data = urllib.parse.urlencode(form).encode() if form is not None else None
     req = urllib.request.Request(_base(f) + path, data=data, method=method,
-                                 headers={"loginToken": token} if token else {})
+                                 headers={"loginToken": token} if token is not None else {})
     try:
         with urllib.request.urlopen(req, timeout=5) as r:
             return r.status, json.load(r)
@@ -65,8 +65,9 @@ def test_login_gives_a_token_and_a_wrong_password_401(fleet):
 
 def test_calls_need_the_token(fleet):
     path = "hes-gateway/terminal/getHomeGatewayList"
-    assert _call(fleet, "GET", path)[1]["code"] == 10009
-    assert _call(fleet, "GET", path, token="0" * 32)[1]["code"] == 10009
+    for token in (None, "", "0" * 32):                         # missing, empty, unknown (#323)
+        assert _call(fleet, "GET", path, token=token)[1] == {
+            "code": 401, "message": "Please enter a valid user authorization token!", "success": False}
     token = _login(fleet)[1]["result"]["token"]
     assert _call(fleet, "GET", path, token=token)[1]["code"] == 200
 

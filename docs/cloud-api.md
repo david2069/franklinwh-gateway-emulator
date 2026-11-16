@@ -92,8 +92,9 @@ cloud: {account: owner@example.com, password: emulator}   # these are the defaul
 Login takes the account and the password's MD5, as the app sends them. A wrong account or
 password gets `code 401`. Tokens don't expire unless the fleet file sets `cloud: {token_ttl_s:
 N}`. Every other call needs the token in the
-`loginToken` header; without a valid one the reply is `code 10009`, which franklinwh-cloud
-answers by logging in again.
+`loginToken` header; without a valid one the reply is `code 401`, `Please enter a valid user
+authorization token!` and no `result`, as the app's captures show (#323). franklinwh-cloud and
+richo's franklinwh library answer it by logging in again.
 
 ## What it serves
 
@@ -219,7 +220,7 @@ Rate limits: `rate_limit_per_min` above counts one gateway's requests; `cloud:
 for any gateway, with the same 429 reply.
 
 Token expiry is account-wide: `cloud: {token_ttl_s: N}` in the fleet file. An expired token gets
-`code 10009`, as an unknown one does; franklinwh-cloud logs in again, or with `TokenAuth` raises
+`code 401`, as an unknown one does; franklinwh-cloud logs in again, or with `TokenAuth` raises
 `TokenExpiredException`.
 
 The codes are franklinwh-cloud's (its client.py). The real cloud's rate limits, `Retry-After`
