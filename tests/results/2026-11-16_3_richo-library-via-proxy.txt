@@ -1,0 +1,41 @@
+2026-11-16 #322/#316: richo's franklinwh library, unmodified, through a proxied energy.franklinwh.com
+Emulator main b9c7098, a test instance on its own ports (control 8602, Cloud API 8603 on
+127.0.0.1; fleet: one gateway, seed 3, smart circuits + generator module; account
+ha-test@example.com). Client: franklinwh 2026.3.0 (PyPI), DEFAULT_URL_BASE left at
+https://energy.franklinwh.com/, no url_base.
+
+Path: library -> TLS to energy.franklinwh.com:443 -> a local TLS front (certificate for
+energy.franklinwh.com from a test CA) -> plain HTTP/1.1 to the emulator. Test-only stand-ins,
+both outside the library's code:
+  - routing: the httpx client's network backend sends energy.franklinwh.com:443 to the TLS
+    front and refuses every other host (in a real setup DNS and the proxy do this);
+  - trust: the library's own HttpClientFactory.set_client_factory gives that client the test CA
+    (Home Assistant's integration also sets its own factory).
+
+Result:
+ok    get_stats
+ok    get_smart_switch_state                    (True, True, False)
+ok    set_smart_switch_state(off,-,-)
+ok    get_smart_switch_state                    (False, True, False)
+ok    set_smart_switch_state(on,-,-)
+ok    get_mode                                  ('self_consumption', 5)
+ok    set_mode(self_consumption 30)
+ok    get_mode                                  ('self_consumption', 5)   selfMinSoc, the captured
+                                                constant, not the reserve (richo's own TODO says so)
+ok    get_export_settings                       SOLAR_AND_APOWER, no limit
+ok    set_export_settings(SOLAR_ONLY 5)
+ok    get_export_settings                       SOLAR_ONLY, 5.0 kW
+ok    get_accessories, get_home_gateway_list, get_composite_info, get_accessory_list,
+      get_equipment_list, set_generator(False), set_grid_status(NORMAL)
+404   get_controllable_loads                    (selectTerGatewayControlLoadByGatewayId: not served,
+                                                not in the app's captures)
+TLS front: 27 connections. Emulator Monitor: logins 2, requests 28,
+unserved {GET /hes-gateway/terminal/selectTerGatewayControlLoadByGatewayId: 1}.
+
+Not covered: Home Assistant itself (the integration's polling and entities).
+
+Incident in the first attempt: routing was a socket.getaddrinfo patch, which httpx resolved
+around. The library's connections went to the real energy.franklinwh.com:443 and each failed
+the TLS handshake (CERTIFICATE_VERIFY_FAILED: the client trusted only the test CA), so no
+HTTP request, account or password was sent. Replaced by the network-backend routing above,
+which refuses any other host.
