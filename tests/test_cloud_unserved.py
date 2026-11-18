@@ -50,7 +50,7 @@ def test_unserved_calls_are_counted_logged_and_listed(fleet):
     gw, token = fleet["home"], _token(fleet)
     sn = gw.serial
     for _ in range(2):
-        assert _call(fleet, f"/hes-gateway/terminal/chargePowerDetails?gatewayId={sn}", token)[0] == 404
+        assert _call(fleet, f"/hes-gateway/terminal/getPersonalInfo?gatewayId={sn}", token)[0] == 404
     status, body = _call(fleet, "/hes-gateway/terminal/sendMqtt", token,
                          {"cmdType": 317, "equipNo": sn, "dataArea": "{}"})
     assert status == 200 and body["code"] == 400
@@ -58,18 +58,18 @@ def test_unserved_calls_are_counted_logged_and_listed(fleet):
     assert _call(fleet, f"/hes-gateway/terminal/getDeviceCompositeInfo?gatewayId={sn}", token)[1]["code"] == 200
 
     m = _monitor(fleet)
-    assert m["cloud"]["unserved"] == {"GET /hes-gateway/terminal/chargePowerDetails": 2,
+    assert m["cloud"]["unserved"] == {"GET /hes-gateway/terminal/getPersonalInfo": 2,
                                       "sendMqtt cmdType 317": 1,
                                       "GET /hes-gateway/common/getAppGlobalConfig": 1}
-    assert m["gateways"][0]["cloud"]["unserved"] == {"GET /hes-gateway/terminal/chargePowerDetails": 2,
+    assert m["gateways"][0]["cloud"]["unserved"] == {"GET /hes-gateway/terminal/getPersonalInfo": 2,
                                                      "sendMqtt cmdType 317": 1}
     events = [e for e in gw.events.recent(200, 0) if e["kind"] == "cloud"]
     assert [(e["text"], e["count"]) for e in events] == [
-        ("Cloud API call not emulated: GET /hes-gateway/terminal/chargePowerDetails", 2),
+        ("Cloud API call not emulated: GET /hes-gateway/terminal/getPersonalInfo", 2),
         ("Cloud API call not emulated: sendMqtt cmdType 317", 1)]
     text = _monitor_text(m)
     assert "Cloud API calls not emulated yet:" in text
-    assert "      2  GET /hes-gateway/terminal/chargePowerDetails" in text
+    assert "      2  GET /hes-gateway/terminal/getPersonalInfo" in text
 
 
 def test_nothing_listed_when_every_call_is_served(fleet):
