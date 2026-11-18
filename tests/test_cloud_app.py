@@ -1,9 +1,10 @@
-"""#333 (#316 step 3): the official app's start-up calls. Each reply has the fields the app's 42
+"""#333, #337 (#316 step 3): the official app's calls. Each reply has the fields the app's 42
 HTTP Toolkit captures show (names and types merged over every capture), and its values come
 from the site."""
 
 import hashlib
 import json
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -60,7 +61,55 @@ CAPTURED = {
     "common/getPowerCapConfigList": ("Query success!", {"total"}, list, {
         "id", "modelName", "peHwVersion", "ratedCap", "chargePower", "dischargePower", "derateFlag"}),
     "terminal/tou/notify/ai/cache": ("success", {"traceId"}, type(None), set()),
+    # #337
+    "terminal/getPersonalInfo": ("Query success!", {"total"}, dict, {
+        "userName", "contactNumber", "userAddress", "region", "lat", "lon", "firstName", "lastName",
+        "zipCode", "country", "province", "city", "addressSecondLast", "alphaCode", "addressFinish", "avatar"}),
+    "terminal/backupHistorySummary": ("Operate success!", set(), dict, {
+        "longestDuration", "totalBackup", "totalDuration", "lastRecord"}),
+    "terminal/recommend/recommendFlag": ("Operate success!", set(), dict, {
+        "enableRecommend", "recommendUrl", "recommendCodeMarkdown", "recommendText", "recommendImage"}),
+    "terminal/selectSimBtn": ("Operate success!", set(), list, {"dictLabel", "dictValue", "isDefault"}),
+    "terminal/v2/loginOut": ("Operate success!", set(), type(None), set()),
+    "terminal/selectDeviceOverallInfo": ("Query success!", {"total"}, dict, {"apowerCount", "totalPower"}),
+    "terminal/tou/getBonusInfo": ("Query success!", {"total"}, dict, {
+        "bonusEnable", "touEleCompanyFullName", "extraDTO", "bbDefaultVo", "batteryRatedCapacity",
+        "alertMessage", "sendStatus", "switchBonusFlag", "pcsVo", "apowerCount"}),
+    "terminal/site/get/DeviceDetail": ("Operate success!", set(), dict, {
+        "gatewayName", "address1", "address2", "country", "province", "city", "postCode", "alphaCode",
+        "completeAddress"}),
+    "terminal/selectGatewayAlarm": ("Query success!", {"total"}, list, set()),
+    "terminal/obtainApowersInfo": ("Query success!", {"total"}, list, {
+        "apowerSn", "ratedPower", "ratedCapacity", "status", "remainingPower", "fpgaVer", "dcdcVer",
+        "invVer", "bmsVer", "blVer", "thVer", "peHwVer", "mpptAppVer", "soc"}),
+    "terminal/obtainAgateInfo": ("Query success!", {"total"}, dict, {
+        "protocolVer", "sysHdVersion", "emsDeviceVer", "ibgVersion", "ibgMainVersion", "connType",
+        "slVersion", "slVersionApp", "slVersionBoot", "awsVersion", "appVersion", "meterVersion",
+        "msaModel", "msaSn"}),
 }
+# Replies in another envelope: path -> (HTTP status, the reply's keys).
+OWN_ENVELOPE = {
+    "newApi/api-user/app/resource/getUserResources/v2": (200, {"code", "msg", "data", "success"}),
+    "terminal/tou/calculate/expected/earnings": (200, {"code", "message", "result", "traceId"}),
+    "terminal/sim/cardShow": (404, {"message", "status"}),
+}
+ALARM_KEYS = {"id", "gatewayId", "alarmEqSn", "alarmCode", "commonAlarmCode", "level", "time", "logName",
+              "commonLogName", "logNameEn", "commonLogNameEn", "createTime", "alarmExplanationZh",
+              "alarmExplanationEn", "alarmExplanation", "pictureUrl", "plan"}
+# sendMqtt cmdType -> (request dataArea, reply cmdType, reply dataArea keys).
+MQTT = {
+    317: ({"optType": 0, "paraType": 6}, 318, {"optType", "paraType", "result", "commSetPara", "num"}),
+    327: ({"opt": 0}, 328, {"opt", "result", "lightStat", "timeEn", "lightOpenTime", "lightCloseTime"}),
+    337: ({"opt": 0}, 338, {"opt", "result", "reason", "wifi_SSID", "wifi_Pw", "ap_SSID", "ap_Pw", "wifi_Safety"}),
+}
+COMM_KEYS = {"opt", "result", "reason", "currentNetType", "wifiDHCP", "wifiMAC", "wifiStaticIP", "wifiDNS",
+             "wifiGateWay", "eth0DHCP", "eth0MAC", "eth0StaticIP", "eth0DNS", "eth0GateWay", "eth1DHCP",
+             "eth1MAC", "eth1StaticIP", "eth1DNS", "eth1GateWay", "operatorMAC", "operatorDNS",
+             "operatorRSSI", "awsStatus"}
+SYS_KEYS = {"electricSys", "ratedGridVolt", "ratedGridHz", "electricSupply", "airSwitchCur", "gridPhaseConSet",
+            "gridPhaseSeqSet", "solarInstallState", "genRatePower", "solarInvManu", "solarInvRatePower",
+            "fhpRatePower", "kwRatePower", "gridExportEnable", "gridSoftLimit", "gridHardLimit",
+            "isThreePhaseInstall"}
 
 
 @pytest.fixture(scope="module")
@@ -81,14 +130,29 @@ def _token(f) -> str:
         return json.load(r)["result"]["token"]
 
 
-def _call(f, method, path, token, **q) -> dict:
+def _call(f, method, path, token, body=None, status=None, **q) -> dict:
     sn = f["home"].serial
     q = {"gatewayId": sn, "equipNo": sn, "lang": "en_US", **q}
-    data = json.dumps({"gatewayId": sn}).encode() if method == "POST" else None
+    data = json.dumps(body or {"gatewayId": sn}).encode() if method == "POST" else None
     req = urllib.request.Request(f"http://127.0.0.1:{f.cloud.port}/hes-gateway/{path}?{urllib.parse.urlencode(q)}",
                                  data=data, method=method, headers={"loginToken": token} if token else {})
-    with urllib.request.urlopen(req, timeout=5) as r:
-        return json.load(r)
+    try:
+        with urllib.request.urlopen(req, timeout=5) as r:
+            code, d = r.status, json.load(r)
+    except urllib.error.HTTPError as e:
+        code, d = e.code, json.load(e)
+    if status is not None:
+        assert code == status, path
+    return d
+
+
+def _mqtt(f, token, cmd_type, area) -> dict:
+    sn = f["home"].serial
+    body = {"cmdType": cmd_type, "equipNo": sn, "type": 0, "timeStamp": 0, "snno": 1, "len": 0, "crc": "",
+            "dataArea": json.dumps(area)}
+    d = _call(f, "POST", "terminal/sendMqtt", token, body=body, status=200)
+    assert d["code"] == 200, d
+    return d
 
 
 def _monitor(f) -> dict:
@@ -97,11 +161,15 @@ def _monitor(f) -> dict:
 
 
 def test_every_start_up_call_has_the_captured_fields(fleet):
-    assert set(p for _, p in APP_CALLS) == set(CAPTURED)
+    assert set(p for _, p in APP_CALLS) == set(CAPTURED) | set(OWN_ENVELOPE)
     token = _token(fleet)
     for method, path in APP_CALLS:
+        if path in OWN_ENVELOPE:
+            status, keys = OWN_ENVELOPE[path]
+            assert set(_call(fleet, method, path, token, status=status)) == keys, path
+            continue
         message, extras, kind, keys = CAPTURED[path]
-        d = _call(fleet, method, path, token)
+        d = _call(fleet, method, path, token, status=200)
         assert set(d) == {"code", "message", "result", "success"} | extras, path
         assert (d["code"], d["message"], d["success"]) == (200, message, True), path
         assert isinstance(d["result"], kind), path
@@ -153,3 +221,73 @@ def test_no_token_unknown_gateway_and_the_monitor(fleet):
     for method, path in APP_CALLS:
         _call(fleet, method, path, token)
     assert _monitor(fleet)["cloud"]["unserved"] == {}
+
+
+def test_sendmqtt_317_327_337_have_the_captured_fields(fleet):
+    token = _token(fleet)
+    for cmd_type, (area, reply, keys) in MQTT.items():
+        r = _mqtt(fleet, token, cmd_type, area)["result"]
+        assert r["cmdType"] == reply
+        assert set(json.loads(r["dataArea"])) == keys, cmd_type
+    net = json.loads(_mqtt(fleet, token, 317, {"optType": 0, "paraType": 6})["result"]["dataArea"])
+    assert set(net["commSetPara"]) == COMM_KEYS and net["commSetPara"]["currentNetType"] == 3
+    sys_ = json.loads(_mqtt(fleet, token, 317, {"optType": 0, "paraType": 12})["result"]["dataArea"])
+    assert set(sys_["sysConfigPara"]) == SYS_KEYS and sys_["num"] == 17
+    assert sys_["sysConfigPara"]["fhpRatePower"] == int(models.APOWERS[2].kw * 1000)
+
+
+def test_sendmqtt_writes_are_kept(fleet):
+    token = _token(fleet)
+    area = lambda t, a: json.loads(_mqtt(fleet, token, t, a)["result"]["dataArea"])
+    assert area(337, {"opt": 1, "wifi_SSID": "lab", "wifi_Pw": "secret"})["wifi_SSID"] == "lab"
+    assert area(337, {"opt": 0})["wifi_Pw"] == "secret"
+    assert area(327, {"opt": 1, "lightStat": [1, 1], "timeEn": 1})["lightStat"] == [1, 1]
+    assert area(327, {"opt": 0})["timeEn"] == 1
+    net = area(317, {"optType": 1, "paraType": 6, "commSetPara": {"currentNetType": 4}})
+    assert net["optType"] == 1 and net["commSetPara"]["opt"] == 1
+    assert area(317, {"optType": 0, "paraType": 6})["commSetPara"]["currentNetType"] == 4
+    area(317, {"optType": 1, "paraType": 6, "commSetPara": {"currentNetType": 3}})
+
+
+def test_batch_two_values_come_from_the_site(fleet):
+    gw, token = fleet["home"], _token(fleet)
+    unit = models.APOWERS[2]
+    overall = _call(fleet, "GET", "terminal/selectDeviceOverallInfo", token)["result"]
+    assert overall == {"apowerCount": 2, "totalPower": pytest.approx(2 * unit.kwh)}
+    aps = _call(fleet, "GET", "terminal/obtainApowersInfo", token)["result"]
+    assert [a["ratedPower"] for a in aps] == [unit.kw] * 2 and [a["peHwVer"] for a in aps] == ["2", "2"]
+    ag = _call(fleet, "GET", "terminal/obtainAgateInfo", token)["result"]
+    assert (ag["sysHdVersion"], ag["ibgVersion"]) == (102, gw.profile.dc_firmware)
+    detail = _call(fleet, "GET", "terminal/site/get/DeviceDetail", token)["result"]
+    assert (detail["gatewayName"], detail["country"], detail["alphaCode"], detail["address1"]) == (
+        "home", "Australia", "AU", "")
+    bonus = _call(fleet, "GET", "terminal/tou/getBonusInfo", token)["result"]
+    assert bonus["apowerCount"] == 2 and bonus["bbDefaultVo"]["dischargePower"] == 2.5
+    earn = _call(fleet, "POST", "terminal/tou/calculate/expected/earnings", token,
+                 body={"template": {"gatewayId": gw.serial}, "strategyList": [], "nemType": 1})
+    assert (earn["result"]["gatewayId"], earn["result"]["scene"]) == (gw.serial, 1)
+    assert _call(fleet, "GET", "terminal/sim/cardShow", token, status=404) == {"message": "", "status": 404}
+    assert _call(fleet, "GET", "newApi/api-user/app/resource/getUserResources/v2", token)["msg"] == "请求成功"
+
+
+def test_alarms_and_backups_follow_the_site(fleet):
+    gw, token = fleet["home"], _token(fleet)
+    site = gw.site
+    assert _call(fleet, "GET", "terminal/selectGatewayAlarm", token)["result"] == []
+    assert _call(fleet, "GET", "terminal/backupHistorySummary", token)["result"]["lastRecord"] is None
+    site.force_alarm("OVER_TEMP")
+    try:
+        alarms = _call(fleet, "GET", "terminal/selectGatewayAlarm", token)
+        assert alarms["total"] == 1 and set(alarms["result"][0]) == ALARM_KEYS
+        assert (alarms["result"][0]["alarmCode"], alarms["result"][0]["logNameEn"]) == ("7", "Over temp")
+    finally:
+        site.clear_alarm()
+    t0 = site.clock.now()
+    site.relay_events.extend([{"ts": t0 - 600, "event": "open", "reason": "outage", "stage": None},
+                              {"ts": t0 - 300, "event": "close", "reason": None, "stage": None}])
+    try:
+        b = _call(fleet, "GET", "terminal/backupHistorySummary", token)["result"]
+        assert (b["totalBackup"], b["totalDuration"], b["longestDuration"]) == (1, 300, 300)
+        assert b["lastRecord"]["second"] == 300 and b["lastRecord"]["chargeType"] == 2
+    finally:
+        del site.relay_events[-2:]
