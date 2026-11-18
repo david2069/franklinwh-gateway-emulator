@@ -32,7 +32,7 @@ FAILED tests/test_cloud_app.py::test_batch_two_values_come_from_the_site - As...
 7 passed in 0.21s
 
 ## Full suite
-862 passed, 44 warnings in 54.26s
+862 passed, 44 warnings in 53.72s
 
 ## Served, of the 143 captured method+paths (each one routed in process)
 before: served 45 unserved 98
