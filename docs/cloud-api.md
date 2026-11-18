@@ -227,6 +227,29 @@ captures', merged over all of them; values are the emulator's own:
 | `GET hes-gateway/terminal/message/selectMessage`, `appObtainAdvertiseLst`, `common/getPageByTypeList` | no messages (null), adverts or help pages (empty lists) |
 | `POST hes-gateway/terminal/updateTerUserFcmToken`, `tou/notify/ai/cache` | accepted (the phone's push token isn't kept) |
 
+Then the next 14 (#337), made in 19 to 30 of the captures, and three more sendMqtt commands
+(34 to 37):
+
+| Call | What comes back |
+|---|---|
+| `GET hes-gateway/terminal/obtainAgateInfo?gatewayId=` | the aGate's versions as Direct Connect 1102 has them (`ibgVersion`, `protocolVer`, `slVersion`, `awsVersion`, `appVersion`, `meterVersion`), `sysHdVersion` (the aGate code), `connType` 3 (Wi-Fi) |
+| `GET hes-gateway/terminal/obtainApowersInfo?gatewayId=` | each aPower: `ratedPower` kW, `ratedCapacity` and `remainingPower` kWh, `soc`, `peHwVer` (the model code) and its firmware versions (1102's) |
+| `GET hes-gateway/terminal/selectDeviceOverallInfo?gatewayId=` | `apowerCount` and `totalPower` (the total capacity, kWh) |
+| `GET hes-gateway/terminal/selectGatewayAlarm?gatewayId=` | the alarms active now, named as the run log names them, level 2; English only, explanations empty |
+| `GET hes-gateway/terminal/backupHistorySummary?gatewayId=` | the grid relay's openings: `totalBackup`, `totalDuration` and `longestDuration` (seconds), and `lastRecord` (null before the first; its start and end SoC are null, as the site doesn't record them) |
+| `GET hes-gateway/terminal/site/get/DeviceDetail?gatewayId=` | the fleet entry's id as `gatewayName`; country, state, city and postcode from `location` (no street); `alphaCode` the country code |
+| `GET hes-gateway/terminal/tou/getBonusInfo?gatewayId=` | battery bonus off; `bbDefaultVo` as every capture has it (its start-time window is the emulator's); the capacity and aPower count from the site |
+| `POST hes-gateway/terminal/tou/calculate/expected/earnings` | no prices, so no savings: `scene` 1, 0.0; the envelope has `traceId` and no `success`, as captured |
+| `GET hes-gateway/terminal/getPersonalInfo` | the account's profile with nothing filled in (no names or address) |
+| `GET hes-gateway/newApi/api-user/app/resource/getUserResources/v2` | no resources, in that service's own envelope (`msg`, `data`) |
+| `GET hes-gateway/terminal/selectSimBtn?gatewayId=` | the SIM page's three buttons, as captured |
+| `GET hes-gateway/terminal/sim/cardShow?gatewayId=` | HTTP 404 with `{"message": "", "status": 404}`, as 2,449 of 2,471 captured calls |
+| `GET hes-gateway/terminal/recommend/recommendFlag` | no referral offer |
+| `POST hes-gateway/terminal/v2/loginOut` | accepted; the token stays valid until it expires |
+| `sendMqtt` 317 → 318 | `paraType` 6: the network interfaces (`commSetPara`: on Wi-Fi, addresses from the documentation ranges, 192.0.2.x and `AA:BB:CC:…`); `optType` 1 writes the keys sent. `paraType` 12: the install profile (`sysConfigPara`, Direct Connect 1702's values; `fhpRatePower` one aPower's rating, W) |
+| `sendMqtt` 327 → 328 | the aPower LED: `lightStat` one per aPower, the timer off; `opt` 1 writes the keys sent |
+| `sendMqtt` 337 → 338 | the aGate's Wi-Fi and access point (placeholder names and passwords); `opt` 1 writes the keys sent |
+
 What the app shows for these values hasn't been seen yet: that is #316 step 4, the app pointed
 at the emulator.
 

@@ -127,10 +127,11 @@ V2L_RUN_STATE = {"Disabled": 0, "Standby": 1, "Active": 2}   # franklinwh-cloud 
 
 class CloudError(Exception):
     def __init__(self, code: int, message: str, http: int = 200, retry_after: int | None = None,
-                 unserved: str | None = None):
+                 unserved: str | None = None, body: dict | None = None):
         super().__init__(message)
         self.code, self.http, self.retry_after = code, http, retry_after
         self.unserved = unserved        # a call the emulator doesn't answer yet (#316): "GET /path"
+        self.body = body                # the reply as the cloud words it, when not the envelope
 
 
 def _is_ip(host: str) -> bool:
@@ -203,6 +204,7 @@ class CloudApi:
         self._hits: dict[str, list[float]] = {}     # per gateway: request times (rate limit)
         self._payloads: dict[str, DcPayloads] = {}
         self._modes: dict[str, dict] = {}            # per gateway: what only the cloud keeps
+        self._app: dict[tuple[str, str], dict] = {}  # per (gateway, block): the app's settings (#337)
         self._tou: dict[str, cloud_tou.TouStore] = {}
         self._server: asyncio.base_events.Server | None = None
         self._hung: set[asyncio.StreamWriter] = set()   # bad_reply "hang": held until stop
@@ -413,6 +415,8 @@ class CloudApi:
             return self.power_info(gw)
         if ty == 203:
             return self.composite(gw)["runtimeData"]
+        if ty in cloud_app.MQTT_CALLS:                            # network, LED, Wi-Fi (#337)
+            return cloud_app.MQTT_CALLS[ty](self, gw, req)
         raise CloudError(400, f"sendMqtt: cmdType {ty} is not emulated yet", unserved=f"sendMqtt cmdType {ty}")
 
     def switch_block(self, gw: "Gateway", req: dict) -> dict:
@@ -738,7 +742,9 @@ class CloudApi:
                 payload = self.route(method.upper(), target, headers, raw)
             except CloudError as e:
                 status, payload, unserved = e.http, _envelope(None, e.code, str(e)), e.unserved
-                if e.code == 401:
+                if e.body is not None:
+                    payload = e.body
+                elif e.code == 401:
                     del payload["result"]                        # the cloud's reply has none
                 if e.retry_after is not None:
                     extra = f"Retry-After: {e.retry_after}\r\n"
