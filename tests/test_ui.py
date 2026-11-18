@@ -43,7 +43,7 @@ def test_page_and_its_files(ui):
     page = body.decode()
     refs = re.findall(r'(?:src|href)="/static/([^"]+)"', page)
     assert set(refs) == {"style.css", "app.js", "diagram.js", "actions.js", "tou.js",
-                         "groups.js", "units.js", "alpinejs-3.14.1.min.js"}
+                         "groups.js", "units.js", "splash.js", "alpinejs-3.14.1.min.js"}
     for name in refs:
         status, ctype, _ = get(f"{base}/static/{name}")
         assert status == 200
@@ -79,7 +79,7 @@ def test_page_reads_only_fields_the_state_has(ui):
     """Every g.<field> / current.<field> the page uses exists in the control API's state."""
     fleet, _ = ui
     state = gateway_state(fleet["site"])
-    text = "".join((STATIC / n).read_text() for n in ("index.html", "app.js", "diagram.js", "actions.js", "tou.js", "groups.js", "units.js"))
+    text = "".join((STATIC / n).read_text() for n in ("index.html", "app.js", "diagram.js", "actions.js", "tou.js", "groups.js", "units.js", "splash.js"))
     used = set(re.findall(r"\b(?:g|current)\.([a-z0-9_]+)", text))
     assert used and used <= set(state), sorted(used - set(state))
     leg_fields = set(re.findall(r"\bleg\.([a-z_]+)", text))
