@@ -58,6 +58,19 @@ The page notices a restart or a new version and offers to reload. Loopback only,
 internet. Plan:
 [UI plan](UI_PLAN.md); a hands-on walk-through: [testing the UI by hand](UI_TESTING.md).
 
+## Start-up screen
+
+![The start-up screen: a welcome, the active gateway's last 7 days, the emulator's mark](assets/ui/splash.png)
+
+The first time the page opens in a browser session it shows a start-up screen (#329, from the
+owner's design board F): a welcome, the active gateway's last 7 days of solar and home use in kWh
+a day (from `GET /gateways/<id>/days`, the same daily totals as the Cloud API's
+`getFhpElectricData`; today so far is the last point), and the emulator's own mark with
+"Unofficial · not affiliated with FranklinWH" and the running version. A new run has only today,
+or no history at all ("No history yet"); `history_days` in the fleet file gives it past days. It
+fades once the page has loaded (at least 2.5 s on screen), or at once on a click or Esc. Reloading
+in the same tab doesn't show it again; a new tab or window does.
+
 ## The page
 
 ![Cards for every gateway, the actions column on the right](assets/ui/overview.png)

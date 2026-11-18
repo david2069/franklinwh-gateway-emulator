@@ -75,7 +75,7 @@ def split(slot: dict) -> dict[str, float]:
     return f
 
 
-def _day_kwh(gw: "Gateway", date: str) -> dict[str, float]:
+def day_kwh(gw: "Gateway", date: str) -> dict[str, float]:
     tot: dict[str, float] = {}
     for slot in gw.site.history.get(date, []):
         hours = (slot.get("s") or 0.0) / 3600
@@ -149,7 +149,7 @@ def electric_data(gw: "Gateway", q: dict) -> dict:
     for _, dates in periods:
         tot: dict[str, float] = {}
         for d in dates:
-            for k, v in _day_kwh(gw, d).items():
+            for k, v in day_kwh(gw, d).items():
                 tot[k] = tot.get(k, 0.0) + v
         totals.append(tot)
     for array, key in ELECTRIC:

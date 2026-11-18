@@ -12,6 +12,7 @@
   --warn: #f5a524;
   --bad: #f87171;
   /* Mode and battery-status colours (owner, #49) */
+  --c-solar: #f5a524; --c-home: #60a5fa;   /* start-up chart (#329, board F) */
   --c-green: #4ade80; --c-cyan: #22d3ee; --c-red: #f87171; --c-orange: #fb923c; --c-v2l: #f5a524; --v2l-bg: #2a2416;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -22,6 +23,7 @@
     --bg: #f4f6f9; --panel: #ffffff; --panel-2: #eef1f5; --line: #d5dbe4;
     --text: #172235; --text-2: #2c3a52; --muted: #56627a;
     --ok: #15803d; --ok-bg: #dcfce7; --warn: #b45309; --bad: #b91c1c;
+    --c-solar: #b45309; --c-home: #1d4ed8;
     --c-green: #15803d; --c-cyan: #0e7490; --c-red: #b91c1c; --c-orange: #c2410c; --c-v2l: #b45309; --v2l-bg: #fef3c7;
     color-scheme: light;
   }
@@ -391,3 +393,41 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
 .diagram .ic.v2l { stroke: var(--c-v2l); }
 .diagram .ts.v2l { fill: var(--c-v2l); }
 .diagram .flow.v2l { stroke: var(--c-v2l); opacity: 1; }
+
+/* Start-up screen (#329): the owner's design board F. */
+[x-cloak] { display: none !important; }
+.splash { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+          padding: 16px; background: var(--bg); cursor: pointer; }
+.splash-card { width: 100%; min-width: 0; max-width: 1100px; max-height: 100%; overflow: auto; display: flex; flex-direction: column;
+               align-items: center; gap: 32px; padding: clamp(24px, 6vw, 64px) clamp(16px, 6vw, 88px) 40px;
+               background: var(--panel-2); border: 1px solid var(--line); border-radius: 22px; }
+.splash-title { align-self: center; display: flex; flex-direction: column; gap: 4px; }
+.splash-title h2 { margin: 0; font-size: clamp(48px, 9vw, 84px); line-height: 1; font-weight: 800; letter-spacing: -0.02em; }
+.splash-title p { margin: 0 0 0 clamp(40px, 14vw, 180px); font-size: clamp(22px, 4.5vw, 44px); line-height: 1.15;
+                  font-weight: 700; color: var(--text-2); }
+.splash-chart { margin: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.splash-chart svg { width: 100%; height: auto; max-width: 860px; }
+.splash-chart .grid { stroke: var(--line); }
+.splash-chart .axis { stroke: var(--muted); }
+.splash-chart .tick { font-size: 16px; fill: var(--muted); }
+.splash-chart path { fill: none; stroke-width: 2.5; stroke-linecap: round; }
+.splash-chart path.solar { stroke: var(--c-solar); }
+.splash-chart path.home { stroke: var(--c-home); }
+.splash-chart g.solar { fill: var(--c-solar); }
+.splash-chart g.home { fill: var(--c-home); }
+.splash-chart figcaption { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 28px; font-size: 15px; color: var(--muted); }
+.splash-chart figcaption > span { display: flex; align-items: center; gap: 8px; }
+.splash-chart .key { width: 22px; height: 3px; border-radius: 2px; }
+.splash-chart .key.solar { background: var(--c-solar); }
+.splash-chart .key.home { background: var(--c-home); }
+.splash-foot { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+.splash-foot p { margin: 0; font-size: 13px; color: var(--muted); }
+.splash-mark { max-width: 100%; display: flex; align-items: center; gap: 14px; color: var(--ok); text-align: left; }
+.splash-mark div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.splash-mark .name { font-size: clamp(20px, 5vw, 26px); font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+.splash-mark .tagline { font: 500 13px var(--mono); letter-spacing: 0.08em; overflow-wrap: anywhere; color: var(--ok); }
+.splash-leave { transition: opacity 600ms ease; }
+.splash-on { opacity: 1; }
+.splash-off { opacity: 0; }
+@media (max-width: 600px) { .splash-chart .tick { font-size: 30px; } }   /* the chart scales down: labels stay legible */
+@media (prefers-reduced-motion: reduce) { .splash-leave { transition: none; } }

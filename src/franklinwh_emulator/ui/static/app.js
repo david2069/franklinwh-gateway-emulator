@@ -47,12 +47,16 @@ function running() {
     touDrafts: {},    // gateway -> the TOU editor's draft (tou.js), while it is open
     busy: '',
     _timer: null,
+    splash: false,     // the start-up screen (splash.js, #329), first load of a session only
+    splashDays: null,  // GET /gateways/<active>/days, for its chart (null until read)
 
     get current() {
       return this.gateways.find(g => g.id === this.active) || null;
     },
 
     async start() {
+      this.splash = splashWanted();
+      const shownAt = Date.now();
       try {
         this.active = localStorage.getItem('emulator.active');
         this.layout = localStorage.getItem('emulator.layout') || 'right';
@@ -69,6 +73,7 @@ function running() {
       this._versionTimer = setInterval(() => this.checkVersion(), VERSION_CHECK_MS);
       await this.poll();
       this._timer = setInterval(() => this.poll(), POLL_MS);
+      if (this.splash) this.loadSplash(shownAt);
       this.loadSessions();
       try {
         this.schema = await this._get('/schema');
@@ -400,6 +405,25 @@ function running() {
         : 'The emulator restarted. Its gateways started fresh, so earlier actions (overrides, ' +
           'alarms, modes) were not kept.';
       this.staleNewCode = newCode;
+    },
+    // -- start-up screen (#329) -----------------------------------------------------------
+    async loadSplash(shownAt) {
+      if (this.active) {
+        try {
+          this.splashDays = (await this._get('/gateways/' + encodeURIComponent(this.active) + '/days?n=7')).days;
+        } catch (e) { this.splashDays = []; }
+      } else this.splashDays = [];
+      setTimeout(() => this.closeSplash(), Math.max(0, SPLASH_MIN_MS - (Date.now() - shownAt)));
+    },
+    closeSplash() {
+      if (!this.splash) return;
+      this.splash = false;
+      splashSeen();
+    },
+    splashSvg() { return splashSvg(splashChart(this.splashDays || [])); },
+    splashCaption() {
+      return 'Last 7 days · ' + (this.active || 'no gateway') + ' · ' +
+             (this.splashDays ? splashSummary(this.splashDays) : 'reading…');
     },
     versionText() {
       if (!this.version) return '';

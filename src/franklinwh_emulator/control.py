@@ -611,6 +611,28 @@ class ControlApi:
         ev = gw.events
         return {"level": ev.level, "dropped": ev.dropped, "events": ev.recent(limit, since)}
 
+    @staticmethod
+    def days(gw: "Gateway", path: str) -> dict:
+        """The last n days of the site's history (#329): solar and home use in kWh a day, from the
+        quarter-hour history, split as the Cloud API's getFhpElectricData; oldest first, today
+        last (so far). Days with no history aren't listed."""
+        from urllib.parse import parse_qs, urlsplit
+        from .cloud_energy import day_kwh
+        try:
+            n = int(parse_qs(urlsplit(path).query).get("n", ["7"])[0])
+        except ValueError:
+            raise ApiError(400, "days: n is an integer") from None
+        if not 1 <= n <= 31:
+            raise ApiError(400, "days: n is 1 to 31")
+        gw.site.step()
+        out = []
+        for d in sorted(gw.site.history)[-n:]:
+            kwh = day_kwh(gw, d)
+            if gw.site.history[d]:
+                out.append({"date": d, "solar_kwh": round(kwh.get("sun", 0.0), 2),
+                            "home_kwh": round(kwh.get("load", 0.0), 2)})
+        return {"days": out}
+
     def monitor(self) -> dict:
         rows, conns, refused, rate, accepted = [], 0, 0, 0.0, 0
         for gid, gw in self.gateways.items():
@@ -915,6 +937,8 @@ class ControlApi:
                 return gateway_state(gw)
             if parts[2:] == ["events"] and method == "GET":
                 return self.events(gw, path)
+            if parts[2:] == ["days"] and method == "GET":
+                return self.days(gw, path)
             if len(parts) == 3 and method == "POST":
                 from urllib.parse import parse_qs, urlsplit
                 src = parse_qs(urlsplit(path).query).get("source", ["api"])[0]

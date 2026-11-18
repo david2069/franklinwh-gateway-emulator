@@ -60,6 +60,11 @@ franklinwh-emulator monitor --watch 5
 count, last_at, last_site_time}]}`, oldest first. `?since=<rev>` returns only entries added or
 folded into since that revision; `?limit=` caps the count (default 200; the log keeps 1000).
 
+**Days.** `GET /gateways/<id>/days?n=7` is the site's last `n` days (1 to 31, default 7) of solar
+and home use from its quarter-hour history, oldest first, today so far last: `{days: [{date,
+solar_kwh, home_kwh}]}`. Days with no history aren't listed. The totals are the Cloud API's
+`getFhpElectricData` ones (`kwhSuArray`, `kwhLoadArray`). The UI's start-up screen draws them (#329).
+
 **Groups.** aGates in a fleet group (one site and grid connection, one per phase; see
 [Configuration](configuration.md), #241) share the grid: a `grid` action on any member reaches
 them all, `phase` picks the member on that leg, and frequency is common to all. Each member's

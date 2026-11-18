@@ -12,9 +12,39 @@
 <script src="/static/tou.js"></script>
 <script src="/static/groups.js"></script>
 <script src="/static/units.js"></script>
+<script src="/static/splash.js"></script>
 <script defer src="/static/alpinejs-3.14.1.min.js"></script>
 </head>
 <body x-data="running()" x-init="start()">
+<div class="splash" x-show="splash" x-cloak x-transition:leave="splash-leave" x-transition:leave-start="splash-on"
+     x-transition:leave-end="splash-off" @click="closeSplash()" @keydown.escape.window="closeSplash()"
+     role="dialog" aria-modal="true" aria-labelledby="splash-title">
+  <div class="splash-card">
+    <div class="splash-title">
+      <h2 id="splash-title">Welcome</h2>
+      <p>to FranklinWH Gateway Emulator</p>
+    </div>
+    <figure class="splash-chart">
+      <svg viewBox="0 0 860 330" role="img" x-html="splashSvg()"
+           :aria-label="'Solar and home use in kWh a day, ' + splashCaption()"></svg>
+      <figcaption>
+        <span><span class="key solar"></span>Solar, kWh a day</span>
+        <span><span class="key home"></span>Home use, kWh a day</span>
+        <span x-text="splashCaption()"></span>
+      </figcaption>
+    </figure>
+    <div class="splash-foot">
+      <div class="splash-mark">
+        <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="currentColor" stroke-width="3"></circle><path d="M26 9 L15 27 H23 L21 39 L33 20 H25 Z" fill="currentColor"></path></svg>
+        <div>
+          <span class="name">FranklinWH Gateway Emulator</span>
+          <span class="tagline">AGATE EMULATOR · NO HARDWARE NEEDED</span>
+        </div>
+      </div>
+      <p>Unofficial · not affiliated with FranklinWH<span x-show="version" x-text="' · ' + versionText()"></span></p>
+    </div>
+  </div>
+</div>
 <header>
   <h1>FranklinWH Emulator</h1>
   <span class="version" x-show="version" x-text="versionText()"></span>

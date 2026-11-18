@@ -1,0 +1,24 @@
+#329: UI start-up screen (design board F), 2026-11-18, macOS, Python 3.12, branch ui/329-startup-screen
+
+Tests
+  .venv/bin/python -m pytest -q          852 passed
+  tests/test_ui_splash.py                6 passed: GET /gateways/<id>/days matches the Cloud API's
+    getFhpElectricData daily kwhSuArray / kwhLoadArray (8 backfilled days, AU, bell weather);
+    n=3; a fresh gateway has at most today; n=0, n=32, n=x -> 400; unknown gateway -> 404;
+    the page carries the board's text, the click/Esc close and the once-a-session flag.
+  Break check: control.days() reading "sun_home" instead of "sun" -> the daily-totals test fails
+    (1 failed, 5 passed); restored.
+
+Browser (headless Chrome, a local test emulator on 127.0.0.1:8612 with history_days 7, AU,
+synthetic weather; stopped afterwards)
+  GET /gateways/<id>/days for the one gateway: 7 days, 2026-11-12 .. 2026-11-18 (today so far).
+  1280x860 dark: welcome, chart with 0-40 kWh ticks, Thu..Wed labels, both lines and points,
+    caption "Last 7 days · home · 7 days: solar 213.3 kWh, home use 143.5 kWh", mark, version.
+  1280x860 light (prefers-color-scheme light): the light tokens (solar #b45309, home #1d4ed8).
+  390 px (an iframe; headless Chrome's window is never narrower than 500 px): fits, no
+    horizontal overflow, the title and tagline wrap, chart labels 30 px in viewBox units.
+  After 8 s of virtual time: the splash is gone and the normal page shows.
+  First finding, fixed: Alpine's x-for doesn't render inside <svg> (no ticks, labels or points);
+    the chart's children are now set with x-html from numbers and fixed weekday names.
+  Not checked in a browser: that a reload in the same tab skips it (sessionStorage), the fade
+    itself, reduced motion.
