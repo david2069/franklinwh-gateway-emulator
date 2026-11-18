@@ -6,6 +6,9 @@
 - Cloud API: the official app's start-up calls, the 17 it makes in 34+ of 42 captures that weren't served (#333, #316 step 3): `getDeviceInfoV2` (the aGate and aPowers from the site's models), `chargePowerDetails` (displayed SoC and active reserve), `tou/getEntranceInfo`, `weather/getCurrentBriefWeather` (the site's sky and temperature), `bill/electric/selectBenefitInfo` (the day's solar and aPower kWh), `common/selectDeviceRunLogList`, `common/getPowerCapConfigList`, and the account extras answered as none (`selectProgramFlag`, `nps/getNpsShowTip`, `getShowTip`, `feedback/whetherPopUp`, `getAppGlobalConfig`, `message/selectMessage`, `appObtainAdvertiseLst`, `common/getPageByTypeList`, `updateTerUserFcmToken`, `tou/notify/ai/cache`). Shapes from the app's captures (names and types only). See docs/cloud-api.md.
 - `examples/fleet-north-america.yaml`: `examples/fleet.yaml` plus 15 split-phase homes across the US and Canada, each with its own timezone (Redding CA, Boise, Houston, Tampa, Buffalo, Chicago, Seattle, St Louis, Cincinnati, Atlanta, Oklahoma City, Ottawa, Halifax, Long Beach NY, Atlantic City; Phoenix is the existing `us-split`) (#335). See docs/configuration.md.
 
+### Changed
+- `examples/fleet-north-america.yaml`: two or more homes in each of its 16 places, 31 in all with Phoenix's second, each one different: aGate and aPower models (some mixed), V10R01 or V12R02 firmware, solar or none, remote PV, aPower S DC PV, a generator, V2L and smart-circuit loads (HVAC, EV charger, hot water, pool and well pumps) (#338). See docs/configuration.md.
+
 ## 0.3.0 (2026-11-18)
 
 ### Added

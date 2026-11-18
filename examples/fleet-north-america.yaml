@@ -1,8 +1,10 @@
 # franklinwh-emulator fleet ./examples/fleet-north-america.yaml
 #
-# examples/fleet.yaml plus homes across the US and Canada (#335): split-phase 120/240 V
-# (ac_type 1), IEEE 1547-2018 Category II, a 200 A service, city-level locations. Phoenix is
-# us-split below. A typical site: 1 aGate, 1-2 aPowers, often no solar (solar_peak_w: 0).
+# examples/fleet.yaml plus two or more homes in each of 16 places across the US and Canada
+# (#335, #338): split phase 120/240 V (ac_type 1), IEEE 1547-2018 Category II, a 200 A service,
+# city-level locations. Phoenix's first home is us-split below. Every home differs: aGate and
+# aPower models (some mixed), older (V10R01) or newer (V12R02) firmware, solar or none, remote PV
+# through the aPbox, aPower S DC PV, a generator, V2L and smart-circuit loads.
 #
 # Every key outside `gateways` is optional. Per gateway:
 #   id, seed, serial, host, port (or modbus: {host, port}), directconnect: {port} (every aGate
@@ -160,162 +162,576 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5025}
 
-  # North America (#335): one aGate per home, 120/240 V split phase, IEEE 1547 Category II.
+  # North America (#335, #338): 120/240 V split phase, IEEE 1547 Category II, each home different.
+  # Redding, CA: two aPower S with DC PV on their MPPT inputs; hot summers on the AC.
   - id: redding-ca
     seed: 200
     ac_type: 1
     grid_code: ieee1547-cat2
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 103, apower: [4, 4]}
     apower_units: 2
+    dc_pv: {rated_w: 8000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 27, heat_below: 10, span: 8, circuit: 1}
+      - {name: hot_water, type: schedule, w: 4500, on: ["05:30-07:00", "18:00-19:30"], circuit: 2}
     location: {latitude: 40.59, longitude: -122.39, timezone: America/Los_Angeles,
                country: US, state: CA, city: Redding}
     service: {main_breaker_a: 200}
     modbus: {port: 5040}
     directconnect: {port: 9040}
-  - id: boise-id
+  # Redding, CA: wildfire power shutoffs: an older aGate X-10 on V10R01, a generator, a well pump, no solar.
+  - id: redding-ca-2
     seed: 201
     ac_type: 1
     grid_code: ieee1547-cat2
+    profile: agate-v10r01b04d00
+    model: {agate: 100, apower: 1}
     apower_units: 1
-    location: {latitude: 43.62, longitude: -116.2, timezone: America/Boise,
-               country: US, state: ID, city: Boise}
+    solar_peak_w: 0
+    generator: {installed: true, rated_w: 12000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: well_pump, type: cycle, w: 1100, period: 30m, duty: 0.15, circuit: 1}
+    location: {latitude: 40.59, longitude: -122.39, timezone: America/Los_Angeles,
+               country: US, state: CA, city: Redding}
     service: {main_breaker_a: 200}
     modbus: {port: 5041}
     directconnect: {port: 9041}
-  - id: houston-tx
+  # Boise, ID: older aGate X-10 and aPower X on V10R01 firmware; rooftop solar; a well pump.
+  - id: boise-id
     seed: 202
     ac_type: 1
     grid_code: ieee1547-cat2
-    apower_units: 2
-    location: {latitude: 29.76, longitude: -95.37, timezone: America/Chicago,
-               country: US, state: TX, city: Houston}
+    profile: agate-v10r01b04d00
+    model: {agate: 100, apower: 0}
+    apower_units: 1
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: well_pump, type: cycle, w: 1100, period: 30m, duty: 0.15, circuit: 1}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 29, heat_below: 4, span: 8, circuit: 2}
+    location: {latitude: 43.62, longitude: -116.2, timezone: America/Boise,
+               country: US, state: ID, city: Boise}
     service: {main_breaker_a: 200}
     modbus: {port: 5042}
     directconnect: {port: 9042}
-  - id: tampa-fl
+  # Boise, ID: two aPower S with DC PV, an EV charging on solar surplus.
+  - id: boise-id-2
     seed: 203
     ac_type: 1
     grid_code: ieee1547-cat2
-    apower_units: 1
-    location: {latitude: 27.95, longitude: -82.46, timezone: America/New_York,
-               country: US, state: FL, city: Tampa}
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 103, apower: [5, 5]}
+    apower_units: 2
+    solar_peak_w: 0
+    dc_pv: {rated_w: 10000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: evse, type: ev, w: 9600, min_w: 1440, arrive: "18:00", depart: "07:30", kwh: 20, mode: solar, start: "23:00", circuit: 1}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 28, heat_below: 5, span: 8, circuit: 2}
+    location: {latitude: 43.62, longitude: -116.2, timezone: America/Boise,
+               country: US, state: ID, city: Boise}
     service: {main_breaker_a: 200}
     modbus: {port: 5043}
     directconnect: {port: 9043}
-  - id: buffalo-ny
+  # Houston, TX: hurricane backup: a 22 kW standby generator, two aPower 2s, solar, AC and a pool pump.
+  - id: houston-tx
     seed: 204
     ac_type: 1
     grid_code: ieee1547-cat2
-    apower_units: 1
-    solar_peak_w: 0
-    location: {latitude: 42.89, longitude: -78.88, timezone: America/New_York,
-               country: US, state: NY, city: Buffalo}
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 104, apower: [3, 3]}
+    apower_units: 2
+    generator: {installed: true, rated_w: 22000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 25, heat_below: 12, span: 8, circuit: 1}
+      - {name: pool_pump, type: schedule, w: 1500, on: ["09:00-15:00"], circuit: 2}
+    location: {latitude: 29.76, longitude: -95.37, timezone: America/Chicago,
+               country: US, state: TX, city: Houston}
     service: {main_breaker_a: 200}
     modbus: {port: 5044}
     directconnect: {port: 9044}
-  - id: chicago-il
+  # Houston, TX: aGate X-20 on V10R01, one aPower 2, no solar, no accessory modules.
+  - id: houston-tx-2
     seed: 205
     ac_type: 1
     grid_code: ieee1547-cat2
+    profile: agate-v10r01b04d00
+    model: {agate: 101, apower: 3}
     apower_units: 1
     solar_peak_w: 0
-    location: {latitude: 41.88, longitude: -87.63, timezone: America/Chicago,
-               country: US, state: IL, city: Chicago}
+    accessories: {smart_circuits: false, generator_module: false, apbox: false}
+    location: {latitude: 29.76, longitude: -95.37, timezone: America/Chicago,
+               country: US, state: TX, city: Houston}
     service: {main_breaker_a: 200}
     modbus: {port: 5045}
     directconnect: {port: 9045}
-  - id: seattle-wa
+  # Tampa, FL: aGate X-20 on V10R01, one aPower X, solar on the aGate and a remote array (aPbox).
+  - id: tampa-fl
     seed: 206
     ac_type: 1
     grid_code: ieee1547-cat2
+    profile: agate-v10r01b04d00
+    model: {agate: 101, apower: 1}
     apower_units: 1
-    solar_peak_w: 0
-    location: {latitude: 47.61, longitude: -122.33, timezone: America/Los_Angeles,
-               country: US, state: WA, city: Seattle}
+    pv_inputs: {proximal: 0.5, remote1: 0.5}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: pool_pump, type: schedule, w: 1500, on: ["09:00-15:00"], circuit: 1}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 25, heat_below: 14, span: 8, circuit: 2}
+    location: {latitude: 27.95, longitude: -82.46, timezone: America/New_York,
+               country: US, state: FL, city: Tampa}
     service: {main_breaker_a: 200}
     modbus: {port: 5046}
     directconnect: {port: 9046}
-  - id: st-louis-mo
+  # Tampa, FL: an aPower S, rooftop solar and an EV on V2L for hurricane outages.
+  - id: tampa-fl-2
     seed: 207
     ac_type: 1
     grid_code: ieee1547-cat2
-    apower_units: 2
-    solar_peak_w: 0
-    location: {latitude: 38.63, longitude: -90.2, timezone: America/Chicago,
-               country: US, state: MO, city: St Louis}
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 103, apower: 4}
+    apower_units: 1
+    v2l: {circuit: 1, ev_kwh: 82, ev_soc: 80, max_w: 7600, min_soc: 20}   # EV values: placeholders (#287)
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: pool_pump, type: schedule, w: 1500, on: ["09:00-15:00"], circuit: 2}
+    location: {latitude: 27.95, longitude: -82.46, timezone: America/New_York,
+               country: US, state: FL, city: Tampa}
     service: {main_breaker_a: 200}
     modbus: {port: 5047}
     directconnect: {port: 9047}
-  - id: cincinnati-oh
+  # Buffalo, NY: no solar; a portable generator for winter storms; electric heat.
+  - id: buffalo-ny
     seed: 208
     ac_type: 1
     grid_code: ieee1547-cat2
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 103, apower: 3}
     apower_units: 1
-    location: {latitude: 39.1, longitude: -84.51, timezone: America/New_York,
-               country: US, state: OH, city: Cincinnati}
+    solar_peak_w: 0
+    generator: {installed: true, rated_w: 9000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 28, heat_below: 5, span: 8, circuit: 1}
+    location: {latitude: 42.89, longitude: -78.88, timezone: America/New_York,
+               country: US, state: NY, city: Buffalo}
     service: {main_breaker_a: 200}
     modbus: {port: 5048}
     directconnect: {port: 9048}
-  - id: atlanta-ga
+  # Buffalo, NY: three aPower 2s, solar on the house and the barn (aPbox), hot water and an EV.
+  - id: buffalo-ny-2
     seed: 209
     ac_type: 1
     grid_code: ieee1547-cat2
-    apower_units: 2
-    location: {latitude: 33.75, longitude: -84.39, timezone: America/New_York,
-               country: US, state: GA, city: Atlanta}
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 104, apower: [3, 3, 3]}
+    apower_units: 3
+    pv_inputs: {proximal: 0.7, remote1: 0.3}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hot_water, type: schedule, w: 4500, on: ["05:30-07:00", "18:00-19:30"], circuit: 1}
+      - {name: evse, type: ev, w: 9600, min_w: 1440, arrive: "18:00", depart: "07:30", kwh: 20, mode: offpeak, start: "23:00", circuit: 2}
+    location: {latitude: 42.89, longitude: -78.88, timezone: America/New_York,
+               country: US, state: NY, city: Buffalo}
     service: {main_breaker_a: 200}
     modbus: {port: 5049}
     directconnect: {port: 9049}
-  - id: oklahoma-city-ok
+  # Chicago, IL: no solar, no accessory modules; aGate X-10 on V10R01 with a later aPower X.
+  - id: chicago-il
     seed: 210
     ac_type: 1
     grid_code: ieee1547-cat2
+    profile: agate-v10r01b04d00
+    model: {agate: 100, apower: 6}
     apower_units: 1
     solar_peak_w: 0
-    location: {latitude: 35.47, longitude: -97.52, timezone: America/Chicago,
-               country: US, state: OK, city: Oklahoma City}
+    accessories: {smart_circuits: false, generator_module: false, apbox: false}
+    location: {latitude: 41.88, longitude: -87.63, timezone: America/Chicago,
+               country: US, state: IL, city: Chicago}
     service: {main_breaker_a: 200}
     modbus: {port: 5050}
     directconnect: {port: 9050}
-  - id: ottawa-on
+  # Chicago, IL: two aPower S with DC PV and a generator.
+  - id: chicago-il-2
     seed: 211
     ac_type: 1
     grid_code: ieee1547-cat2
-    apower_units: 1
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 103, apower: [4, 4]}
+    apower_units: 2
     solar_peak_w: 0
-    location: {latitude: 45.42, longitude: -75.7, timezone: America/Toronto,
-               country: CA, state: ON, city: Ottawa}
+    dc_pv: {rated_w: 12000}
+    generator: {installed: true, rated_w: 15000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 27, heat_below: 2, span: 8, circuit: 1}
+    location: {latitude: 41.88, longitude: -87.63, timezone: America/Chicago,
+               country: US, state: IL, city: Chicago}
     service: {main_breaker_a: 200}
     modbus: {port: 5051}
     directconnect: {port: 9051}
-  - id: halifax-ns
+  # Seattle, WA: no solar; an aPower S; the EV charger and hot water on smart circuits.
+  - id: seattle-wa
     seed: 212
     ac_type: 1
     grid_code: ieee1547-cat2
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 103, apower: 5}
     apower_units: 1
     solar_peak_w: 0
-    location: {latitude: 44.65, longitude: -63.58, timezone: America/Halifax,
-               country: CA, state: NS, city: Halifax}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: evse, type: ev, w: 9600, min_w: 1440, arrive: "18:00", depart: "07:30", kwh: 20, mode: offpeak, start: "23:00", circuit: 1}
+      - {name: hot_water, type: schedule, w: 4500, on: ["05:30-07:00", "18:00-19:30"], circuit: 2}
+    location: {latitude: 47.61, longitude: -122.33, timezone: America/Los_Angeles,
+               country: US, state: WA, city: Seattle}
     service: {main_breaker_a: 200}
     modbus: {port: 5052}
     directconnect: {port: 9052}
-  - id: long-beach-ny
+  # Seattle, WA: aGate X-20 on V10R01, an aPower X and an aPower 2 (mixed), rooftop solar.
+  - id: seattle-wa-2
     seed: 213
     ac_type: 1
     grid_code: ieee1547-cat2
+    profile: agate-v10r01b04d00
+    model: {agate: 101, apower: [1, 3]}
     apower_units: 2
-    solar_peak_w: 0
-    location: {latitude: 40.59, longitude: -73.66, timezone: America/New_York,
-               country: US, state: NY, city: Long Beach}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hot_water, type: schedule, w: 4500, on: ["05:30-07:00", "18:00-19:30"], circuit: 1}
+    location: {latitude: 47.61, longitude: -122.33, timezone: America/Los_Angeles,
+               country: US, state: WA, city: Seattle}
     service: {main_breaker_a: 200}
     modbus: {port: 5053}
     directconnect: {port: 9053}
-  - id: atlantic-city-nj
+  # St Louis, MO: an aPower X joined later by an aPower 2 (mixed) on V10R01; no solar; a generator.
+  - id: st-louis-mo
     seed: 214
     ac_type: 1
     grid_code: ieee1547-cat2
-    apower_units: 1
-    location: {latitude: 39.36, longitude: -74.42, timezone: America/New_York,
-               country: US, state: NJ, city: Atlantic City}
+    profile: agate-v10r01b04d00
+    model: {agate: 101, apower: [0, 3]}
+    apower_units: 2
+    solar_peak_w: 0
+    generator: {installed: true, rated_w: 12000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 26, heat_below: 8, span: 8, circuit: 1}
+    location: {latitude: 38.63, longitude: -90.2, timezone: America/Chicago,
+               country: US, state: MO, city: St Louis}
     service: {main_breaker_a: 200}
     modbus: {port: 5054}
     directconnect: {port: 9054}
+  # St Louis, MO: an aPower S, solar on a detached garage (aPbox) and an EV on V2L.
+  - id: st-louis-mo-2
+    seed: 215
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 104, apower: 5}
+    apower_units: 1
+    pv_inputs: {remote1: 1.0}
+    v2l: {circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 3800, min_soc: 20}   # EV values: placeholders (#287)
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 26, heat_below: 7, span: 8, circuit: 2}
+    location: {latitude: 38.63, longitude: -90.2, timezone: America/Chicago,
+               country: US, state: MO, city: St Louis}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5055}
+    directconnect: {port: 9055}
+  # Cincinnati, OH: solar on a detached garage through the aPbox only; an aPower S.
+  - id: cincinnati-oh
+    seed: 216
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 104, apower: 4}
+    apower_units: 1
+    pv_inputs: {remote1: 1.0}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: evse, type: ev, w: 9600, min_w: 1440, arrive: "18:00", depart: "07:30", kwh: 20, mode: solar, start: "23:00", circuit: 1}
+    location: {latitude: 39.1, longitude: -84.51, timezone: America/New_York,
+               country: US, state: OH, city: Cincinnati}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5056}
+    directconnect: {port: 9056}
+  # Cincinnati, OH: aGate X-10 on V10R01, an aPower X, rooftop solar and a small generator.
+  - id: cincinnati-oh-2
+    seed: 217
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v10r01b04d00
+    model: {agate: 100, apower: 0}
+    apower_units: 1
+    generator: {installed: true, rated_w: 8000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hot_water, type: schedule, w: 4500, on: ["05:30-07:00", "18:00-19:30"], circuit: 1}
+    location: {latitude: 39.1, longitude: -84.51, timezone: America/New_York,
+               country: US, state: OH, city: Cincinnati}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5057}
+    directconnect: {port: 9057}
+  # Atlanta, GA: two aPower 2s, solar, and an EV on V2L that supplies the home off-grid.
+  - id: atlanta-ga
+    seed: 218
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 103, apower: [3, 3]}
+    apower_units: 2
+    v2l: {circuit: 1, ev_kwh: 75, ev_soc: 80, max_w: 7600, min_soc: 20}   # EV values: placeholders (#287)
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 25, heat_below: 10, span: 8, circuit: 2}
+    location: {latitude: 33.75, longitude: -84.39, timezone: America/New_York,
+               country: US, state: GA, city: Atlanta}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5058}
+    directconnect: {port: 9058}
+  # Atlanta, GA: aGate X-20 on V10R01, an aPower X, no solar, a 20 kW generator, AC and a pool pump.
+  - id: atlanta-ga-2
+    seed: 219
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v10r01b04d00
+    model: {agate: 101, apower: 1}
+    apower_units: 1
+    solar_peak_w: 0
+    generator: {installed: true, rated_w: 20000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 25, heat_below: 9, span: 8, circuit: 1}
+      - {name: pool_pump, type: schedule, w: 1500, on: ["09:00-15:00"], circuit: 2}
+    location: {latitude: 33.75, longitude: -84.39, timezone: America/New_York,
+               country: US, state: GA, city: Atlanta}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5059}
+    directconnect: {port: 9059}
+  # Phoenix, AZ: three aPower S with DC PV and rooftop solar; AC and a pool pump.
+  - id: phoenix-az
+    seed: 220
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 104, apower: [4, 4, 4]}
+    apower_units: 3
+    dc_pv: {rated_w: 15000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 26, heat_below: 8, span: 8, circuit: 1}
+      - {name: pool_pump, type: schedule, w: 1500, on: ["09:00-15:00"], circuit: 2}
+    location: {latitude: 33.45, longitude: -112.07, timezone: America/Phoenix,
+               country: US, state: AZ, city: Phoenix}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5060}
+    directconnect: {port: 9060}
+  # Oklahoma City, OK: rural: a well pump and a generator, no solar, V10R01.
+  - id: oklahoma-city-ok
+    seed: 221
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v10r01b04d00
+    model: {agate: 100, apower: 1}
+    apower_units: 1
+    solar_peak_w: 0
+    generator: {installed: true, rated_w: 14000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: well_pump, type: cycle, w: 1100, period: 30m, duty: 0.15, circuit: 1}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 27, heat_below: 7, span: 8, circuit: 2}
+    location: {latitude: 35.47, longitude: -97.52, timezone: America/Chicago,
+               country: US, state: OK, city: Oklahoma City}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5061}
+    directconnect: {port: 9061}
+  # Oklahoma City, OK: two aPower 2s, rooftop solar, an EV charging on solar surplus.
+  - id: oklahoma-city-ok-2
+    seed: 222
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 103, apower: [3, 3]}
+    apower_units: 2
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: evse, type: ev, w: 9600, min_w: 1440, arrive: "18:00", depart: "07:30", kwh: 20, mode: solar, start: "23:00", circuit: 1}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 27, heat_below: 6, span: 8, circuit: 2}
+    location: {latitude: 35.47, longitude: -97.52, timezone: America/Chicago,
+               country: US, state: OK, city: Oklahoma City}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5062}
+    directconnect: {port: 9062}
+  # Ottawa, ON: cold winters: heat and hot water on smart circuits, no solar.
+  - id: ottawa-on
+    seed: 223
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 103, apower: 3}
+    apower_units: 1
+    solar_peak_w: 0
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 27, heat_below: 3, span: 8, circuit: 1}
+      - {name: hot_water, type: schedule, w: 4500, on: ["05:30-07:00", "18:00-19:30"], circuit: 2}
+    location: {latitude: 45.42, longitude: -75.7, timezone: America/Toronto,
+               country: CA, state: ON, city: Ottawa}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5063}
+    directconnect: {port: 9063}
+  # Ottawa, ON: an aPower 2, rooftop solar, a generator for ice storms, an EV.
+  - id: ottawa-on-2
+    seed: 224
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 104, apower: 3}
+    apower_units: 1
+    generator: {installed: true, rated_w: 12000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: evse, type: ev, w: 9600, min_w: 1440, arrive: "18:00", depart: "07:30", kwh: 20, mode: offpeak, start: "23:00", circuit: 1}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 27, heat_below: 2, span: 8, circuit: 2}
+    location: {latitude: 45.42, longitude: -75.7, timezone: America/Toronto,
+               country: CA, state: ON, city: Ottawa}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5064}
+    directconnect: {port: 9064}
+  # Halifax, NS: storm backup: aGate X-20 on V10R01, an aPower X and a generator; no solar.
+  - id: halifax-ns
+    seed: 225
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v10r01b04d00
+    model: {agate: 101, apower: 0}
+    apower_units: 1
+    solar_peak_w: 0
+    generator: {installed: true, rated_w: 10000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 28, heat_below: 4, span: 8, circuit: 1}
+    location: {latitude: 44.65, longitude: -63.58, timezone: America/Halifax,
+               country: CA, state: NS, city: Halifax}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5065}
+    directconnect: {port: 9065}
+  # Halifax, NS: two aPower 2s, rooftop solar and an EV on V2L.
+  - id: halifax-ns-2
+    seed: 226
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 103, apower: [3, 3]}
+    apower_units: 2
+    v2l: {circuit: 1, ev_kwh: 64, ev_soc: 80, max_w: 3800, min_soc: 20}   # EV values: placeholders (#287)
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hot_water, type: schedule, w: 4500, on: ["05:30-07:00", "18:00-19:30"], circuit: 2}
+    location: {latitude: 44.65, longitude: -63.58, timezone: America/Halifax,
+               country: CA, state: NS, city: Halifax}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5066}
+    directconnect: {port: 9066}
+  # Long Beach, NY: two aPower S, no solar, an EV charger charging off-peak.
+  - id: long-beach-ny
+    seed: 227
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 104, apower: [5, 5]}
+    apower_units: 2
+    solar_peak_w: 0
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: evse, type: ev, w: 9600, min_w: 1440, arrive: "18:00", depart: "07:30", kwh: 20, mode: offpeak, start: "23:00", circuit: 1}
+    location: {latitude: 40.59, longitude: -73.66, timezone: America/New_York,
+               country: US, state: NY, city: Long Beach}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5067}
+    directconnect: {port: 9067}
+  # Long Beach, NY: aGate X-20 on V10R01, a later aPower X, rooftop solar, AC.
+  - id: long-beach-ny-2
+    seed: 228
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v10r01b04d00
+    model: {agate: 101, apower: 6}
+    apower_units: 1
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 26, heat_below: 10, span: 8, circuit: 1}
+    location: {latitude: 40.59, longitude: -73.66, timezone: America/New_York,
+               country: US, state: NY, city: Long Beach}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5068}
+    directconnect: {port: 9068}
+  # Atlantic City, NJ: solar and a pool pump; one aPower 2 on V10R01.
+  - id: atlantic-city-nj
+    seed: 229
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v10r01b04d00
+    model: {agate: 103, apower: 3}
+    apower_units: 1
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: pool_pump, type: schedule, w: 1500, on: ["09:00-15:00"], circuit: 1}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 25, heat_below: 10, span: 8, circuit: 2}
+    location: {latitude: 39.36, longitude: -74.42, timezone: America/New_York,
+               country: US, state: NJ, city: Atlantic City}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5069}
+    directconnect: {port: 9069}
+  # Atlantic City, NJ: aGate X-10 on V10R01, an aPower X and an aPower 2 (mixed), a generator, no solar, an EV.
+  - id: atlantic-city-nj-2
+    seed: 230
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v10r01b04d00
+    model: {agate: 100, apower: [0, 3]}
+    apower_units: 2
+    solar_peak_w: 0
+    generator: {installed: true, rated_w: 10000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: evse, type: ev, w: 9600, min_w: 1440, arrive: "18:00", depart: "07:30", kwh: 20, mode: offpeak, start: "23:00", circuit: 1}
+    location: {latitude: 39.36, longitude: -74.42, timezone: America/New_York,
+               country: US, state: NJ, city: Atlantic City}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5070}
+    directconnect: {port: 9070}
