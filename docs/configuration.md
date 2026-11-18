@@ -19,6 +19,9 @@ file to make them permanent.
 ## How to set it up
 
 1. Copy `examples/fleet.yaml` and edit it: one entry under `gateways:` per site.
+   [`examples/fleet-north-america.yaml`](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/examples/fleet-north-america.yaml)
+   is the same fleet plus 15 split-phase homes across the US and Canada (IEEE 1547 Category II,
+   each in its own timezone), for a US or Canadian starting point.
 2. Start it: `franklinwh-emulator ui my-fleet.yaml` (web UI on http://127.0.0.1:8502/) or
    `franklinwh-emulator fleet my-fleet.yaml` (no UI). It checks the file first and prints every
    problem with its path (e.g. `gateways[1].modbus: port 5020 already used`), then exits.
