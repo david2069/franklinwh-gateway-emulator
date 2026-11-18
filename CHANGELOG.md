@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- Cloud API: the official app's start-up calls, the 17 it makes in 34+ of 42 captures that weren't served (#333, #316 step 3): `getDeviceInfoV2` (the aGate and aPowers from the site's models), `chargePowerDetails` (displayed SoC and active reserve), `tou/getEntranceInfo`, `weather/getCurrentBriefWeather` (the site's sky and temperature), `bill/electric/selectBenefitInfo` (the day's solar and aPower kWh), `common/selectDeviceRunLogList`, `common/getPowerCapConfigList`, and the account extras answered as none (`selectProgramFlag`, `nps/getNpsShowTip`, `getShowTip`, `feedback/whetherPopUp`, `getAppGlobalConfig`, `message/selectMessage`, `appObtainAdvertiseLst`, `common/getPageByTypeList`, `updateTerUserFcmToken`, `tou/notify/ai/cache`). Shapes from the app's captures (names and types only). See docs/cloud-api.md.
+
 ## 0.3.0 (2026-11-18)
 
 ### Added

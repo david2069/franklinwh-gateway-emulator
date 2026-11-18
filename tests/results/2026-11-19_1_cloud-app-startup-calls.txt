@@ -1,0 +1,43 @@
+#333 (#316 step 3): the official app's start-up calls, 2026-11-19
+
+Shapes: the owner's HTTP Toolkit HARs on the mini PC (50 files, 42 with FranklinWH requests),
+read over SSH by a script copied to /tmp, run and deleted with its output. Only aggregates left
+the machine: method + path, query and body field NAMES, response field names and types merged
+over every capture, envelope keys, code counts and server message text. One server message (a
+500 on tou/notify/ai/cache) carried a gateway id; it was not copied anywhere.
+
+call                                        captures  calls  message            extra keys
+GET  terminal/chargePowerDetails                 39   3316  Query success!     total
+POST terminal/nps/getNpsShowTip                  38    182  Operate success!
+GET  terminal/selectProgramFlag                  38   2899  Operate success!
+GET  common/selectDeviceRunLogList               37    162  Query success!     total
+GET  terminal/bill/electric/selectBenefitInfo    36   2553  Operate success!
+GET  terminal/getDeviceInfoV2                    36   2489  Operate success!
+GET  terminal/message/selectMessage              36   6749  Operate success!
+GET  terminal/tou/getEntranceInfo                36   3948  Operate success!
+POST terminal/updateTerUserFcmToken              36    171  UpdateSuccess!     total
+GET  terminal/weather/getCurrentBriefWeather     36   1096  Operate success!
+GET  terminal/appObtainAdvertiseLst              35    159  Operate success!
+GET  terminal/feedback/whetherPopUp              35    268  Operate success!
+GET  terminal/getAppGlobalConfig                 35    127  Operate success!
+GET  terminal/getShowTip                         35    100  Operate success!
+GET  common/getPageByTypeList                    34    320  Operate success!
+GET  common/getPowerCapConfigList                34     74  Query success!     total
+POST terminal/tou/notify/ai/cache                34    422  success            traceId
+The field sets match franklinwh-cloud's docs/franklinwh_openapi.json (main 26cccd2); the captures
+add getDeviceInfoV2.msaInstallStartDetectTime (also in the OpenAPI's terminal entry) and the
+nested selectProgramFlag.programList / vppBannerDetail objects (null here).
+
+Values: docs/FINDINGS.md for chargePowerDetails (batterySoc = composite runtimeData.soc;
+touMinSoc = active reserve); franklinwh-cloud's discover.py for getDeviceInfoV2 units (ratedPwr
+W, rateBatCap Wh, totalCap kWh, fixedPowerTotal kW). The rest are the emulator's own.
+
+Tests (main ae03a75 + branch): .venv/bin/python -m pytest -q -> 855 passed
+  tests/test_cloud_app.py: every call's envelope, message, result type and field set equal the
+    captured ones; values from the site (models, SoC, reserve, temperature, daily kWh, grid
+    limits, alarms); no token -> 401; unknown gateway -> 400; Monitor lists nothing unserved.
+  tests/test_cloud_unserved.py: its unserved example is now terminal/getPersonalInfo.
+  Break checks: dropping msaInstallStartDetectTime from getDeviceInfoV2 -> the field-set test
+    fails; solarToHouseList from sun_grid -> the values test fails. (Restoring within the same
+    second left a stale .pyc for one run; cleared.)
+Not done: the app itself pointed at the emulator (#316 step 4).

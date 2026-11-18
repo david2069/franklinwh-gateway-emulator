@@ -210,6 +210,26 @@ Phase 2d (#322), the calls richo's franklinwh library makes. The app makes the f
 | `POST hes-gateway/terminal/tou/updateTouMode` | as `updateTouModeV2`, with the parameters in the query (the app) or a form body (richo's library); `result` null |
 | `GET hes-gateway/manage/getEquipmentList?gatewayId=`, `GET hes-gateway/terminal/getIotAccessoryList?gatewayId=` | the same list as `getAccessoryList`. Neither is in the app's captures, so their real shape isn't known |
 
+The official app's start-up calls (#333, #316 step 3): the 17 the app makes in 34 or more of
+the 42 captures that weren't served. Field names, types, message text and envelope keys are the
+captures', merged over all of them; values are the emulator's own:
+
+| Call | What comes back |
+|---|---|
+| `GET hes-gateway/terminal/getDeviceInfoV2?gatewayId=` | the aGate and its aPowers from the site's models: `sysHdVersion`/`sysHdVersionInt` (the aGate code), `realSysHdVersion` (`FHP1.2` for code 102, the reference aGate's; empty otherwise), `protocolVer` (Direct Connect's), `zoneInfo`, `countryId`, `date`/`deviceTime` (site local), `fhpSn`, `peHwVerList`, `apowerList` (`ratedPwr` W, `rateBatCap` Wh), `totalCap` kWh, `fixedPowerTotal`/`fixedPowerAverage` kW, `mpptEnFlag` (an aPower S), `genEn`, `v2lModeEnable`, `offGirdFlag` (the cloud's spelling) |
+| `GET hes-gateway/terminal/chargePowerDetails?gatewayId=` | `batterySoc` (the displayed SoC, as the composite's) and `touMinSoc` (the active mode's reserve), as [Findings](FINDINGS.md) records; the duration and consumption figures are null |
+| `GET hes-gateway/terminal/tou/getEntranceInfo?gatewayId=` | the grid limits as `getPowerControlSetting` has them; every settings entrance off (`sgipEntrance`, `bbEntrance`, `pcsEntrance`, `ja12Entrance` 0) |
+| `GET hes-gateway/terminal/weather/getCurrentBriefWeather?equipNo=` | the site's sky (a weather event's, else the model's: `description`, `thunderFlag` and `rainFlag` for `storm`), ambient `tempC`/`tempF`, and `isDayTime` from the sun; icons and the forecast null |
+| `GET hes-gateway/terminal/bill/electric/selectBenefitInfo?gatewayId=&dayTime=` | the day's solar and aPower energy to the home and the grid (kWh, the split above); no prices, so the earnings are 0 and `priceFlag` false |
+| `GET hes-gateway/common/selectDeviceRunLogList` | the emulator's alarm names (`alarmCode` its bit) |
+| `GET hes-gateway/common/getPowerCapConfigList` | the aPower models the emulator knows: `peHwVersion`, `modelName`, `ratedCap` Wh, `chargePower`/`dischargePower` W |
+| `GET hes-gateway/terminal/selectProgramFlag`, `nps/getNpsShowTip`, `getShowTip`, `feedback/whetherPopUp`, `getAppGlobalConfig` | no VPP programme, survey, tip, feedback prompt or feature entrance (their keys aren't known) |
+| `GET hes-gateway/terminal/message/selectMessage`, `appObtainAdvertiseLst`, `common/getPageByTypeList` | no messages (null), adverts or help pages (empty lists) |
+| `POST hes-gateway/terminal/updateTerUserFcmToken`, `tou/notify/ai/cache` | accepted (the phone's push token isn't kept) |
+
+What the app shows for these values hasn't been seen yet: that is #316 step 4, the app pointed
+at the emulator.
+
 ## Faults
 
 Phase 3 (#309). Per gateway, the `cloud-faults` action (`ctl <gw> cloud-fault k=v`, or

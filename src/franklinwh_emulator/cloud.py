@@ -61,6 +61,7 @@ those; every value is this emulator's own model.
   1902's mode. Grid limits (``getPowerControlSetting``/``setPowerControl``, kW, -1 unlimited,
   0 off): the charge limit is the site's utility ``grid_charge``/``grid_charge_max_w``; a
   discharge limit of 0 turns battery export off, and other values are kept, not enforced.
+* The official app's start-up calls (#333): cloud_app.py.
 * ``selectOffgrid``: ``offgridSet``/``offgridState`` as Direct Connect 1412's off-grid read;
   ``get_stats`` asks for it when the grid relay is open, to tell a requested off-grid from an
   outage.
@@ -81,7 +82,7 @@ import secrets
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlsplit
 
-from . import cloud_energy, cloud_tou
+from . import cloud_app, cloud_energy, cloud_tou
 from .dc_payloads import DcPayloads
 from .models import AUNZ, NA
 from .server import MQTT_BAD_REPLIES
@@ -96,7 +97,8 @@ _rng = random.Random(311)               # which requests get a bad_reply_p < 1: 
 DEFAULT_ACCOUNT = "owner@example.com"
 DEFAULT_PASSWORD = "emulator"
 CLOUD_KEYS = {"account", "password", "token_ttl_s", "rate_limit_per_min"}
-PREFIX = "/hes-gateway/terminal/"
+GATEWAY_ROOT = "/hes-gateway/"
+PREFIX = GATEWAY_ROOT + "terminal/"
 ENERGY = {"/api-energy/power/getFhpPowerByDay": cloud_energy.power_by_day,
           "/api-energy/electric/getFhpElectricData": cloud_energy.electric_data}
 # Outside /terminal/: accessories (#322)
@@ -233,7 +235,10 @@ class CloudApi:
         path = url.path
         if method == "POST" and path == PREFIX + "initialize/appUserOrInstallerLogin":
             return self.login({k: v[0] for k, v in parse_qs(body.decode("utf-8", "replace")).items()})
-        if not path.startswith(PREFIX) and path not in ENERGY and path not in ACCESSORY_PATHS:
+        app_call = cloud_app.APP_CALLS.get((method, path[len(GATEWAY_ROOT):])) \
+            if path.startswith(GATEWAY_ROOT) else None
+        if not path.startswith(PREFIX) and path not in ENERGY and path not in ACCESSORY_PATHS \
+                and app_call is None:
             raise CloudError(404, f"no such path: {path}", http=404, unserved=f"{method} {path}")
         if not self._token_ok(headers.get("logintoken")):
             raise CloudError(401, TOKEN_INVALID)
@@ -252,6 +257,8 @@ class CloudApi:
             self.tou(gw).sync()
             if name == "getDeviceCompositeInfo" and gw.cloud_faults.empty_composite:
                 return _envelope(None)
+        if app_call is not None:                                  # the app's start-up calls (#333)
+            return app_call(self, q, body)
         if method == "GET" and name == "getHomeGatewayList":
             return _envelope([self.gateway_entry(gw) for gw in self.gateways.values()])
         if method == "GET" and name == "getDeviceCompositeInfo":
