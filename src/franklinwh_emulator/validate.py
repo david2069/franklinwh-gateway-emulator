@@ -21,7 +21,7 @@ from .gateway import Gateway, GatewayConfig, expand_groups, fix_bool_keys, mock_
 from .schema import ACTIONS, check_body
 from .site import SiteConfig
 
-FLEET_KEYS = ("defaults", "groups", "gateways")
+FLEET_KEYS = ("defaults", "groups", "gateways", "cloud")
 
 # One line per gateway key. Shorthands first, then GatewayConfig, then SiteConfig.
 DOCS: dict[str, str] = {
@@ -70,7 +70,10 @@ DOCS: dict[str, str] = {
     "initial_soc": "starting state of charge, %; default derived from the seed",
     "solar_peak_w": "bell-curve solar peak, W; 0 = no solar; default derived from the seed",
     "home_base_w": "base house load, W; default derived from the seed",
-    "weather": "{model: bell|synthetic|open-meteo, kwp, tilt, azimuth, sky}; inherits lat/lon",
+    "weather_events": "timed or seeded-random darker skies on top of the weather (#270): a list of "
+                      "{sky, at: 'HH:MM', for: 2h | 30m..3h, every: 1d, times: N} or {sky, for, chance: 0..1, per: day}",
+    "weather": "{model: bell|synthetic|open-meteo, kwp, tilt, azimuth, sky, offline, refresh_h}; inherits lat/lon; "
+               "without model: open-meteo with a location, else bell",
     "loads": "house load: a preset name, a list of components, or {preset, add, remove, set}",
     "replay": "recorded solar/load to replay: a path, or {source, use, align, loop}",
     "circuits": "smart circuits: 1–2 on AU aGates, 1–3 on North American: {1: {name, on, soc_low_cutoff}}",
@@ -101,6 +104,9 @@ DOCS: dict[str, str] = {
     "export_limit_enforced": "enforce the grid code's export limit (default: tracked only)",
     "battery": "loss model: agate-measured, ideal, legacy, or {preset, ...}",
     "generator": "{installed, rated_w, ...} plus 1901 fields; null = none fitted",
+    "v2l": "V2L (#287): an EV on a smart circuit supplying the home off-grid through the generator input: "
+           "{circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 2200, min_soc: 20, enabled: true, charge_apower: true} (the EV values are "
+           "settings to confirm); needs the smart circuits and the generator module; null = none",
     "model": "hardware models (#180): {agate, apower}, each a code, SKU or name, e.g. {agate: 102, apower: 2}; the aPower model sets kWh, kW and charge kW per unit, Direct Connect 1102 serves the codes; default by region: AU/NZ 102 + 2, North America 103 + 0; apower may be a list, one model per aPower (mixed, e.g. [0, 3]: aPower X + aPower 2), checked against the Backwards Compatibility Statement (15 at most; aGate X 1.1 with X and 2 mixed, 8; up to 8 aPower S) (docs/sources-and-regions.md)",
     "pv_non_1547": "PV inputs whose inverters don't follow IEEE 1547-2018 (no Freq/Watt droop), e.g. [remote1]; off-grid, a North American aGate opens their relay instead, for 300 s at a time (#178)",
     "dc_pv": "aPower S DC PV on its MPPT inputs (#180): {rated_w, export: true}; needs an aPower S, rated_w up to 15 kW per aPower S (datasheet MPPT limit). It follows the site's solar shape, shares the aPower S inverter with battery discharge (11.5 kW each), charges the battery directly, and with export: false only serves the house and battery. The app's MPPT page (Commissioning Guide p. 22)",
@@ -171,6 +177,14 @@ def validate_fleet(d: Any, *, prefix: str = "", at: float | None = None) -> list
     d = fix_bool_keys(d)
     out = [_problem(f"{prefix}{k}", f"unknown key; known {list(FLEET_KEYS)}")
            for k in d if k not in FLEET_KEYS]
+    cloud = d.get("cloud")
+    if cloud is not None:                              # the Cloud API's account (#297)
+        from .cloud import CLOUD_KEYS
+        if not isinstance(cloud, dict):
+            out.append(_problem(f"{prefix}cloud", "must be a mapping, e.g. {account: owner@example.com, password: emulator}"))
+        else:
+            out += [_problem(f"{prefix}cloud.{k}", f"unknown key; known {sorted(CLOUD_KEYS)}")
+                    for k in cloud if k not in CLOUD_KEYS]
     known = config_schema()
     entries, group_problems = expand_groups(d)
     out += [_problem(f"{prefix}{p}", m) for p, m in group_problems]

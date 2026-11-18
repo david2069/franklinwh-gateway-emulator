@@ -45,7 +45,8 @@ package isn't installed in it: `pip install -e .` once).
 ## 3. Energy diagram
 
 - Select `au-3phase-l1`: the diagram shows the whole `au-3phase` site (board E), one row per
-  phase; L1 has remote PV through an aPbox. Select `site` for the single board with its aPbox-free
+  phase; L1 has remote PV through an aPbox and no smart circuits, L2 aircon and hot water +
+  induction on SC 1 + 2, L3 the EV on SC 1 (SC 2 unused). Select `site` for the single board with its aPbox-free
   AC-port PV.
 - Dashed lines move in the direction power flows; idle lines are grey and still.
 - Solar follows the site's local time (the diagram's header shows the weather). At night it is 0;

@@ -9,9 +9,9 @@ covers how the models work, how they were checked, and what they show.
 
 | `weather.model` | How it works |
 |---|---|
-| `bell` (default) | Half-sine from 06:00 to 20:00 local, with a ±12 % ripple. No location needed. |
+| `bell` | Half-sine from 06:00 to 20:00 local, with a ±12 % ripple. No location needed. The default for a site **without** a location. |
 | `synthetic` | Sun position (NOAA approximation), Haurwitz clear-sky GHI, a 15 % diffuse share, beam by angle of incidence on the array, isotropic diffuse. Then a deterministic cloud field (a ~6 min structure plus ~40 s edges, thresholded to the sky's cover). |
-| `open-meteo` | Real 15-minute global tilted irradiance (GTI) and 2 m temperature for the location and UTC day, plus hourly cloud cover. PV = GTI ÷ 1000 × kWp × 0.85, **the same formula as franklinwh-local-bridge's `solar_forecast.py`**. |
+| `open-meteo` | **The default for a site with a location** (latitude and longitude). Real 15-minute global tilted irradiance (GTI) and 2 m temperature for the location and UTC day, plus hourly cloud cover. PV = GTI ÷ 1000 × kWp × 0.85, **the same formula as franklinwh-local-bridge's `solar_forecast.py`**. |
 
 Synthetic skies:
 
@@ -49,13 +49,83 @@ array irradiance is used as it is. The built-in model stays the default.
   `historical-forecast-api.open-meteo.com/v1/forecast` serves older dates (2022 onwards, with
   15-minute data). The emulator picks by the date's age (more than 85 days → historical).
   Requests use `timezone=GMT` and `timeformat=unixtime`, so times are UTC epochs.
-- **Fetching and caching:** each UTC day is fetched once and cached as JSON under
+- **Fetching and caching:** each UTC day is cached as JSON under
   `~/.cache/franklinwh-emulator/open-meteo/` (or `cache_dir`, or the
-  `FRANKLINWH_EMULATOR_CACHE` environment variable). `offline: true` never fetches. A local day
-  spans two UTC days, so both get fetched.
+  `FRANKLINWH_EMULATOR_CACHE` environment variable). `offline: true` never fetches; the
+  `FRANKLINWH_EMULATOR_OFFLINE=1` environment variable sets it for every site (the test suite
+  does). A local day spans two UTC days, so both get fetched. Fetches run in the background:
+  the simulation, start-up and Ctrl-C never wait on the network, and a day runs on the
+  `synthetic` sky (or the copy already held) until its data arrives (#291).
+- **Refresh:** a past day is fetched once and kept. Today and later can still change, so a
+  copy older than `refresh_h` hours (default 2) is fetched again, by a running site too, and
+  today's request also brings tomorrow. If a refresh fails, the older copy is used.
+- **Calls:** each uses that site's own latitude, longitude, tilt and azimuth; there is no
+  polling beyond the refresh. About 12 a day per site with the default `refresh_h: 2` (plus one
+  per past day a run reaches, e.g. with `history_days`). Sites sharing a location and array
+  share the cached files.
+- **When a day can't be fetched** (no network, an API error, or `offline` with nothing cached),
+  that day runs on the `synthetic` sky instead (the site's `sky`, default `broken`), with no
+  measured ambient temperature. The emulator logs it once, adds a `weather` event to the
+  gateway's event log, shows `weather.fallback` (the reason) in the state and "Open-Meteo
+  unavailable · synthetic … sky" in the UI, and tries the fetch again after 10 minutes. A
+  network failure (a timeout, no route) pauses fetching for every site for those 10 minutes,
+  so a fleet logs one warning, not one per site and day; each site still shows the fallback.
+- **Repeatable runs:** real weather differs from day to day. Set `weather: {model: bell}` or
+  `synthetic` when a run must give the same numbers every time; the built-in scenarios do.
 - **Bundled data:** Sydney (−33.87, 151.21, tilt 20, azimuth 180) for 2026-01-14 and
   2026-01-15, used with `cache_dir: builtin`.
 - **Licence:** Open-Meteo data is CC BY 4.0, with attribution to https://open-meteo.com/.
+
+### Seeing and changing the weather while it runs
+
+Each gateway card in the [Web UI](ui.md) has a `Weather:` line, and the active gateway's
+diagram has the full weather line. To change it without editing the fleet file, use the
+`weather` action (Web UI: Inputs → weather; or `ctl`):
+
+```bash
+franklinwh-emulator ctl spec weather model=synthetic latitude=-33.87 longitude=151.21 sky=broken
+franklinwh-emulator ctl spec sky storm                 # the sky alone, once a model is set
+franklinwh-emulator ctl spec weather model=open-meteo  # keeps the place it has
+franklinwh-emulator ctl spec weather model=bell        # back to the half-sine day
+```
+
+- `model` without coordinates uses the current weather's place, else the site's location; a
+  gateway with neither must be given `latitude` and `longitude`.
+- On a **grouped site** (fleet `groups:`, one aGate per phase) the change reaches every aGate
+  in the group, as the `grid` action does: a site has one sky. Every other action changes only
+  the active aGate.
+- The coordinates are the **weather's only**: the site's time zone, local time and location
+  (and the sun position shown for it) stay as configured.
+- The change lasts until the emulator stops. It is in the action log, so a saved session
+  replays it; to keep it, put it in the fleet file.
+- `ctl <gw> solar <W>` still fixes solar on any gateway, with or without a model.
+
+### Weather events
+
+`weather_events` (per gateway, or per group so every phase sees the same sky) darkens the sky
+for a while, on top of whatever the weather model gives: Open-Meteo, synthetic or the bell. A
+storm on a sunny real day still dips. Each entry multiplies solar by its `sky`'s haze and a
+seeded cloud field (the [synthetic skies](#models) table). Replayed solar is left as measured.
+
+```yaml
+weather_events:
+  - {sky: storm, at: "13:00", for: 2h, every: 1d, times: 3}   # fixed: 13:00-15:00, 3 days
+  - {sky: overcast, for: 30m..3h, chance: 0.3, per: day}      # random: 30 % of days
+```
+
+| Key | Meaning |
+|---|---|
+| `sky` | `clear`, `broken`, `overcast` or `storm` |
+| `for` | how long: a duration (`90m`, `2h`) or a range `low..high`, drawn per occurrence |
+| `at` | fixed entries: local start time `HH:MM` on the day the gateway starts |
+| `every` | fixed entries: the gap between starts (default `1d`) |
+| `times` | how many occurrences (omitted: no end); for random entries, how many hits |
+| `chance` + `per: day` | random entries: the chance each local day has one, starting between 07:00 and 17:00 |
+
+Give either `at` or `chance`. Random draws come from the site's seed, so a run repeats
+exactly. When two entries overlap, the first listed wins. `ctl solar <W>` still overrides
+solar while it is set. The state shows the event in force (`weather_event`: sky, entry, start,
+end), and the gateway's event log records each start and end. `validate` checks the entries.
 
 ### Cloud-edge flicker on Open-Meteo data
 
@@ -128,6 +198,14 @@ cooking events only.
 
 - **State lives in the site:** name, on/off, `soc_low_cutoff`, energy. All three circuits are
   on by default; set them with `circuits: {3: {on: false}}`.
+- **Loads on a circuit:** a load component with `circuit: N` in the fleet file's `loads:`
+  (the `sydney-family` preset puts hot water, EV and aircon on circuits), for example
+  `- {name: hot_water, type: schedule, w: 3600, on: ["10:00-14:00"], circuit: 1}`.
+- **Watts set while running** (#279): `circuit` with `w` makes the circuit draw that many watts,
+  replacing its appliances (a gateway without `loads:` gets a load this way), until `w: null`
+  hands it back. It still obeys the circuit's switch, the islanded SoC cutoff and off-grid
+  shedding. `ctl <gw> circuit 2 on w=7000`, `ctl <gw> circuit 2 w=auto`; the state shows it as
+  the circuit's `set_w`.
 - **Switching** removes the bound load. It can be done by:
   - the control action `circuit`;
   - `ctl circuit`;
@@ -136,6 +214,47 @@ cooking events only.
   power and energy on circuit 1 and the car switch (circuit 2).
 - **Off-grid:** when the battery cannot carry the house, every running circuit is shed before
   any other load. A circuit is also dropped while islanded with SoC below its `soc_low_cutoff`.
+
+### V2L
+
+V2L (vehicle-to-load) lets an EV supply the home through the aGate. It needs the **generator
+input** and the **smart circuits**; the EV sits on a smart circuit. The FranklinWH app offers it
+on AU sites from a recent firmware update (Settings → Vehicle to Load (V2L)), and the emulator
+follows that page. Set it per gateway:
+
+```yaml
+accessories: {smart_circuits: true, generator_module: true}
+v2l: {circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 2200, min_soc: 20, charge_apower: true}
+```
+
+- **When it supplies:** off-grid only, and only while a generator on the same input is not
+  running, until the EV is down to `min_soc`. It covers the house's shortfall (load less solar
+  and the generator), and with `charge_apower` (the app's **Allow charging to aPower?**, on by
+  default as the app shows it) also charges the aPower, all within `max_w`. The aPower covers
+  what V2L can't.
+- **States**, as the app: `Disabled` (V2L Control off), `Standby` (on, not supplying: on-grid,
+  generator running or the EV at its floor), `Active` (supplying; the app's word for this
+  state has not been seen yet).
+- **The EV on that circuit** doesn't charge while V2L is available off-grid.
+- **Control:** the `v2l` action (Web UI: Generator → v2l; `ctl <gw> v2l on|off [soc=60]`):
+  `on` is the app's V2L Control, `charge_apower` its Allow charging to aPower, `ev_soc` the
+  EV's state of charge.
+- **State:** `v2l` with the app's Vehicle Data (`power_w`, `voltage_v`, `frequency_hz`: 0
+  unless Active, as the app shows in Standby), the state, the EV's SoC, `energy_kwh` and the
+  settings. The diagrams draw that circuit as `SW 1 · V2L` (`SC 1 · V2L` on a grouped site, as
+  board E), amber while Active, with the EV's SoC.
+- **Direct Connect:** `1411` reports V2L on the car switch where the aGate has no third
+  circuit: `CarSWPower` negative while supplying and the energy supplied as `CarSWExpEnergy`.
+  Modbus has no V2L registers (franklinwh-modbus docs).
+
+**Sources and what is not known.** The FranklinWH app's V2L page on the owner's AU site (one
+site, firmware version not recorded) and franklinwh-cloud's notes on captured traffic
+(`docs/GENERATOR_V2L_API.md`); no FranklinWH documentation. franklinwh-cloud's device catalogue
+entry "no V2L port" for AU aGates predates the firmware that added it. Not established: the
+`CarSWPower` sign and the energy fields' meanings, the app's name for the active state, and
+whether V2L supplies only off-grid. The EV's battery size and SoC, the most V2L supplies and
+the SoC it stops at are not documented: the defaults (60 kWh, 80 %, 2.2 kW as board E shows,
+20 %) are placeholders to confirm for a real site.
 
 ## Replay of recorded data
 
@@ -156,7 +275,7 @@ works with a `columns` mapping.
   and reserves. `replay_compare` then scores `native` and `dispatched` samples separately, and
   the report lists `replay_dispatches`. `battery` and `dispatch` are exclusive.
   `scale_solar` and `scale_load` resize them, for "what if we add 3 kW of panels".
-- **Priority:** for solar, override → replay → weather → bell. For load, override → replay →
+- **Priority:** for solar, override → replay → weather → bell (weather events scale the last two). For load, override → replay →
   `loads` → the curve. For ambient, override → replay → weather → the default.
 - **Alignment:** `day` maps the recording's first whole local day, DST-aware, onto the site's
   first day, and loops in whole days. `absolute` uses the recorded timestamps as they are.

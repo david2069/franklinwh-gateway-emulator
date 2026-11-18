@@ -57,7 +57,8 @@ DEFAULT_API = "http://127.0.0.1:8502"
 
 async def _run(gateways: list[Gateway], control_port: int | None, ui: bool = False,
                workspace: str = "emulator-workspace", fleet_file: str | None = None,
-               restore: str | None = None) -> None:
+               restore: str | None = None, cloud_port: int | None = None,
+               cloud: dict | None = None, cloud_host: str = "127.0.0.1") -> None:
     for gw in gateways:
         host, port = await gw.start_async()
         p = gw.profile
@@ -83,6 +84,9 @@ async def _run(gateways: list[Gateway], control_port: int | None, ui: bool = Fal
         print(f"control API on http://{host}:{port}/gateways", flush=True)
         if ui:
             print(f"UI on http://{host}:{port}/", flush=True)
+        api_opt = "" if port == 8502 else f" --api http://{host}:{port}"
+        print(f"who is connected: run `franklinwh-emulator monitor{api_opt} --watch 5` in another terminal "
+              "(leave this one running)", flush=True)
         if restore:
             from .control import ApiError
             try:
@@ -94,11 +98,23 @@ async def _run(gateways: list[Gateway], control_port: int | None, ui: bool = Fal
                         print(f"  {x['gateway']} {x['do']} {x.get('with')}: {x['error']}", flush=True)
             except ApiError as e:
                 print(f"restore {restore}: {e}", flush=True)
+    cloud_api = None
+    if cloud_port is not None:
+        from .cloud import CloudApi
+        cloud_api = CloudApi({gw.config.id: gw for gw in gateways}, host=cloud_host, port=cloud_port, cloud=cloud)
+        host, port = await cloud_api.start()
+        print(f"FranklinWH Cloud API on http://{host}:{port}/  account={cloud_api.account}  "
+              f"(franklinwh-cloud: url_base=\"http://{host}:{port}/\")", flush=True)
+        if not cloud_api.loopback:
+            print(f"warning: the Cloud API listens on {host}, not loopback: anyone who can reach it and "
+                  "knows the account can read and change the emulated gateways", flush=True)
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, stop.set)
     await stop.wait()
+    if cloud_api is not None:
+        await cloud_api.stop()
     if api is not None:
         await api.stop()
     for gw in gateways:
@@ -226,9 +242,25 @@ def _ctl_request(verb: str, args: list[str]) -> tuple[str, str, dict]:
     if verb == "soc":
         need(1)
         return "POST", "soc", {"value": float(args[0])}
-    if verb == "circuit":
+    if verb == "v2l":                                       # v2l on|off [soc=60] (#287)
+        need(1)
+        body = {}
+        for x in args:
+            if x.startswith("soc="):
+                body["ev_soc"] = float(x[4:])
+            else:
+                body["on"] = bool(_parse_value(x))
+        return "POST", "v2l", body
+    if verb == "circuit":                                   # circuit 2 on [w=7000 | w=auto]
         need(2)
-        return "POST", "circuit", {"n": int(args[0]), "on": bool(_parse_value(args[1]))}
+        body = {"n": int(args[0])}
+        for a in args[1:]:
+            if a.startswith("w="):
+                v = a[2:]
+                body["w"] = None if v in ("auto", "none") else float(v)
+            else:
+                body["on"] = bool(_parse_value(a))
+        return "POST", "circuit", body
     if verb == "appliance":
         need(2)
         v = _parse_value(args[1])
@@ -253,6 +285,10 @@ def _ctl_request(verb: str, args: list[str]) -> tuple[str, str, dict]:
     if verb == "sky":
         need(1)
         return "POST", "weather", {"sky": args[0]}
+    if verb == "weather":                                   # #278: weather model=synthetic latitude=.. longitude=..
+        need(1)
+        kv = dict(a.split("=", 1) for a in args)
+        return "POST", "weather", {k: v if k in ("model", "sky") else _parse_value(v) for k, v in kv.items()}
     if verb == "modbus":
         need(1)
         return "POST", "der-comms", {"modbus": bool(_parse_value(args[0]))}
@@ -289,13 +325,13 @@ def _ctl_request(verb: str, args: list[str]) -> tuple[str, str, dict]:
                 body["duration_s"] = float(rest[1])
             return "POST", "csip", body
         raise SystemExit(f"unknown csip sub-command {sub!r}")
-    if verb in ("fault", "dc-fault"):
+    if verb in ("fault", "dc-fault", "cloud-fault"):
         need(1)
         body = {}
         for a in args:
             k, _, v = a.partition("=")
             body[k] = _parse_value(v)
-        return "POST", "faults" if verb == "fault" else "dc-faults", body
+        return "POST", {"fault": "faults", "dc-fault": "dc-faults", "cloud-fault": "cloud-faults"}[verb], body
     raise SystemExit(f"unknown ctl verb {verb!r}")
 
 
@@ -351,16 +387,147 @@ def ctl(api: str, gateway: str, verb: str, args: list[str], as_json: bool) -> in
     req = urllib.request.Request(url, data=data, method=method,
                                  headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=API_TIMEOUT_S) as resp:
             state = json.load(resp)
     except urllib.error.HTTPError as e:
         print(json.load(e).get("error", e), file=sys.stderr)
         return 1
     except urllib.error.URLError as e:
-        print(f"cannot reach control API at {api}: {e.reason}", file=sys.stderr)
+        print(_unreachable(api, e.reason), file=sys.stderr)
+        return 1
+    except TimeoutError as e:
+        print(_no_answer(api, e), file=sys.stderr)
         return 1
     print(json.dumps(state, indent=1) if as_json else _summary(state))
     return 0
+
+
+API_TIMEOUT_S = 5.0                 # monitor and ctl: how long to wait for the control API
+
+
+def _unreachable(api: str, reason) -> str:
+    return (f"No emulator is running at {api} ({reason}).\n"
+            "This command talks to a running emulator. In another terminal, start one and leave it running:\n"
+            "    franklinwh-emulator ui examples/fleet.yaml\n"
+            "then run this command again here. If the emulator uses another port, add --api http://127.0.0.1:<port>.")
+
+
+def _no_answer(api: str, reason) -> str:
+    """A timeout reading the reply: something is listening there, but it didn't answer (#293)."""
+    return (f"The emulator at {api} didn't answer within {API_TIMEOUT_S:g} s ({reason or 'timed out'}).\n"
+            "It is running but not answering; its terminal may say why. Try again in a moment.")
+
+
+def _get(api: str, path: str):
+    with urllib.request.urlopen(f"{api.rstrip('/')}{path}", timeout=API_TIMEOUT_S) as resp:
+        return json.load(resp)
+
+
+def _dur(s: float | None) -> str:
+    if s is None:
+        return "-"
+    s = int(s)
+    if s < 60:
+        return f"{s} s"
+    if s < 3600:
+        return f"{s // 60} min {s % 60:02d} s"
+    if s < 86400:
+        return f"{s // 3600} h {s % 3600 // 60:02d} min"
+    return f"{s // 86400} d {s % 86400 // 3600:02d} h"
+
+
+def _monitor_text(m: dict, history: dict[str, dict] | None = None) -> str:
+    """``GET /monitor`` (and, with ``history``, each gateway's client events) as plain text."""
+    p, t = m["process"], m["totals"]
+    lines = [f"process {p['pid']} · up {_dur(p['uptime_s'])} · CPU {p['cpu_pct']} % · "
+             f"memory {p['rss_mb']} MB (peak {p['peak_rss_mb']}) · loop lag {p['loop_lag_ms']} ms",
+             f"all: {t['gateways']} gateways, {t['with_clients']} with clients · {t['connections']} connected now · "
+             f"{t['accepted']} accepted since start · {t['refused_1h']} refused in the last hour · "
+             f"{t['requests_per_s']} req/s"
+             + (f" · Cloud API {m['cloud']['logins']} logins, {m['cloud']['requests']} requests" if m.get("cloud") else ""),
+             "",
+             f"{'gateway':16} {'listener':14} {'port':>5} {'now':>3} {'accepted':>8} {'requests':>9} "
+             f"{'req/s':>6} {'refused 1h':>10}  last client"]
+    for g in m["gateways"]:
+        for name, label in (("modbus", "Modbus TCP"), ("dc", "Direct Connect"), ("cloud", "Cloud API")):
+            s = g.get(name)
+            if s is None:
+                continue
+            last = s["last_client"]
+            last = "-" if last is None else (f"{last['peer']} left {_dur(last['ago_s'])} ago, "
+                                             f"stayed {_dur(last['stayed_s'])}, {last['requests']} requests")
+            port = s["port"] if s["listening"] else "off"
+            lines.append(f"{g['id']:16} {label:14} {port:>5} {len(s['clients']):>3} {s['accepted']:>8} "
+                         f"{s['requests']:>9} {s['requests_per_s']:>6} {s['refused_1h']:>10}  {last}")
+            for c in s["clients"]:
+                app = f" {c['app']}" if c.get("app") else ""
+                lines.append(f"{'':16}   ↳ {c['peer']}{app} connected {_dur(c['connected_s'])}, "
+                             f"{c['requests']} requests, idle {_dur(c['idle_s'])}")
+            if s["last_refused"]:
+                r = s["last_refused"]
+                lines.append(f"{'':16}   ↳ refused {r['peer']} {_dur(r['ago_s'])} ago")
+    unserved = (m.get("cloud") or {}).get("unserved") or {}
+    if unserved:
+        lines += ["", "Cloud API calls not emulated yet:"]
+        lines += [f"  {n:5d}  {call}" for call, n in sorted(unserved.items(), key=lambda x: -x[1])]
+    if history is not None:
+        lines += ["", "client history (site time, oldest first)"]
+        for gid, ev in history.items():
+            rows = [e for e in ev["events"] if e["kind"] == "client"]
+            note = f" ({ev['dropped']} older events dropped)" if ev["dropped"] else ""
+            if ev["level"] == "off":
+                note = " (events off for this gateway)"
+            if not rows:
+                lines.append(f"{gid:16} none{note}")
+                continue
+            lines.append(f"{gid}{note}")
+            for e in rows:
+                n = f" ×{e['count']}, last {e['last_site_time'][:19].replace('T', ' ')}" if e["count"] > 1 else ""
+                lines.append(f"  {e['site_time'][:19].replace('T', ' ')}  {e['text']}{n}")
+    return "\n".join(lines)
+
+
+def monitor(api: str, gateways: list[str], watch: float | None, history: bool, as_json: bool) -> int:
+    """Who is using a running emulator: clients, TCP connections and their history (#257)."""
+    import time
+    while True:
+        try:
+            m = _get(api, "/monitor")
+            if gateways:
+                unknown = set(gateways) - {g["id"] for g in m["gateways"]}
+                if unknown:
+                    print(f"unknown gateway(s): {', '.join(sorted(unknown))}", file=sys.stderr)
+                    return 1
+                m["gateways"] = [g for g in m["gateways"] if g["id"] in gateways]
+            hist = None if not history else {
+                g["id"]: _get(api, f"/gateways/{g['id']}/events?limit=0") for g in m["gateways"]}
+        except urllib.error.URLError as e:
+            print(_unreachable(api, e.reason), file=sys.stderr)
+            return 1
+        except TimeoutError as e:
+            if watch is None:
+                print(_no_answer(api, e), file=sys.stderr)
+                return 1
+            out = _no_answer(api, e)                   # keep watching (#293)
+        except KeyboardInterrupt:
+            return 0
+        else:
+            if as_json:
+                if hist is not None:
+                    m["history"] = {gid: [e for e in ev["events"] if e["kind"] == "client"]
+                                    for gid, ev in hist.items()}
+                out = json.dumps(m, indent=1)
+            else:
+                out = _monitor_text(m, hist)
+        if watch is None:
+            print(out)
+            return 0
+        print("\033[H\033[2J" + time.strftime("%H:%M:%S") + f" · every {watch:g} s · Ctrl-C to stop\n" + out,
+              flush=True)
+        try:
+            time.sleep(watch)
+        except KeyboardInterrupt:
+            return 0
 
 
 def _scenario_cmd(args) -> int:
@@ -493,6 +660,14 @@ def main(argv: list[str] | None = None) -> int:
     u.add_argument("--restore", metavar="NAME",
                    help="replay a saved session's actions once the fleet is up")
 
+    for p in (s, f, u):
+        p.add_argument("--cloud-port", type=int, metavar="PORT",
+                       help="also serve the FranklinWH Cloud API on PORT (e.g. 8503; "
+                            "off by default); point a cloud client's base URL at it")
+        p.add_argument("--cloud-host", default="127.0.0.1", metavar="HOST",
+                       help="the address the Cloud API listens on (default 127.0.0.1, loopback only); "
+                            "e.g. a Tailscale address so HTTP Toolkit on another machine can forward "
+                            "the official app to it (#316)")
     for p in (s, f):
         p.add_argument("--control-port", type=int, default=8502,
                        help="HTTP control API port on 127.0.0.1 (default 8502)")
@@ -518,11 +693,11 @@ def main(argv: list[str] | None = None) -> int:
     c = sub.add_parser("ctl", help="steer a running emulator via its control API",
                        description="verbs: status | outage [L1|L2|L3] | restore | voltage <V|0.8pu> [leg] | "
                                    "hz <Hz> | offgrid on|off | episode <down_s> <offgrid_s> | write-reject <model.point> [abs_gt|gt|lt=N] [code=N] | clear | addressing alias=..|none write=..|all | range-fault <start> <end> [mode] [code=N] [for=S] | clear | pv <proximal|remote1|remote2> on|off"
-                                   " | solar <W|auto> | load <W|auto> | ambient <C|auto> | "
+                                   " | solar <W|auto> | load <W|auto> | ambient <C|auto> | weather model=bell|synthetic|open-meteo [latitude=.. longitude=..] [sky=..] | "
                                    "alarm <NAME...> [--persistent] | clear-alarm [NAME...] | "
                                    "reset-alarms | fault|dc-fault key=value... | vpp <W, +charge> | release | "
                                    "mode <1|2|3> (Modbus 15507: 1 Emergency Backup, 2 Self-Consumption, 3 TOU) | soc <pct> | sky clear|broken|overcast|storm | "
-                                   "circuit <1-3> on|off | appliance <name> on|off|auto | modbus on|off | "
+                                   "circuit <1-3> on|off [w=<W>|w=auto] | v2l on|off [soc=<pct>] | appliance <name> on|off|auto | modbus on|off | "
                                    "generator start|stop|clear|fault X|refuel L|set k=v... | "
                                    "export-limit enforce|track | csip on|off [uri] | "
                                    "csip server up|down | csip export|import|gen|load <W> [secs] | "
@@ -535,7 +710,21 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("verb")
     c.add_argument("args", nargs=argparse.REMAINDER)
 
+    mo = sub.add_parser("monitor", help="who is using a running emulator: clients, TCP connections, history",
+                        description="Needs an emulator running (serve, fleet or ui) in another "
+                                    "terminal: this reads its control API's /monitor (and, with --history, "
+                                    "each gateway's client events). Counts and history start from zero each "
+                                    "time the emulator starts. Read-only.")
+    mo.add_argument("gateways", nargs="*", metavar="GATEWAY", help="only these gateways (default: all)")
+    mo.add_argument("--api", default=DEFAULT_API)
+    mo.add_argument("--watch", type=float, metavar="SECONDS", help="redraw every SECONDS until Ctrl-C")
+    mo.add_argument("--history", action="store_true",
+                    help="also list each gateway's client events: connected, left, refused")
+    mo.add_argument("--json", action="store_true", help="print the raw reply as JSON")
+
     args = ap.parse_args(argv)
+    if args.cmd == "monitor":
+        return monitor(args.api, args.gateways, args.watch, args.history, args.json)
     if args.cmd == "ctl":
         return ctl(args.api, args.gateway, args.verb, args.args, args.json)
     if args.cmd == "scenario":
@@ -570,7 +759,8 @@ def main(argv: list[str] | None = None) -> int:
         gateways = list(Fleet.from_dict(d).gateways.values())
         try:
             asyncio.run(_run(gateways, args.port, ui=True, workspace=args.workspace,
-                             fleet_file=args.config, restore=args.restore))
+                             fleet_file=args.config, restore=args.restore,
+                             cloud_port=args.cloud_port, cloud=d.get("cloud"), cloud_host=args.cloud_host))
         except KeyboardInterrupt:
             pass
         return 0
@@ -579,9 +769,11 @@ def main(argv: list[str] | None = None) -> int:
         if d is None:
             return 2
         gateways = list(Fleet.from_dict(d).gateways.values())
+    cloud = d.get("cloud") if args.cmd == "fleet" else None
 
     try:
-        asyncio.run(_run(gateways, None if args.no_control else args.control_port))
+        asyncio.run(_run(gateways, None if args.no_control else args.control_port,
+                         cloud_port=args.cloud_port, cloud=cloud, cloud_host=args.cloud_host))
     except KeyboardInterrupt:
         pass
     return 0

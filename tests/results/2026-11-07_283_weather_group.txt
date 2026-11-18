@@ -1,0 +1,18 @@
+# #283 weather action: reach every aGate in a group — 2026-11-07
+
+Branch weather-group, base main 5d4fc40.
+
+## New tests
+23 passed in 1.19s
+
+## Break check
+with src stashed, test_weather_action_reaches_every_aGate_in_a_group fails; restored, it passes
+
+## Full suite
+767 passed in 71.95s (0:01:11)
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

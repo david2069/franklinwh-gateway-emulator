@@ -493,6 +493,12 @@ class DcPayloads:
         c1, c2, c3 = (self.site.circuits.get(n) for n in (1, 2, 3))
         p1, p2 = s.circuit_w.get(1, 0.0), s.circuit_w.get(2, 0.0)
         p3 = s.circuit_w.get(3, 0.0) if c3 else 0.0
+        # V2L (#287) on the car switch: power out of the EV as a negative CarSWPower (an AU
+        # gateway reports it negative about half the time; the sign is not established) and the
+        # energy it supplied as CarSWExpEnergy (read as "discharged through CarSW", unsourced).
+        v2l = self.site.v2l
+        if v2l is not None and not c3:
+            p3 = -s.v2l_w
         # Units follow the reference capture: volts and Hz ×10 as integers (it read
         # Sw1Volt 1014, freq 500). Energies are kWh here; the device's integer encoding
         # (CarSWExpEnergy 10150, CarSWImpEnergy 16384) is not decoded yet.
@@ -502,7 +508,9 @@ class DcPayloads:
                    SW1ExpEnergy=round(c1.energy_wh / 1000.0, 3) if c1 else 0.0,
                    SW2ExpEnergy=round(c2.energy_wh / 1000.0, 3) if c2 else 0.0,
                    CarSWCurr=round(p3 / v, 2) if v else 0.0, CarSWPower=round(p3, 1),
-                   CarSWExpEnergy=round(c3.energy_wh / 1000.0, 3) if c3 else 0.0, CarSWImpEnergy=0.0,
+                   CarSWExpEnergy=(round(c3.energy_wh / 1000.0, 3) if c3 else
+                                   round(v2l.energy_wh / 1000.0, 3) if v2l is not None else 0.0),
+                   CarSWImpEnergy=0.0,
                    CarSwConsSupExpEnerge=0, power=0, curr=0, volt=2,
                    genpowerGen=int(round(s.generator_w)),
                    freq=int(round(s.hz * 10)))

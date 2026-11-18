@@ -144,3 +144,108 @@ def test_direct_connect_limit_is_opt_in(clock):
                 c3, ok3 = login(gw)
                 c3.transport.close()
                 assert ok3
+
+
+def test_monitor_command_lists_clients_and_history(fleet, capsys):
+    """#257: the shell command shows who is connected now and the connection history."""
+    from franklinwh_emulator.cli import main
+    api = f"http://127.0.0.1:{fleet.control.port}"
+    c = RawClient(*fleet["a"].address)
+    c.read(0, 2)
+    assert _wait(lambda: fleet["a"].server.clients.snapshot()["requests"] == 1)
+    assert main(["monitor", "--api", api]) == 0
+    out = capsys.readouterr().out
+    assert "2 gateways, 1 with clients · 1 connected now · 1 accepted since start" in out
+    assert "↳ 127.0.0.1:" in out and "1 requests" in out
+    c.close()
+    assert _wait(lambda: fleet["a"].server.clients.snapshot()["clients"] == [])
+    assert main(["monitor", "--api", api, "--history", "a"]) == 0
+    out = capsys.readouterr().out
+    assert "left" in out and "stayed" in out                 # last client, after it left
+    hist = out.split("client history", 1)[1]
+    assert "Modbus TCP client 127.0.0.1 connected" in hist and "Modbus TCP client 127.0.0.1 left" in hist
+    assert "\nb " not in out                                 # only the gateway asked for
+
+
+def test_monitor_command_json_and_failures(fleet, capsys):
+    from franklinwh_emulator.cli import main
+    api = f"http://127.0.0.1:{fleet.control.port}"
+    assert main(["monitor", "--api", api, "--json", "--history"]) == 0
+    m = json.loads(capsys.readouterr().out)
+    assert m["totals"]["gateways"] == 2 and set(m["history"]) == {"a", "b"}
+    assert main(["monitor", "--api", api, "nope"]) == 1
+    assert "unknown gateway(s): nope" in capsys.readouterr().err
+    assert main(["monitor", "--api", "http://127.0.0.1:9"]) == 1        # nothing listening
+    err = capsys.readouterr().err
+    assert "No emulator is running at http://127.0.0.1:9" in err and "In another terminal" in err   # #259
+
+
+def test_ctl_without_an_emulator_says_what_to_do(capsys):
+    """#259: ctl, too, explains that it needs a running emulator."""
+    from franklinwh_emulator.cli import main
+    assert main(["ctl", "--api", "http://127.0.0.1:9", "site", "status"]) == 1
+    err = capsys.readouterr().err
+    assert "No emulator is running" in err and "franklinwh-emulator ui examples/fleet.yaml" in err
+
+
+@pytest.fixture
+def silent_api(monkeypatch):
+    """A control API that accepts the connection and never answers (#293)."""
+    import socket
+    from franklinwh_emulator import cli
+    monkeypatch.setattr(cli, "API_TIMEOUT_S", 0.3, raising=False)
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    s.listen(8)                                             # never accepted: no reply comes
+    yield f"http://127.0.0.1:{s.getsockname()[1]}"
+    s.close()
+
+
+def test_monitor_and_ctl_say_when_the_emulator_does_not_answer(silent_api, capsys):
+    """#293: a timeout reading the reply is a message, not a traceback."""
+    from franklinwh_emulator.cli import main
+    assert main(["monitor", "--api", silent_api]) == 1
+    err = capsys.readouterr().err
+    assert f"The emulator at {silent_api} didn't answer within 0.3 s" in err and "Traceback" not in err
+    assert main(["ctl", "--api", silent_api, "site", "status"]) == 1
+    assert "didn't answer within 0.3 s" in capsys.readouterr().err
+
+
+def test_monitor_watch_keeps_going_through_a_timeout_and_stops_on_ctrl_c(silent_api, capsys, monkeypatch):
+    """#293: --watch shows the timeout and tries again; Ctrl-C ends it quietly, even mid-request."""
+    from franklinwh_emulator import cli
+    sleeps = []
+
+    def sleep(s):
+        sleeps.append(s)
+        if len(sleeps) == 2:
+            raise KeyboardInterrupt
+    monkeypatch.setattr("time.sleep", sleep)
+    assert cli.main(["monitor", "--api", silent_api, "--watch", "1"]) == 0
+    assert capsys.readouterr().out.count("didn't answer") == 2   # two rounds, then Ctrl-C
+
+    def interrupted(api, path):
+        raise KeyboardInterrupt
+    monkeypatch.setattr(cli, "_get", interrupted)
+    assert cli.main(["monitor", "--api", silent_api, "--watch", "1"]) == 0
+
+
+def test_startup_output_names_the_monitor_command(capsys):
+    """#259: the start-up lines say how to see who is connected."""
+    import asyncio
+    import os
+    import signal
+    from franklinwh_emulator.cli import _run
+    from franklinwh_emulator.gateway import Gateway, GatewayConfig
+    gw = Gateway(GatewayConfig(id="a", setup="in-service", port=0))
+
+    async def go():
+        async def stop_soon():
+            await asyncio.sleep(0.3)
+            os.kill(os.getpid(), signal.SIGINT)          # _run's own Ctrl-C handler stops it cleanly
+        asyncio.create_task(stop_soon())
+        await _run([gw], control_port=0)
+    asyncio.run(go())
+    out = capsys.readouterr().out
+    assert "who is connected: run `franklinwh-emulator monitor --api http://127.0.0.1:" in out
+    assert "--watch 5` in another terminal (leave this one running)" in out

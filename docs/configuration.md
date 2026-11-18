@@ -53,6 +53,12 @@ A grid event (outage, voltage, frequency) on any member reaches the whole group,
 `GET /groups` reports the site's three-phase meter ([Control API](control-api.md)). The web UI
 draws the group as one site ([Web UI](ui.md#energy-diagram)).
 
+`cloud:` is the account for the [FranklinWH Cloud API](cloud-api.md) (served with
+`--cloud-port`): `{account, password, token_ttl_s, rate_limit_per_min}`, default
+`{account: owner@example.com, password: emulator}`; `token_ttl_s` expires login tokens after
+that many seconds (default: never); `rate_limit_per_min` answers HTTP 429 past that many
+requests a minute from the whole account (default: no limit). Every gateway in the file belongs to it.
+
 ## A complete example
 
 ```yaml
@@ -131,7 +137,8 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 |---|---|---|---|
 | `pv_inputs` | object | `{'proximal': 1.0}` | share of solar per PV input: proximal (aGate), remote1/remote2 (aPbox) |
 | `pv_non_1547` | list | `[]` | PV inputs whose inverters don't follow IEEE 1547-2018 (no Freq/Watt droop), e.g. `[remote1]`; off-grid, a North American aGate opens their relay instead, for 300 s at a time |
-| `weather` | object | — | {model: bell\|synthetic\|open-meteo, kwp, tilt, azimuth, sky}; inherits lat/lon |
+| `weather` | object | — | {model: bell\|synthetic\|open-meteo, kwp, tilt, azimuth, sky, offline, refresh_h (open-meteo: hours before today's data is fetched again, default 2)}; inherits lat/lon; without `model`: open-meteo when the site has a location (synthetic for a day it can't fetch), else bell ([Weather and loads](WEATHER_AND_LOADS.md)) |
+| `weather_events` | list | — | timed or seeded-random darker skies on top of the weather: `{sky, at: "HH:MM", for: 2h, every: 1d, times: 3}` (fixed) or `{sky, for: 30m..3h, chance: 0.3, per: day}` (random, from the seed) ([Weather and loads](WEATHER_AND_LOADS.md#weather-events)) |
 | `solar_peak_w` | number | — | bell-curve solar peak, W; default derived from the seed |
 | `pv_temperature` | object | — | PV output falls as panels heat up: {temp_coeff (per °C, -0.004), noct (°C, 45), ref_cell_c (°C, 45: the 0.85 efficiency's typical warm day)}; false = off |
 | `cap_forced_solar` | boolean | `True` | forced solar (pv solar_w) can't exceed the solar model's value now, 0 at night (default true); false = use it as given (lab tests) |
@@ -164,6 +171,7 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 
 | Key | Type | Default | What it does |
 |---|---|---|---|
+| `v2l` | object | — | V2L: an EV on a smart circuit supplying the home **off-grid** through the generator input: `{circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 2200, min_soc: 20, enabled: true, charge_apower: true}` (`charge_apower`: the app's Allow charging to aPower); the EV values are not documented by FranklinWH, so confirm them for your site; needs the smart circuits and the generator module ([Weather and loads](WEATHER_AND_LOADS.md#v2l)) |
 | `generator` | object | — | {installed, rated_w, ...} plus 1901 fields; null = none fitted; AU/NZ: `rated_w` at most 80 A × line-to-neutral V (18.4 kW at 230 V) |
 | `dc_pv` | object | — | aPower S DC PV on its MPPT inputs: {rated_w, export: true}; needs an aPower S, rated_w up to 15 kW per aPower S (datasheet MPPT limit). It follows the site's solar shape, shares the aPower S inverter with battery discharge (11.5 kW each), charges the battery directly, and with export: false only serves the house and battery. The app's MPPT page (Commissioning Guide p. 22) |
 | `power_limits` | string | `settable` | settable (default) or locked: locked = the user's power-rating settings can't be changed, as FranklinWH has done in some US areas (owner's statement; regions not evidenced, so never derived). Direct Connect 1701 limit writes are then acknowledged and not stored |
@@ -179,7 +187,7 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 |---|---|---|---|
 | `location` | object | — | {latitude, longitude, timezone (IANA, DST-aware), postcode, name, country (ISO alpha-2), state, city, site_id}; country/state/city/site_id only group gateways in the UI |
 | `tz_offset_hours` | number | — | fixed UTC offset, no DST; location.timezone wins |
-| `group` | string | — | the fleet `groups:` entry this aGate shares a site and grid connection with (#241): one single-phase aGate per phase (phases: [L1]); it takes the group's location, weather, grid code, utility, service (per phase), clock and sky |
+| `group` | string | — | the fleet `groups:` entry this aGate shares a site and grid connection with (#241): one single-phase aGate per phase (phases: [L1]); it takes the group's location, weather, weather events, grid code, utility, service (per phase), clock and sky |
 | `sky_seed` | integer | — | seed for the sky (clouds, synthetic weather, ambient); set by the group, default the gateway's seed |
 | `install` | object | — | where the aGate/aPower sits: {indoor: heated\|unheated\|uninsulated} or {outdoor: {sun: morning\|afternoon\|all-day\|shade, cover: none\|roof\|enclosure}}, plus cabinet_lag_h, self_heat_c_per_kw, room_c; drives the cabinet temperature. Default: ambient + 8 °C |
 | `time_scale` | number | `1.0` | site clock speed; > 1 fast-forwards |

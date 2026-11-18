@@ -13,7 +13,8 @@ Direct Connect addresses to point a bridge at, SoC, solar, home, battery and gri
 state, mode, battery status, FORCE, alarms and injected faults. Selecting a card shows its live energy diagram
 (grid, meter, aGate, home, PV per input with the aPbox for remote inputs, the battery, generator
 and smart circuits, with lines moving in the direction power flows), then its legs, circuits,
-appliances and generator. What the emulator doesn't model (per-aPower values, V2L, a non-backup
+appliances and generator, and V2L where it is set up (amber while the EV supplies the home).
+What the emulator doesn't model (per-aPower values, a non-backup
 panel, tariffs and more) is listed under the diagram rather than drawn. Under it, every control action
 has a form (built from `GET /schema`, grouped as in SCENARIOS.md); only the fields you fill are
 sent, and the emulator's answer (applied, or its error) stays in the form. The control API below
@@ -61,7 +62,9 @@ internet. Plan:
 
 ![Cards for every gateway, the actions column on the right](assets/ui/overview.png)
 
-Each card shows the gateway's local time and timezone, firmware, the Modbus TCP and Direct
+Each card shows the gateway's local time and timezone, firmware, its weather (`Weather:` the
+model, the synthetic sky, "Open-Meteo unavailable" when it fell back, and a weather event in
+force with its end), the Modbus TCP and Direct
 Connect addresses to point a client at, live power, and tags for the grid, mode, battery status,
 FORCE (an M704 setpoint), alarms, faults and Debug Mode. Click a card to make it the **active
 gateway**; the actions column works on it.
@@ -78,11 +81,12 @@ has the design's icon. Lines move in the direction power flows; idle lines are g
 dot is green, red when faulted and orange when offline, as the card border.
 
 Above it: the site's name in bold (`location.name`, else the gateway id), its place and local
-time, the weather line, and tags for the state and how solar is connected; top right, the
+time, the weather line (the weather model, Open-Meteo's fallback when it applies, and a
+[weather event](WEATHER_AND_LOADS.md#weather-events) in force, with its end), and tags for the state and how solar is connected; top right, the
 hardware: aGate model, aPower count and model, total kWh and PV kWp.
 
 Each aPower card shows the combined battery's SoC and an even share of its power: per-aPower
-values are not modelled. The design's aPower S DC board, non-backup panel, V2L and prices are not
+values are not modelled. The design's aPower S DC board, non-backup panel and prices are not
 drawn. Below the diagram: grid legs, smart circuits, appliances, the generator and the TOU schedule.
 
 **A grouped site** (fleet `groups:`, one single-phase aGate per phase; [Configuration](configuration.md))
@@ -91,8 +95,11 @@ is drawn as one site, after board E of the canvas: the grid and the service mete
 then one row per aGate, titled with its phase (`aGate 2 · L2`), fed by its phase's line with
 that phase's amps and import; its aPowers under it; AC solar or its smart circuits and their
 loads (an unused circuit dashed) to the right; and its phase's **Home Loads**, which board E
-leaves out. The active gateway has the thicker outline; pick another member from the gateway
-picker to act on it. The tables below the diagram are the active member's.
+leaves out. The active gateway is drawn in **cyan**: its outline (thicker), its title and its
+phase line from the meter; under FORCE its outline stays orange. Pick another member from the
+gateway picker to act on it. The tables below the diagram are the active member's. Two actions
+reach the whole group: `grid` (one grid connection; its `phase` picks one leg) and `weather`
+(one sky).
 
 ## Temperature units
 
@@ -120,7 +127,8 @@ clicking its card does. The filters are remembered by the browser.
 
 Every control action has a form, built from `GET /schema`. Only the fields you fill are sent; the
 emulator's answer stays in the form. **Activity** lists every action from any source.
-**Monitor** (below Activity) shows each gateway's Modbus TCP and Direct Connect clients and
+**Monitor** (below Activity) shows each gateway's Modbus TCP, Direct Connect and
+[Cloud API](cloud-api.md#seeing-it-in-the-ui) clients and
 recent refusals, and the process's CPU, memory, threads and loop lag (`GET /monitor`, read
 only while the panel is open).
 

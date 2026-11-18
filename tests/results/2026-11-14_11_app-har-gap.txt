@@ -1,0 +1,157 @@
+2026-11-14 FranklinWH app calls (HTTP Toolkit HARs) against the emulator's Cloud API routes
+Source: the owner's HTTP Toolkit captures of the official app, on the owner's Ubuntu mini PC, read over SSH.
+Only aggregates left the machine: hosts, method + path (query strings dropped; numeric or hex
+segments as <id>), the softwareversion header values with the months seen, sendMqtt cmdType counts.
+No bodies, tokens, serials or account details. Emulator: main d21e37c, routes in cloud.py.
+
+FILES 42 of 50 with FranklinWH requests; 2025-02-27 to 2026-03-20
+HOSTS {'energy.franklinwh.com': 68645, 'www.franklinwh.com': 5, 'e-static.franklinwh.us': 159, 'e-uploads.franklinwh.com': 13, 'manage-api.franklinwh.us': 4}
+VERSIONS {'APP2.3.4': ['2025-05'], 'APP2.4.1': ['2025-08'], 'APP2.5.0': ['2025-10'], 'APP2.4.2': ['2025-08', '2025-09'], 'APP1.9.7': ['2025-02', '2025-03'], 'APP2.5.1': ['2025-10'], 'APP2.3.1': ['2025-03'], 'APP2.9.0': ['2026-01', '2026-02'], 'APP2.2.0': ['2025-03'], 'APP1.9.5': ['2025-02'], 'APP2.5.2': ['2025-11'], 'APP2.6.1': ['2025-11'], 'APP2.6.2': ['2025-11', '2025-12'], 'APP2.7.0': ['2025-12'], 'APP2.8.0': ['2025-12'], 'APP2.8.1': ['2026-01'], 'APP2.11.0': ['2026-03']}
+CMDTYPES {203: 949, 211: 134, 311: 278, 315: 2, 317: 499, 327: 417, 335: 38, 337: 383, 339: 72, 341: 37, 353: 1234}
+
+method path | captures containing it (of 42) | served by the emulator
+ 39  no   GET     /hes-gateway/terminal/chargePowerDetails
+ 38  yes  GET     /hes-gateway/terminal/getHomeGatewayList
+ 38  yes  POST    /hes-gateway/terminal/initialize/appUserOrInstallerLogin
+ 38  no   POST    /hes-gateway/terminal/nps/getNpsShowTip
+ 38  no   GET     /hes-gateway/terminal/selectProgramFlag
+ 38  yes  GET     /hes-gateway/terminal/selectTerPushMessageUnreadCount
+ 37  no   GET     /hes-gateway/common/selectDeviceRunLogList
+ 37  yes  POST    /hes-gateway/terminal/sendMqtt
+ 36  yes  GET     /api-energy/electric/getFhpElectricData
+ 36  no   GET     /hes-gateway/terminal/bill/electric/selectBenefitInfo
+ 36  yes  GET     /hes-gateway/terminal/getDeviceCompositeInfo
+ 36  no   GET     /hes-gateway/terminal/getDeviceInfoV2
+ 36  no   GET     /hes-gateway/terminal/message/selectMessage
+ 36  no   GET     /hes-gateway/terminal/tou/getEntranceInfo
+ 36  no   POST    /hes-gateway/terminal/updateTerUserFcmToken
+ 36  no   GET     /hes-gateway/terminal/weather/getCurrentBriefWeather
+ 36  yes  GET     /hes-gateway/terminal/weather/getProgressingStormList
+ 35  no   GET     /hes-gateway/terminal/appObtainAdvertiseLst
+ 35  no   GET     /hes-gateway/terminal/feedback/whetherPopUp
+ 35  no   GET     /hes-gateway/terminal/getAppGlobalConfig
+ 35  no   GET     /hes-gateway/terminal/getShowTip
+ 35  yes  POST    /hes-gateway/terminal/tou/getGatewayTouListV2
+ 34  no   GET     /hes-gateway/common/getPageByTypeList
+ 34  no   GET     /hes-gateway/common/getPowerCapConfigList
+ 34  yes  GET     /hes-gateway/terminal/tou/getTouDispatchDetail
+ 34  no   POST    /hes-gateway/terminal/tou/notify/ai/cache
+ 34  yes  GET     /hes-gateway/terminal/weather/getStormSetting
+ 30  no   GET     /hes-gateway/terminal/getPersonalInfo
+ 29  no   GET     /hes-gateway/newApi/api-user/app/resource/getUserResources/v2
+ 28  no   GET     /hes-gateway/terminal/backupHistorySummary
+ 28  no   GET     /hes-gateway/terminal/recommend/recommendFlag
+ 27  no   GET     /hes-gateway/common/getAccessoryList
+ 27  no   GET     /hes-gateway/terminal/selectSimBtn
+ 25  no   POST    /hes-gateway/terminal/v2/loginOut
+ 24  no   GET     /hes-gateway/terminal/selectDeviceOverallInfo
+ 24  yes  POST    /hes-gateway/terminal/tou/updateTouModeV2
+ 22  no   POST    /hes-gateway/terminal/tou/calculate/expected/earnings
+ 22  no   GET     /hes-gateway/terminal/tou/getBonusInfo
+ 21  yes  GET     /api-energy/power/getFhpPowerByDay
+ 21  no   GET     /hes-gateway/terminal/site/get/DeviceDetail
+ 20  no   GET     /hes-gateway/terminal/obtainApowersInfo
+ 20  no   GET     /hes-gateway/terminal/selectGatewayAlarm
+ 19  no   GET     /hes-gateway/terminal/obtainAgateInfo
+ 19  no   GET     /hes-gateway/terminal/sim/cardShow
+ 19  yes  POST    /hes-gateway/terminal/tou/updateSocV2
+ 18  no   GET     /hes-gateway/terminal/site/list/siteAndDeviceInfo
+ 18  yes  GET     /hes-gateway/terminal/tou/getPowerControlSetting
+ 18  yes  POST    /hes-gateway/terminal/tou/saveTouDispatch
+ 17  yes  GET     /hes-gateway/terminal/selectOffgrid
+ 17  yes  POST    /hes-gateway/terminal/tou/getPcsHintInfo
+ 16  no   GET     /hes-gateway/terminal/listAppUserDevice
+ 16  no   GET     /hes-gateway/terminal/newCompliance/getComplianceDetailById
+ 16  no   GET     /hes-gateway/terminal/newCompliance/getComplianceNameList
+ 15  no   GET     /hes-gateway/common/obtainGeographyList
+ 14  no   POST    /hes-gateway/terminal/tou/getCustomEnergyDispatchList
+ 13  no   GET     /hes-gateway/manage/getDeviceUpgradeResult
+ 13  no   GET     /hes-gateway/manage/selectAppGatewayList
+ 13  no   GET     /hes-gateway/manage/tipForUploadingPictures
+ 12  no   GET     /hes-gateway/terminal/getHotSpotInfo/v2
+ 11  no   GET     /hes-gateway/terminal/listDeviceMessagesByType
+ 11  yes  POST    /hes-gateway/terminal/tou/setPowerControl
+ 10  no   GET     /hes-gateway/manage/getAppGlobalConfig
+ 10  no   GET     /hes-gateway/manage/getDeviceCompositeInfo
+ 10  no   GET     /hes-gateway/manage/getDeviceInfoV2
+ 10  no   GET     /hes-gateway/manage/getEquipmentLocationDetail
+ 10  no   GET     /hes-gateway/manage/getPersonalInfo
+ 10  no   GET     /hes-gateway/manage/selectAppGatewayStatus
+ 10  no   GET     /hes-gateway/manage/selectCountriesList
+ 10  no   GET     /hes-gateway/manage/selectSimBtn
+ 10  no   GET     /hes-gateway/manage/tou/getEntranceInfo
+ 10  no   POST    /hes-gateway/manage/tou/getGatewayTouListV2
+ 10  no   POST    /hes-gateway/manage/v2/loginOut
+ 10  no   GET     /hes-gateway/terminal/getEquipmentLocationDetail
+ 10  yes  GET     /hes-gateway/terminal/selectIotGenerator
+ 10  no   GET     /hes-gateway/terminal/selectTerPushMessageListApp
+ 10  no   GET     /hes-gateway/terminal/site/get/SiteDetail
+ 10  no   GET     /hes-gateway/terminal/solar/selectAnyOneSolarOpen
+ 10  no   POST    /hes-gateway/terminal/updateTerPushMessageReadByType
+ 10  no   GET     /hes-gateway/terminal/v2/warrantyInfo
+  9  no   GET     /hes-gateway/manage/getOffGridFlag
+  9  no   GET     /hes-gateway/manage/selectDeviceOverallInfo
+  9  no   GET     /hes-gateway/manage/selectIotGatewayInstall
+  9  no   GET     /hes-gateway/terminal/span/getSpanSetting
+  8  no   POST    /api-smart/terminal/askQuestion
+  8  no   GET     /api-smart/terminal/recommendQuestion
+  8  no   GET     /hes-gateway/common/v2/obtainUrlByKey
+  8  no   GET     /hes-gateway/manage/message/selectMessage
+  8  no   GET     /hes-gateway/manage/selectProgramFlag
+  8  no   GET     /hes-gateway/terminal/getOffGridFlag
+  8  no   GET     /hes-gateway/terminal/selectEventClassification
+  8  no   POST    /hes-gateway/terminal/tou/getGatewayTouList
+  7  no   GET     /hes-gateway/manage/obtainApowersInfo
+  7  no   GET     /hes-gateway/manage/selectStatesList
+  7  no   POST    /hes-gateway/manage/sendMqtt
+  7  no   GET     /hes-gateway/terminal/getHotSpotInfo
+  7  no   POST    /hes-gateway/terminal/setEventPushToUser
+  7  yes  GET     /hes-gateway/terminal/weather/getStormList
+  7  yes  POST    /hes-gateway/terminal/weather/switchStorm
+  6  no   POST    /hes-gateway/manage/app/message/fcmToken/updateManage
+  6  no   GET     /hes-gateway/manage/app/message/selectPushUnreadCount
+  6  no   GET     /hes-gateway/manage/listUpgradeSteps
+  6  no   GET     /hes-gateway/manage/obtainAgateInfo
+  6  no   GET     /hes-gateway/terminal/iotChargePowers
+  6  no   POST    /hes-gateway/terminal/tou/getRecommendEnergyDispatchList
+  5  no   GET     /hes-gateway/common/getMaintenanceInfo
+  5  no   GET     /hes-gateway/manage/getCommunicationOptimization
+  5  no   GET     /hes-gateway/terminal/getDeviceInfo
+  5  no   GET     /hes-gateway/terminal/getWarnFlagNotice
+  5  no   GET     /hes-gateway/terminal/selectIotUserRuntimeDataLog
+  5  no   GET     /hes-gateway/terminal/selectWorkingHours
+  5  yes  POST    /hes-gateway/terminal/updateOffgrid
+  5  yes  POST    /hes-gateway/terminal/weather/setAdvanceBackupTime
+  5  yes  POST    /hes-gateway/terminal/weather/setStormNotice
+  4  no   GET     /hes-gateway/common/getDeviceRealTimeData
+  4  no   GET     /hes-gateway/manage/selectGatewayPowerAlarm
+  4  no   GET     /hes-gateway/manage/solar/selectAnyOneSolarOpen
+  4  no   GET     /hes-gateway/terminal/getGatewaySystemSetting
+  4  no   GET     /hes-gateway/terminal/selectTerPushMessageList
+  4  no   GET     /hes-gateway/terminal/selectTerPushMessageUnread
+  4  yes  POST    /hes-gateway/terminal/updateIotGenerator
+  3  no   POST    /api-smart/terminal/feedback
+  3  no   GET     /hes-gateway/terminal/chargePowerTotal
+  3  no   GET     /hes-gateway/terminal/countLoad
+  3  no   GET     /hes-gateway/terminal/electricStatistics
+  3  no   GET     /hes-gateway/terminal/getCompliance
+  3  no   POST    /hes-gateway/terminal/getProvincesListBYGatewayId
+  3  no   GET     /hes-gateway/terminal/initialize/selectTerStartupPage
+  3  no   GET     /hes-gateway/terminal/iotDayPowerStatistics
+  3  no   GET     /hes-gateway/terminal/site/check/OverlapSite
+  3  no   POST    /hes-gateway/terminal/site/update/DeviceDetail
+  3  no   POST    /hes-gateway/terminal/site/update/SiteDetail
+  3  no   GET     /hes-gateway/terminal/tou/getTariffDetailByIdV2
+  3  no   GET     /hes-gateway/terminal/tou/getTariffListByCompanyId
+  3  no   POST    /hes-gateway/terminal/tou/getTouCompanyListPageV2
+  3  no   GET     /hes-gateway/terminal/tou/getVppTipForUpdateTou
+  2  no   GET     /hes-gateway/manage/getHotSpotInfo/v2
+  2  no   GET     /hes-gateway/newApi/api-user/app/resource/getUserResources
+  2  no   POST    /hes-gateway/terminal/tou/setPowerControlV2
+  2  no   GET     /hes-gateway/terminal/v2/queryTerminalUserInfo
+  1  no   GET     /hes-gateway/manage/component/progressOrderCount
+  1  no   GET     /hes-gateway/terminal/selectTerPushMessageV2
+  1  no   GET     /hes-gateway/terminal/system/getSystemSetting
+  1  no   POST    /hes-gateway/terminal/tou/updateTouMode
+
+served 25 of 143; sendMqtt cmdTypes served: 203, 211, 311, 353

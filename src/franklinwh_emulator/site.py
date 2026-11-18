@@ -230,6 +230,9 @@ class SiteConfig:
     # Solar resource: {"model": "bell"|"synthetic"|"open-meteo", "latitude", "longitude",
     # "kwp", "tilt", "azimuth", "sky", ...} — see weather.py. None = the original bell.
     weather: dict | None = None
+    # Timed or seeded-random darker skies on top of the weather (#270): a list of
+    # {sky, for, at, every, times} or {sky, for, chance, per: day} — see weather_events.py.
+    weather_events: list | None = None
     # House load: a preset name ("sydney-family"), a list of components, or
     # {"preset", "add", "remove", "set"} — see loads.py. None = the original curve.
     loads: Any = None
@@ -281,6 +284,10 @@ class SiteConfig:
     # oilmano*, manuSw) and hardware facts (crank_s, warmup_s, cooldown_s, min_run_s,
     # fuel_l). None = the reference site: feature off, nothing fitted. See generator.py.
     generator: dict | None = None
+    # V2L (#287): an EV on a smart circuit supplying the home off-grid through the generator
+    # input: {circuit, ev_kwh, ev_soc, max_w, min_soc, enabled}. Needs the smart circuits and
+    # the generator module. None = no V2L. See v2l.py.
+    v2l: dict | None = None
     # Hardware models (#180): {agate: code|SKU|name, apower: …}; None → the region's defaults.
     # The aPower model sets capacity and power per unit (models.py).
     model: dict | None = None
@@ -415,6 +422,7 @@ class Snapshot:
     circuit_w: dict = field(default_factory=dict) # served W per smart circuit
     circuits_shed: bool = False                   # islanded: smart circuits dropped
     generator_w: float = 0.0                      # generator output into the house/battery
+    v2l_w: float = 0.0                            # V2L: the EV supplying the house (#287)
     gen_state: int = 0                            # genStat: 0 off, 1 running, 2 cooldown, 3 fault
     gen_relay_closed: bool = False
 
@@ -431,6 +439,14 @@ def _even_split(phases: tuple[str, ...], shares: dict[str, float] | None) -> dic
         raise ValueError(f"split names legs {sorted(bad)} that are not connected {phases}")
     total = sum(shares.values()) or 1.0
     return {ph: shares.get(ph, 0.0) / total for ph in phases}
+
+
+@dataclass
+class _CircuitLoad:
+    """Watts set on a smart circuit at runtime (#279), as the model sees a component."""
+    circuit: int
+    leg: str | None = None
+    type: str = "circuit"
 
 
 class Site:
@@ -538,6 +554,7 @@ class Site:
         self._out_gen = 1.0                      # tightening response lags from the output
         self.solar_override_w: float | None = None
         self.load_override_w: float | None = None
+        self.circuit_load_w: dict[int, float] = {}    # watts set on a smart circuit at runtime (#279)
         self.ambient_override_c: float | None = None
         self.location = Location.from_dict(cfg.location)
         # Hardware models (#180): the aPower model sets capacity and power per unit.
@@ -592,6 +609,15 @@ class Site:
         k = self.model.agate.smart_circuits if self.accessories["smart_circuits"] else 0
         self.circuits: dict[int, Circuit] = {n: Circuit(DEFAULT_CIRCUITS[n]) for n in range(1, k + 1)}
         self.circuit_range = f"1–{k}" if k else "none (accessories.smart_circuits is false)"
+        from .v2l import V2L
+        self.v2l = V2L.from_dict(cfg.v2l)
+        if self.v2l is not None:
+            if not (self.accessories["smart_circuits"] and self.accessories["generator_module"]):
+                raise ValueError("v2l: needs the smart circuits and the generator module "
+                                 "(accessories.smart_circuits and generator_module)")
+            if self.v2l.circuit not in self.circuits:
+                raise ValueError(f"v2l: circuit {self.v2l.circuit}: {self.model.agate.name} has "
+                                 f"smart circuits {self.circuit_range}")
         for n, c in (cfg.circuits or {}).items():
             n = int(n)
             if n not in self.circuits:
@@ -609,17 +635,16 @@ class Site:
             rcfg = ReplayConfig.from_dict(cfg.replay)
             rcfg.apower_units = max(1, cfg.apower_units)
             self.replay = Replay(rcfg, local_midnight=self.local_midnight)
+        from .pvmodel import from_config as _pv_model
+        self.pvlib = _pv_model(cfg.pv)                       # None = the built-in PV model (#112)
         wdict = dict(cfg.weather or {})
         if self.location.latitude is not None:              # weather inherits the location
             wdict.setdefault("latitude", self.location.latitude)
             wdict.setdefault("longitude", self.location.longitude)
-        wcfg = WeatherConfig.from_dict(wdict)
-        self.weather = None if wcfg.model == "bell" else Weather(
-            wcfg, seed=self.sky_seed, kwp=self.solar_peak_w / 1000.0 / wcfg.efficiency)
-        from .pvmodel import from_config as _pv_model
-        self.pvlib = _pv_model(cfg.pv)                       # None = the built-in PV model (#112)
-        if self.pvlib is not None and self.weather is not None:
-            self.weather.clear_sky = self.pvlib.clear_sky_poa
+        self._build_weather(wdict)
+        from .weather_events import WeatherEvents
+        self.weather_events = WeatherEvents(cfg.weather_events, seed=self.sky_seed,
+                                            start=self.clock.now(), local_midnight=self.local_midnight)
 
         # Grid, relays, alarms.
         self.utility = self._healthy_utility()
@@ -858,6 +883,8 @@ class Site:
         h["fhp"] += snap.battery_w * dt
         h["load"] += snap.load_w * dt
         h["gen"] = h.get("gen", 0.0) + snap.generator_w * dt
+        h["v2l"] = h.get("v2l", 0.0) + snap.v2l_w * dt        # the cloud's energy history (#301)
+        h["soc"] = h.get("soc", 0.0) + snap.soc * dt
 
     def local_hour(self, ts: float) -> float:
         d = self.local_datetime(ts)
@@ -873,6 +900,44 @@ class Site:
             return min(forced, model) if self.config.cap_forced_solar else forced
         return model
 
+    def _build_weather(self, wdict: dict) -> None:
+        wcfg = WeatherConfig.from_dict(wdict)
+        self.weather = None if wcfg.model == "bell" else Weather(
+            wcfg, seed=self.sky_seed, kwp=self.solar_peak_w / 1000.0 / wcfg.efficiency)
+        if self.weather is not None:                         # #268: say when Open-Meteo falls back
+            self.weather.on_fallback = lambda text: (getattr(self, "events", None) is not None
+                                                     and self.events.add("weather", text))
+            if self.pvlib is not None:
+                self.weather.clear_sky = self.pvlib.clear_sky_poa
+
+    def set_weather_model(self, model: str | None, latitude: float | None = None,
+                          longitude: float | None = None) -> None:
+        """Change the weather model now (#278). Coordinates: these, else the current weather's,
+        else the site's location. They are the weather's only: the site's time zone and its
+        location stay as configured."""
+        with self.lock:
+            cur = self.weather.cfg if self.weather is not None else None
+            wdict = {k: v for k, v in (self.config.weather or {}).items() if k not in ("model", "latitude", "longitude")}
+            if cur is not None:
+                wdict.update(sky=cur.sky, flicker=cur.flicker)
+            lat = latitude if latitude is not None else (cur.latitude if cur else self.location.latitude)
+            lon = longitude if longitude is not None else (cur.longitude if cur else self.location.longitude)
+            if (latitude is None) != (longitude is None):
+                raise ValueError("weather: give latitude and longitude together")
+            if latitude is not None and not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+                raise ValueError("weather: latitude is -90..90 and longitude -180..180")
+            if model is None:
+                model = cur.model if cur else ("open-meteo" if latitude is not None else "bell")
+            if lat is not None and model != "bell":
+                wdict.update(latitude=lat, longitude=lon)
+                if latitude is not None:
+                    wdict.pop("azimuth", None)                # re-derive north/south facing
+            if model in ("synthetic", "open-meteo") and lat is None:
+                raise ValueError(f"weather: model {model} needs a place: give latitude and longitude "
+                                 "(this gateway has no location)")
+            wdict["model"] = model
+            self._build_weather(wdict)
+
     def solar_model_w(self, ts: float) -> float:
         """What the solar model gives now: replayed data (as measured), or the weather model or
         the bell curve, each with the panel-temperature loss (#109)."""
@@ -881,7 +946,8 @@ class Site:
             if v is not None:
                 return v
         poa, base = self._solar_poa_w(ts)
-        return base * self.pv_temperature_factor(ts, poa)[1] * self._pv_age
+        wx = self.weather_events.factor(ts)                  # #270: a scheduled darker sky
+        return base * wx * self.pv_temperature_factor(ts, poa * wx)[1] * self._pv_age
 
     def _solar_poa_w(self, ts: float) -> tuple[float, float]:
         """(irradiance on the array W/m², PV output before the temperature loss W)."""
@@ -1454,6 +1520,7 @@ class Site:
         Switched-off smart circuits, and circuits below their islanded SoC cutoff, demand 0."""
         if self.load_override_w is not None:              # the house forced; heater/fan still draw
             out, comps = {"override": max(0.0, self.load_override_w)}, {"override": None}
+            self._add_circuit_loads(out, comps, islanded)
             self._add_battery_aux(out, comps)
             return out, comps
         if self.replay is not None:
@@ -1462,6 +1529,7 @@ class Site:
                 return {"recorded": v}, {"recorded": None}
         if self.loads is None:
             out, comps = {"house": self.load_w(ts)}, {"house": None}
+            self._add_circuit_loads(out, comps, islanded)
             self._add_battery_aux(out, comps)
             return out, comps
         ctx = Context(ts, self.local_datetime(ts), ambient, 0.0)
@@ -1471,6 +1539,9 @@ class Site:
         def allowed(c: Component) -> bool:
             if c.circuit is None:
                 return True
+            if (self.v2l is not None and self.v2l.circuit == c.circuit
+                    and self.v2l.available_w(islanded, self.generator.relay_closed) > 0):
+                return False                                  # the port is a V2L source now (#287)
             circ = self.circuits[c.circuit]
             if not circ.on:
                 return False
@@ -1485,8 +1556,33 @@ class Site:
             if c.type == "ev":
                 out[c.name] = c.demand(ctx, self.loads.seed) if allowed(c) else 0.0
                 comps[c.name] = c
+        self._add_circuit_loads(out, comps, islanded)
         self._add_battery_aux(out, comps)
         return out, comps
+
+    def _v2l_w(self, net_w: float, islanded: bool, max_charge_w: float = 0.0) -> float:
+        """V2L's share (#287): the house's shortfall after solar and the generator (``net_w``,
+        negative = surplus), off-grid, up to its limit; with ``charge_apower`` (#289) also the
+        aPower's remaining charge headroom. Nothing while the generator runs on the same input."""
+        if self.v2l is None:
+            return 0.0
+        cap = self.v2l.available_w(islanded, self.generator.relay_closed)
+        want = max(0.0, net_w)
+        if self.v2l.charge_apower:
+            want += max(0.0, max_charge_w - max(0.0, -net_w))
+        return min(cap, want)
+
+    def _add_circuit_loads(self, out: dict, comps: dict, islanded: bool) -> None:
+        """Watts set on a smart circuit (#279): they replace its appliances' demand, and obey the
+        circuit's switch and islanded SoC cutoff like any load on it."""
+        for n, w in self.circuit_load_w.items():
+            for name, c in comps.items():
+                if c is not None and c.circuit == n:
+                    out[name] = 0.0
+            circ = self.circuits[n]
+            ok = circ.on and not (islanded and circ.soc_low_cutoff and self.soc < circ.soc_low_cutoff)
+            out[f"circuit {n}"] = w if ok else 0.0
+            comps[f"circuit {n}"] = _CircuitLoad(n)
 
     def _add_battery_aux(self, out: dict, comps: dict) -> None:
         """The battery heater and fan draw like house loads (#111)."""
@@ -1512,6 +1608,7 @@ class Site:
         faulted = self.inverter_faulted()
         g = self.grid
         clipped = shed = var = 0.0
+        v2l_w = 0.0                                  # V2L supplies off-grid only (#287)
         throttle = 0
         ctl: dict = {}
         source = "none"
@@ -1533,7 +1630,8 @@ class Site:
             # aPower S DC PV is the aPower's own, not frequency-curtailed: it stays (#180).
             pv_in = pv.get("mppt", 0.0) if self.pv_cutoff else solar_avail
             gen_w = self.generator.output_w(load - pv_in, max_chg)
-            net = load - pv_in - gen_w
+            v2l_w = self._v2l_w(load - pv_in - gen_w, islanded, max_chg)
+            net = load - pv_in - gen_w - v2l_w
             on_circuits = [n for n, c in comps.items() if c is not None and c.circuit and demand[n] > 0]
             if net > max_dis and on_circuits:
                 # Short of power off-grid: the aGate sheds smart circuits first.
@@ -1542,7 +1640,8 @@ class Site:
                 circuits_shed = True
                 load = sum(demand.values())
                 gen_w = self.generator.output_w(load - pv_in, max_chg)
-                net = load - pv_in - gen_w
+                v2l_w = self._v2l_w(load - pv_in - gen_w, islanded, max_chg)
+                net = load - pv_in - gen_w - v2l_w
             clipped = solar_avail - pv_in
             if net >= 0:
                 batt = min(net, max_dis)
@@ -1553,14 +1652,14 @@ class Site:
             solar = solar_avail - clipped
             served = load - shed
             grid = 0.0
-            dark = served <= 0 and load > 0 and gen_w <= 0
-            if faulted and gen_w <= 0 or dark:
+            dark = served <= 0 and load > 0 and gen_w <= 0 and v2l_w <= 0
+            if faulted and gen_w <= 0 and v2l_w <= 0 or dark:
                 # Nothing forms the grid: the house is dark and PV inverters drop out.
                 v_legs = {ph: 0.0 for ph in self.phases}
                 hz = 0.0
                 inv = INV_FAULT if faulted else INV_STANDBY
                 solar, clipped, shed, served, batt = 0.0, solar_avail, load, 0.0, 0.0
-                gen_w = 0.0
+                gen_w = v2l_w = 0.0
             else:
                 v_legs = {ph: g.nominal_v_ln for ph in self.phases}
                 hz = PV_CUTOFF_HZ if self.pv_cutoff else self._droop(clipped, solar_avail, dt)
@@ -1695,7 +1794,7 @@ class Site:
             export_limit_w=enforced_limit, declared_export_limit_w=declared,
             export_over_limit_w=over, der_connected=der_on, csip_source=source,
             loads={n: round(w, 1) for n, w in served.items()}, circuit_w=circuit_w,
-            circuits_shed=circuits_shed, generator_w=gen_w,
+            circuits_shed=circuits_shed, generator_w=gen_w, v2l_w=v2l_w,
             gen_state=self.generator.state, gen_relay_closed=self.generator.relay_closed,
         )
 
@@ -1919,6 +2018,8 @@ class Site:
         self.pv_wh += snap.solar_w * hours
         self.gen_wh += snap.generator_w * hours
         self.generator.burn(snap.generator_w, dt)
+        if self.v2l is not None:
+            self.v2l.commit(snap.v2l_w, dt)
         self.load_wh += snap.load_w * hours
         for n, w in snap.circuit_w.items():
             self.circuits[n].energy_wh += w * hours
@@ -2128,12 +2229,20 @@ class Site:
             (self.apower_off.discard if on else self.apower_off.add)(n)
             self.rate_w = self._rate_on()
 
-    def set_circuit(self, n: int, on: bool) -> None:
+    def set_circuit(self, n: int, on: bool | None = None, w: float | None | str = "keep") -> None:
+        """Switch a circuit and/or set its load: ``w`` watts (#279), None = back to its appliances."""
         with self.lock:
             self.step()
             if n not in self.circuits:
                 raise ValueError(f"{self.model.agate.name} has smart circuits {self.circuit_range}")
-            self.circuits[n].on = bool(on)
+            if on is not None:
+                self.circuits[n].on = bool(on)
+            if w is None:
+                self.circuit_load_w.pop(n, None)
+            elif w != "keep":
+                if float(w) < 0:
+                    raise ValueError("circuit: w is 0 or more watts (null or auto hands it back)")
+                self.circuit_load_w[n] = float(w)
 
     def force_appliance(self, name: str, state: bool | None) -> None:
         """True = run now, False = off, None = back to its own schedule."""

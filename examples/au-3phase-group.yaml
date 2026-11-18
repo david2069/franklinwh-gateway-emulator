@@ -7,7 +7,7 @@
 #
 #   L1: aGate with 6 kW of AC-coupled solar on its AC port
 #   L2: aGate with air conditioning and hot water + induction cooktop on smart circuits 1 and 2
-#   L3: aGate with the EV charger on smart circuit 1 (V2L is not modelled), circuit 2 unused
+#   L3: aGate with the EV on smart circuit 1 and V2L (it supplies the home off-grid), circuit 2 unused
 defaults:
   host: 127.0.0.1
   setup: in-service
@@ -56,6 +56,7 @@ gateways:
     phases: [L3]
     seed: 33
     solar_peak_w: 0
+    v2l: {circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 2200, min_soc: 20}   # EV values: placeholders (#287)
     loads:
       - {name: base, type: base, w: 100, drift: 0.1}
       - {name: ev, type: ev, w: 7000, min_w: 1400, arrive: "18:00", depart: "07:30", kwh: 18,

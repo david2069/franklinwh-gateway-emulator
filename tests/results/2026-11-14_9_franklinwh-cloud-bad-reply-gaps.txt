@@ -1,0 +1,53 @@
+2026-11-14 franklinwh-cloud 0.6.5 against #311's broken replies (emulator main 2fd284f)
+Emulator only; no cloud, no aGate. Client with tolerate_stale_data=True; one good call first.
+Filed: david2069/franklinwh-cloud#41 (reset/truncate), #42 (dataArea), #43 (minor checks).
+
+== call, bad_reply, result
+get_stats                  reset           httpx.RemoteProtocolError (FranklinWHError: False): Server disconnected without sending a response.
+get_stats                  truncate        httpx.RemoteProtocolError (FranklinWHError: False): peer closed connection without sending complete message body (received
+get_stats                  not_json        franklinwh_cloud.exceptions.InvalidResponseError (FranklinWHError: True): GET returned a non-JSON body (HTTP 200) from http://127.0.0.1:<port>/he
+get_stats                  bad_data_area   json.decoder.JSONDecodeError (FranklinWHError: False): Expecting ',' delimiter: line 1 column 289 (char 288)
+get_stats                  not_envelope    returned Stats is_stale=True
+get_stats                  wrong_cmd_type  returned Stats is_stale=False
+get_stats                  bad_crc         returned Stats is_stale=False
+get_stats                  success_false   returned Stats is_stale=False
+get_device_composite_info  reset           httpx.RemoteProtocolError (FranklinWHError: False): Server disconnected without sending a response.
+get_device_composite_info  truncate        httpx.RemoteProtocolError (FranklinWHError: False): peer closed connection without sending complete message body (received
+get_device_composite_info  not_json        franklinwh_cloud.exceptions.InvalidResponseError (FranklinWHError: True): GET returned a non-JSON body (HTTP 200) from http://127.0.0.1:<port>/he
+get_device_composite_info  bad_data_area   returned dict keys=['code', 'message', 'result', 'success']
+get_device_composite_info  not_envelope    returned dict keys=['data', 'status']
+get_device_composite_info  wrong_cmd_type  returned dict keys=['code', 'message', 'result', 'success']
+get_device_composite_info  bad_crc         returned dict keys=['code', 'message', 'result', 'success']
+get_device_composite_info  success_false   returned dict keys=['code', 'message', 'result', 'success']
+
+== script
+    import asyncio, hashlib, json, urllib.parse, urllib.request
+    from franklinwh_emulator.control import apply
+    from franklinwh_emulator.gateway import Fleet
+    from franklinwh_cloud.auth import TokenAuth
+    from franklinwh_cloud.client import Client
+    from franklinwh_cloud.exceptions import FranklinWHError
+    f = Fleet.from_dict({"gateways": [{"id": "home", "port": 0, "dc_port": 0, "seed": 3}]})
+    f.start(cloud_port=0)
+    form = {"account": "owner@example.com", "password": hashlib.md5(b"emulator").hexdigest()}
+    req = urllib.request.Request(f"http://127.0.0.1:{f.cloud.port}/hes-gateway/terminal/initialize/appUserOrInstallerLogin",
+                                 data=urllib.parse.urlencode(form).encode(), method="POST")
+    token = json.load(urllib.request.urlopen(req))["result"]["token"]
+    for call in ("get_stats", "get_device_composite_info"):
+      for kind in ("reset", "truncate", "not_json", "bad_data_area", "not_envelope", "wrong_cmd_type", "bad_crc", "success_false"):
+        async def go():
+            c = Client(TokenAuth(token), f["home"].serial, url_base=f"http://127.0.0.1:{f.cloud.port}/",
+                       heartbeat=False, tolerate_stale_data=True)
+            await getattr(c, call)()                       # a good reading first: the stale cache has it
+            apply(f["home"], "cloud-faults", {"bad_reply": kind})
+            try:
+                r = await getattr(c, call)()
+                stale = getattr(r, "is_stale", None)
+                return f"returned {type(r).__name__}" + (f" is_stale={stale}" if stale is not None else "") + \
+                       (f" keys={sorted(r)[:4]}" if isinstance(r, dict) else "")
+            except Exception as e:
+                return f"{type(e).__module__}.{type(e).__name__} (FranklinWHError: {isinstance(e, FranklinWHError)}): {str(e)[:70]}"
+            finally:
+                apply(f["home"], "cloud-faults", {"bad_reply": None})
+        print(f"{call:26} {kind:15} {asyncio.run(go())}")
+    f.stop()

@@ -13,6 +13,11 @@ franklinwh-emulator ctl agate outage
 franklinwh-emulator ctl agate restore
 franklinwh-emulator ctl agate solar 6000          # or: solar auto
 franklinwh-emulator ctl agate fault session_held=true
+franklinwh-emulator ctl agate cloud-fault timeout=true   # Cloud API faults (docs: FranklinWH Cloud API)
+franklinwh-emulator ctl agate cloud-fault bad_reply=html_503 bad_reply_count=2   # broken replies
+franklinwh-emulator ctl agate weather model=synthetic latitude=-33.87 longitude=151.21
+franklinwh-emulator ctl agate circuit 2 on w=7000      # 7 kW on smart circuit 2; w=auto hands it back
+franklinwh-emulator ctl agate v2l on soc=70             # V2L (with `v2l:` in the fleet entry)
 franklinwh-emulator ctl --json agate status       # full state
 
 curl -s -X POST localhost:8502/gateways/agate/grid -d '{"hz": 51.3}'
@@ -31,6 +36,24 @@ session, or the `offline` fault) and requests per second; overall, the gateways,
 clients, TCP connections, refusals and requests per second; and the process: CPU % of one core
 since the previous read, memory now and at peak, threads, asyncio tasks, event-loop lag and
 uptime. Memory now comes from psutil when installed, else `/proc` or `ps`.
+
+From a shell, `franklinwh-emulator monitor` prints the same as a table. It reads a **running**
+emulator, so use two terminals: start the emulator in one and leave it running
+(`franklinwh-emulator ui examples/fleet.yaml`; its start-up lines end with the monitor command to
+use), then run `monitor` in the other. Stopping the emulator (Ctrl-C) ends what there is to see,
+and its counts and history start from zero at the next start. The table lists each connected
+client under its listener. Add gateway ids to show only those, `--history` for each gateway's
+client events (connected, left, refused, with the address and a repeat count; they share the
+1000-entry event log, so a long run can push old ones out, and the output says how many were
+dropped), `--watch 5` to redraw every 5 s until Ctrl-C, and `--json` for the raw reply.
+Read-only. An emulator that is running but doesn't answer within 5 s gets a message saying so
+(`ctl` too); under `--watch` the message replaces the table and the next round tries again (#293).
+
+```bash
+franklinwh-emulator monitor
+franklinwh-emulator monitor --history site
+franklinwh-emulator monitor --watch 5
+```
 
 **Events.** `GET /gateways/<id>/events` is what that gateway did on its own (the action log,
 `GET /log`, is what was asked): `{level, dropped, events: [{seq, rev, at, site_time, kind, text,

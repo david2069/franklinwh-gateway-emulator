@@ -12,7 +12,7 @@
   --warn: #f5a524;
   --bad: #f87171;
   /* Mode and battery-status colours (owner, #49) */
-  --c-green: #4ade80; --c-cyan: #22d3ee; --c-red: #f87171; --c-orange: #fb923c;
+  --c-green: #4ade80; --c-cyan: #22d3ee; --c-red: #f87171; --c-orange: #fb923c; --c-v2l: #f5a524; --v2l-bg: #2a2416;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   color-scheme: dark;
@@ -22,7 +22,7 @@
     --bg: #f4f6f9; --panel: #ffffff; --panel-2: #eef1f5; --line: #d5dbe4;
     --text: #172235; --text-2: #2c3a52; --muted: #56627a;
     --ok: #15803d; --ok-bg: #dcfce7; --warn: #b45309; --bad: #b91c1c;
-    --c-green: #15803d; --c-cyan: #0e7490; --c-red: #b91c1c; --c-orange: #c2410c;
+    --c-green: #15803d; --c-cyan: #0e7490; --c-red: #b91c1c; --c-orange: #c2410c; --c-v2l: #b45309; --v2l-bg: #fef3c7;
     color-scheme: light;
   }
 }
@@ -258,6 +258,7 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
 .comms-state { font: 13px var(--mono); color: var(--ok); }
 .comms-state.off { color: var(--muted); }
 .comms-state.warn { color: var(--warn); }
+.comms-state.cloud { flex-basis: 100%; }
 .comms button { font: 600 13px var(--sans); border-radius: 8px; padding: 0 12px; min-height: 36px; cursor: pointer;
   color: var(--text-2); background: var(--panel-2); border: 1px solid var(--line); }
 .comms button:disabled { opacity: .6; cursor: progress; }
@@ -377,5 +378,16 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
 .diagram .gv { font: 700 15px var(--mono); fill: var(--text); text-anchor: end; }
 .diagram .gv.l { font-size: 17px; text-anchor: start; }
 .diagram .pct.s { font-size: 14px; }
-.diagram .box.agate.active { stroke-width: 5; }
+.diagram .bn.s { font-size: 13px; }   /* group diagram: fits the 180-wide aPower tile (#264) */
+/* The active member of a grouped site (#267): cyan, as orange means FORCE/standby and red a fault. */
+.diagram .box.agate.active { stroke-width: 5; stroke: var(--c-cyan); }
+.diagram .box.agate.active.vpp { stroke: var(--warn); }
+.diagram .lbl.active { fill: var(--c-cyan); }
+.diagram .flow.active { stroke: var(--c-cyan); opacity: 1; }
 .diagram .box.tile.unused { stroke-dasharray: 6 4; }
+
+/* V2L (#287), as board E: amber tile, label and flow while the EV supplies the home. */
+.diagram .box.tile.v2l { stroke: var(--c-v2l); fill: var(--v2l-bg); }
+.diagram .ic.v2l { stroke: var(--c-v2l); }
+.diagram .ts.v2l { fill: var(--c-v2l); }
+.diagram .flow.v2l { stroke: var(--c-v2l); opacity: 1; }

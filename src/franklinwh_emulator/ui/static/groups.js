@@ -79,7 +79,7 @@ function pickValues(gateways, filters, field) {
 }
 
 // -- card health (#168) ----------------------------------------------------------------------
-// 'fault' (red): an alarm, a tripped main breaker, or an injected fault on either listener.
+// 'fault' (red): an alarm, a tripped main breaker, or an injected fault on any listener.
 // 'offline' (orange): rebooting, an episode with the listeners down, or a listener set offline.
 // Offline wins: a gateway that is down says so first. ``why`` is the card's tooltip.
 function injected(f) {
@@ -91,10 +91,15 @@ function cardHealth(g) {
   if (g.episode_phase === 'down') off.push('episode: listeners down');
   if (g.faults && g.faults.offline) off.push('Modbus TCP offline');
   if (g.dc_faults && g.dc_faults.offline) off.push('Direct Connect offline');
+  const cf = g.cloud_faults || {};
+  if (cf.offline) off.push('Cloud API offline');
   (g.alarm_names || []).forEach(a => bad.push('alarm ' + a));
   if (g.service && g.service.open) bad.push('main breaker tripped');
   injected(g.faults).forEach(k => bad.push('Modbus TCP fault ' + k));
   injected(g.dc_faults).forEach(k => bad.push('Direct Connect fault ' + k));
+  ['timeout', 'empty_composite', 'latency_s', 'bad_reply'].filter(k => cf[k])
+    .concat(cf.rate_limit_per_min != null ? ['rate_limit_per_min'] : [])
+    .forEach(k => bad.push('Cloud API fault ' + k));
   const state = off.length ? 'offline' : bad.length ? 'fault' : '';
   return { state, why: off.concat(bad).join(' · ') };
 }

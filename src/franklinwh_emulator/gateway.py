@@ -31,7 +31,7 @@ from .clock import Clock, ScaledClock, SystemClock
 from .control import ControlApi
 from .device import AGateDevice
 from .profiles import DEFAULT_PROFILE, get_profile
-from .server import Faults, ModbusServer
+from .server import CloudFaults, Faults, ModbusServer
 from .site import REFERENCE_COUNTERS, Site, SiteConfig
 
 _HEX = "0123456789ABCDEF"
@@ -209,11 +209,18 @@ class Gateway:
             cfg.events, site_time=lambda ts: site.local_datetime(ts).isoformat(timespec="seconds"),
             clock_now=lambda: site.clock.now())
         self.site.events = self.events                 # after backfill: its days aren't events
+        if site.weather is not None and site.weather.fallback:   # #268: a fallback before the log existed
+            self.events.add("weather", site.weather.fallback)
         self.device = AGateDevice(self.site, self.profile, serial=self.serial)
         self.faults = Faults()
         self.server = ModbusServer(self.device, cfg.host, cfg.port, self.faults)
         self.server.clients.notify = lambda what, peer: self.events.client("Modbus TCP", what, peer)
         self.dc_faults = Faults()
+        self.cloud_faults = CloudFaults()
+        from .monitor import SessionTable
+        self.cloud_clients = SessionTable()              # Cloud API sessions naming this gateway (#314)
+        self.cloud_clients.notify = lambda what, peer: self.events.client("Cloud API", what, peer)
+        self.cloud_api = None                            # the fleet's CloudApi while it runs
         self.dc = None
         is_agate = self.profile.name != "spec"          # every other profile is an aGate
         if cfg.dc_port is None and is_agate:
@@ -479,7 +486,7 @@ class Gateway:
 
 
 # Fleet `groups:` (#241): settings an aGate shares with the others on the same grid connection.
-GROUP_KEYS = ("seed", "location", "weather", "grid_code", "grid_overrides", "service", "utility",
+GROUP_KEYS = ("seed", "location", "weather", "weather_events", "grid_code", "grid_overrides", "service", "utility",
               "dnsp", "lines_company", "tz_offset_hours", "time_scale")
 
 
@@ -548,7 +555,8 @@ def expand_groups(d: dict) -> tuple[list[dict], list[tuple[str, str]]]:
 
 
 class Fleet:
-    def __init__(self, configs: list[GatewayConfig], *, clock: Clock | None = None):
+    def __init__(self, configs: list[GatewayConfig], *, clock: Clock | None = None,
+                 cloud: dict | None = None):
         ids = [c.id for c in configs]
         if len(set(ids)) != len(ids):
             raise ValueError(f"duplicate gateway ids: {ids}")
@@ -566,6 +574,8 @@ class Fleet:
             for gw in members:
                 gw.group_members = members
         self.control: ControlApi | None = None
+        self.cloud_config = cloud                # the fleet file's `cloud:` (#297)
+        self.cloud = None                        # CloudApi once started with cloud_port
         self._loop: _LoopThread | None = None
 
     @classmethod
@@ -573,7 +583,7 @@ class Fleet:
         entries, problems = expand_groups(d)
         if problems:
             raise ValueError("; ".join(f"{p}: {m}" for p, m in problems))
-        return cls([GatewayConfig.from_dict(g) for g in entries], clock=clock)
+        return cls([GatewayConfig.from_dict(g) for g in entries], clock=clock, cloud=d.get("cloud"))
 
     @classmethod
     def from_yaml(cls, path: str) -> "Fleet":
@@ -583,10 +593,12 @@ class Fleet:
         return self.gateways[gw_id]
 
     def start(self, control_port: int | None = None, control_host: str = "127.0.0.1",
-              *, ui: bool = False, workspace: str = "emulator-workspace") -> dict[str, tuple[str, int]]:
+              *, ui: bool = False, workspace: str = "emulator-workspace",
+              cloud_port: int | None = None, cloud_host: str | None = None) -> dict[str, tuple[str, int]]:
         """Start every gateway; with ``control_port`` (0 = ephemeral) also the HTTP
         control API, reachable afterwards as ``fleet.control.port``. ``ui``: serve the web UI
-        on that port too."""
+        on that port too. ``cloud_port``: the FranklinWH Cloud API (#297), as ``fleet.cloud``, on
+        ``cloud_host`` (default: ``control_host``)."""
         self._loop = self._loop or _LoopThread("franklinwh-emulator-fleet")
         addresses = {gid: gw.start(self._loop) for gid, gw in self.gateways.items()}
         if control_port is not None and self.control is None:
@@ -596,12 +608,19 @@ class Fleet:
             else:
                 self.control = ControlApi(self.gateways, control_host, control_port, workspace=workspace)
             self._loop.run(self.control.start())
+        if cloud_port is not None and self.cloud is None:
+            from .cloud import CloudApi
+            self.cloud = CloudApi(self.gateways, cloud_host or control_host, cloud_port, self.cloud_config)
+            self._loop.run(self.cloud.start())
         return addresses
 
     def stop(self) -> None:
         if self.control is not None and self._loop is not None:
             self._loop.run(self.control.stop())
             self.control = None
+        if self.cloud is not None and self._loop is not None:
+            self._loop.run(self.cloud.stop())
+            self.cloud = None
         for gw in self.gateways.values():
             gw.stop()
         if self._loop is not None:

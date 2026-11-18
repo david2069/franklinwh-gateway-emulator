@@ -80,7 +80,7 @@ def test_page_reads_only_fields_the_state_has(ui):
     fleet, _ = ui
     state = gateway_state(fleet["site"])
     text = "".join((STATIC / n).read_text() for n in ("index.html", "app.js", "diagram.js", "actions.js", "tou.js", "groups.js", "units.js"))
-    used = set(re.findall(r"\b(?:g|current)\.([a-z_]+)", text))
+    used = set(re.findall(r"\b(?:g|current)\.([a-z0-9_]+)", text))
     assert used and used <= set(state), sorted(used - set(state))
     leg_fields = set(re.findall(r"\bleg\.([a-z_]+)", text))
     leg_state = set(next(iter(state["phases"].values())))
@@ -465,6 +465,11 @@ def test_card_health(tmp_path):
         "episode": {**clean, "episode_phase": "down"},
         "offgrid": {**clean, "episode_phase": "offgrid"},
         "mb_off": {**clean, "faults": {**clean["faults"], "offline": True}},
+        "cloud_ok": {**clean, "cloud_faults": {"offline": False, "rate_limit_per_min": None, "latency_s": 0,
+                                               "bad_reply": None, "bad_reply_count": 0, "bad_reply_p": 1.0}},
+        "cloud_bad": {**clean, "cloud_faults": {"bad_reply": "html_503", "bad_reply_p": 1.0,
+                                                "rate_limit_per_min": None}},
+        "cloud_off": {**clean, "cloud_faults": {"offline": True, "rate_limit_per_min": 0}},
         "bare": {},
     }
     harness = tmp_path / "health.js"
@@ -478,6 +483,9 @@ def test_card_health(tmp_path):
     assert r["dc_exc"] == {"state": "fault", "why": "Direct Connect fault exception"}
     assert r["reboot"] == {"state": "offline", "why": "rebooting · alarm OVER_TEMP"}
     assert r["episode"]["state"] == "offline" and r["mb_off"]["why"] == "Modbus TCP offline"
+    assert r["cloud_ok"] == r["ok"]                                   # #314: defaults are no fault
+    assert r["cloud_bad"] == {"state": "fault", "why": "Cloud API fault bad_reply"}
+    assert r["cloud_off"] == {"state": "offline", "why": "Cloud API offline · Cloud API fault rate_limit_per_min"}
 
 
 # -- card model text with SKUs (#191) -------------------------------------------------------------
@@ -614,9 +622,12 @@ def test_group_diagram_draws_every_phase_with_home_loads(tmp_path):
                        "  total: h.includes('Home Loads, all phases'),\n"
                        "  meter: /class=\"svc[^\"]*\"[^>]*>([^<]*)/.exec(h)[1],\n"
                        "  solar: (h.match(/AC solar · [\\d.]+ kWp/g) || []),\n"
-                       "  circuits: (h.match(/>SC \\d · O/g) || []).length,\n"
+                       "  circuits: (h.match(/>SC \\d · /g) || []).length,\n"
+                       "  v2l: (h.match(/>SC 1 · V2L · Standby</g) || []).length,\n"
                        "  unused: h.includes('>Unused<'),\n"
                        "  active: (h.match(/box agate active/g) || []).length,\n"
+                       "  activeTitle: (/class=\"lbl b active\"[^>]*>([^<]*)/.exec(h) || [])[1],\n"
+                       "  activeLines: (h.match(/class=\"flow \\w+ active\"/g) || []).length,\n"
                        "  model: /class=\"dt-model\">([^<]*)/.exec(h)[1],\n"
                        "  solo: solo.includes('FranklinWH aGate') && !solo.includes('aGate 1 · L1') }));\n")
     r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
@@ -625,6 +636,111 @@ def test_group_diagram_draws_every_phase_with_home_loads(tmp_path):
     assert r["meter"] == "3 × 63 A · 400 V"
     assert r["solar"] == ["AC solar · 6 kWp"]            # only L1 has PV
     assert r["circuits"] == 4 and r["unused"]             # SC 1 + 2 on L2 and L3; L3's SC 2 is free
+    assert r["v2l"] == 1                                   # #287: L3's EV on SC 1 is V2L, ready on-grid
     assert r["active"] == 1
+    assert r["activeTitle"] == "aGate 2 · L2" and r["activeLines"] == 1   # #267: S[1] is the active one
     assert r["model"] == "3× aGate X-01-AU (one per phase) · 3× aPower X-01-AU · 40.8 kWh · PV 6 kWp"
     assert r["solo"]                                       # without the others: the single board
+
+
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_group_diagram_tiles_do_not_overlap(tmp_path):
+    """#263: on an aGate with smart circuits and AC solar, Home Loads ends before AC solar."""
+    import re
+    import subprocess
+    from franklinwh_emulator.clock import ManualClock
+    from franklinwh_emulator.gateway import Fleet, load_yaml
+    f = Fleet.from_dict(load_yaml("examples/au-3phase-group.yaml"), clock=ManualClock(1_793_584_800))
+    states = [gateway_state(gw) for gw in f.gateways.values()]
+    harness = tmp_path / "group.js"
+    harness.write_text("const performance = {now: () => 0};\n" +
+                       (STATIC / "units.js").read_text() + (STATIC / "groups.js").read_text() +
+                       (STATIC / "diagram.js").read_text() +
+                       f"\nconst S = {json.dumps(states, default=str)};\n"
+                       "S[0].circuits = S[1].circuits;   // L1: smart circuits and AC solar, as on the owner's screen\n"
+                       "print(renderDiagram(S[0], 'C', S));\n")
+    h = subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout
+    assert "AC solar" in h and ">SC 1 · O" in h
+    rows: dict[float, list[tuple[float, float]]] = {}
+    for x, y, w in re.findall(r'class="box tile[^"]*" x="([\d.]+)" y="([\d.]+)" width="([\d.]+)"', h):
+        rows.setdefault(float(y), []).append((float(x), float(x) + float(w)))
+    for y, spans in rows.items():
+        spans.sort()
+        for (_, end), (start, _) in zip(spans, spans[1:]):
+            assert end <= start, f"tiles overlap at y={y}: {spans}"
+
+
+def test_group_diagram_apower_name_fits_its_tile():
+    """#264: the group diagram's aPower name uses the small size, which the CSS sets to 13 px."""
+    import re
+    js = (STATIC / "diagram.js").read_text()
+    group = js[js.index("function renderGroupDiagram"):]
+    assert '<text class="bn s"' in group
+    size = re.search(r"\.diagram \.bn\.s \{ font-size: (\d+)px", (STATIC / "style.css").read_text())
+    assert size and int(size[1]) <= 13
+
+
+def test_active_agate_is_cyan_not_a_status_colour():
+    """#267: the active aGate's box, title and line use cyan; orange and red keep their meanings."""
+    css = (STATIC / "style.css").read_text()
+    for rule in (".diagram .box.agate.active {", ".diagram .lbl.active {", ".diagram .flow.active {"):
+        line = next(l for l in css.splitlines() if l.startswith(rule))
+        assert "var(--c-cyan)" in line, line
+
+
+def test_weather_line_names_open_meteo_and_its_fallback():
+    """#268: the weather line says Open-Meteo, or that it is unavailable and the sky is synthetic."""
+    js = (STATIC / "diagram.js").read_text()
+    assert "'Open-Meteo unavailable · synthetic '" in js and ": 'Open-Meteo'," in js
+
+
+def test_weather_line_shows_a_weather_event():
+    """#270: the weather line names the scheduled sky and when it ends."""
+    js = (STATIC / "diagram.js").read_text()
+    assert "g.weather_event ? 'weather event: ' + skyLabel(g.weather_event.sky) + ' until '" in js
+
+
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_card_weather_text(tmp_path):
+    """#277: each card says what weather the gateway is on."""
+    import subprocess
+    harness = tmp_path / "wx.js"
+    harness.write_text((STATIC / "diagram.js").read_text() + """
+print(JSON.stringify([
+  weatherText({weather: null}),
+  weatherText({weather: {model: 'synthetic', sky: 'storm'}}),
+  weatherText({weather: {model: 'open-meteo', sky: 'broken', fallback: null}}),
+  weatherText({weather: {model: 'open-meteo', sky: 'broken', fallback: 'no network'}}),
+  weatherText({weather: {model: 'open-meteo', fallback: null},
+               weather_event: {sky: 'overcast', end: '2026-11-07T15:00+11:00'}})]));
+""")
+    r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
+    assert r == ["Weather: bell curve", "Weather: synthetic · storm", "Weather: Open-Meteo",
+                 "Weather: Open-Meteo unavailable · synthetic broken cloud",
+                 "Weather: Open-Meteo · overcast until 15:00"]
+    assert 'x-text="weatherText(g)"' in (STATIC / "index.html").read_text()
+
+
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_group_diagram_draws_v2l_supplying_as_board_e(tmp_path):
+    """#287: L3's SC 1 is 'SC 1 · V2L · Active' in amber, the EV tile shows its SoC and kW,
+    and the flow runs from the EV to the aGate."""
+    import subprocess
+    from franklinwh_emulator.clock import ManualClock
+    from franklinwh_emulator.gateway import Fleet, load_yaml
+    f = Fleet.from_dict(load_yaml("examples/au-3phase-group.yaml"), clock=ManualClock(1_793_584_800))
+    states = [gateway_state(gw) for gw in f.gateways.values()]
+    harness = tmp_path / "v2l.js"
+    harness.write_text("const performance = {now: () => 0};\n" +
+                       (STATIC / "units.js").read_text() + (STATIC / "groups.js").read_text() +
+                       (STATIC / "diagram.js").read_text() +
+                       f"\nconst S = {json.dumps(states, default=str)};\n"
+                       "Object.assign(S[2].v2l, {state: 'Active', power_w: 2200, ev_soc: 76.4});\n"
+                       "const h = renderDiagram(S[2], 'C', S);\n"
+                       "print(JSON.stringify({label: h.includes('>SC 1 · V2L · Active<'),\n"
+                       "  ev: h.includes('>EV · 76%<') && h.includes('>2.20 kW<'),\n"
+                       "  amber: (h.match(/box tile v2l/g) || []).length,\n"
+                       "  flows: (h.match(/class=\"flow fwd v2l\"/g) || []).length,\n"
+                       "  listed: NOT_MODELLED.includes('V2L')}));\n")
+    r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
+    assert r == {"label": True, "ev": True, "amber": 2, "flows": 2, "listed": False}

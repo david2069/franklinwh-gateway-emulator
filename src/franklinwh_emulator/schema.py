@@ -12,7 +12,7 @@ from dataclasses import fields
 from typing import Any
 
 from .profiles import PROFILES
-from .server import DC_UNSUPPORTED_FAULTS, Faults
+from .server import BAD_REPLIES, DC_UNSUPPORTED_FAULTS, Faults
 from .site import ALARMS, MODE_NAMES, PV_INPUTS
 from .weather import SKIES
 
@@ -169,6 +169,21 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "fields": _fault_fields(exclude=DC_UNSUPPORTED_FAULTS),
         "examples": [{"latency_s": 0.5}],
     },
+    "cloud-faults": {
+        "doc": "FranklinWH Cloud API fault injection, on cloud requests naming this gateway.",
+        "fields": {"offline": _f("boolean", "sendMqtt code 136 (gateway offline); gateway list status 0"),
+                   "timeout": _f("boolean", "sendMqtt code 102 (device timeout)"),
+                   "rate_limit_per_min": _f("integer", "past this many requests a minute: 429 + Retry-After",
+                                            nullable=True),
+                   "latency_s": _f("number", "delay before every reply", unit="s"),
+                   "empty_composite": _f("boolean", "getDeviceCompositeInfo: HTTP 200, result null"),
+                   "bad_reply": _f("string", "a broken reply below the envelope", enum=list(BAD_REPLIES),
+                                   labels=BAD_REPLIES, nullable=True),
+                   "bad_reply_count": _f("integer", "only the next N replies; 0 = every one"),
+                   "bad_reply_p": _f("number", "the chance each request gets it (0-1)")},
+        "examples": [{"timeout": True}, {"rate_limit_per_min": 30},
+                     {"bad_reply": "html_503", "bad_reply_count": 2}],
+    },
     "utility": {
         "doc": "Set the grid operator's rules (utility / DNSP / lines company), as PCS settings: "
                "export allowed, limited or prohibited, import limit, battery export. clear = none.",
@@ -281,9 +296,17 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "examples": [{"value": 55}],
     },
     "weather": {
-        "doc": "Change the sky (synthetic and open-meteo weather only).",
-        "fields": {"sky": _f("string", enum=sorted(SKIES)), "flicker": _f("boolean", "open-meteo: add sub-15-minute cloud edges")},
-        "examples": [{"sky": "storm"}],
+        "doc": "Change the weather model and its place (#278), or the sky (synthetic and open-meteo). "
+               "Coordinates are the weather's only; the site's time zone and location stay as configured. "
+               "On a grouped site it reaches every aGate (one sky).",
+        "fields": {"model": _f("string", "bell = the half-sine day; synthetic and open-meteo need a place",
+                               enum=["bell", "synthetic", "open-meteo"]),
+                   "latitude": _f("number", "with longitude: where the weather is (default: the site's location)", unit="°"),
+                   "longitude": _f("number", "with latitude", unit="°"),
+                   "sky": _f("string", enum=sorted(SKIES)),
+                   "flicker": _f("boolean", "open-meteo: add sub-15-minute cloud edges")},
+        "examples": [{"sky": "storm"}, {"model": "synthetic", "latitude": -33.87, "longitude": 151.21, "sky": "broken"},
+                     {"model": "bell"}],
     },
     "apower": {
         "doc": "Switch an aPower off or on at its physical switch. Off: it adds no charge or discharge "
@@ -295,11 +318,14 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "examples": [{"n": 1, "on": False}, {"n": 1, "on": True}],
     },
     "circuit": {
-        "doc": "Switch a smart circuit.",
+        "doc": "Switch a smart circuit, and/or set the load on it (#279).",
         "fields": {"n": _f("integer", enum=[1, 2, 3]),
-                   "on": _f("boolean", "true = circuit on; false = switched off")},
-        "required": ["n", "on"],
-        "examples": [{"n": 2, "on": False}],
+                   "on": _f("boolean", "true = circuit on; false = switched off"),
+                   "w": _f("number", "watts drawn on this circuit, replacing its appliances; "
+                           "null = back to its appliances", unit="W", nullable=True)},
+        "required": ["n"],
+        "required_any": ["on", "w"],
+        "examples": [{"n": 2, "on": False}, {"n": 2, "on": True, "w": 7000}, {"n": 2, "w": None}],
     },
     "appliance": {
         "doc": "Force an appliance on or off, or hand it back to its schedule.",
@@ -309,6 +335,15 @@ ACTIONS: dict[str, dict[str, Any]] = {
                             nullable=True)},
         "required": ["name"],
         "examples": [{"name": "ev", "on": True}, {"name": "ev", "on": None}],
+    },
+    "v2l": {
+        "doc": "V2L (#287): the app's V2L Control (enable or disable the EV supplying the home, off-grid "
+               "only), Allow charging to aPower, or the EV's state of charge.",
+        "fields": {"on": _f("boolean", "true = V2L enabled: it supplies when off-grid and the generator is off"),
+                   "ev_soc": _f("number", "the EV's state of charge now", unit="%"),
+                   "charge_apower": _f("boolean", "the app's \"Allow charging to aPower?\": V2L may also charge the aPower")},
+        "required_any": ["on", "ev_soc", "charge_apower"],
+        "examples": [{"on": True}, {"ev_soc": 60}, {"on": False}],
     },
     "generator": {
         "doc": "The generator: 1901 settings, hardware, manual start/stop, faults, fuel.",
@@ -394,9 +429,9 @@ GROUPS: dict[str, list[str]] = {
     "Inputs": ["pv", "load", "ambient", "weather"],
     "Battery and modes": ["vpp", "release", "mode", "tou", "reserve", "soc", "apower", "time-machine"],
     "Loads": ["circuit", "appliance"],
-    "Generator": ["generator"],
+    "Generator": ["generator", "v2l"],
     "CSIP and comms": ["csip", "der-comms", "dc-modbus", "dc-reboot", "firmware", "export"],
-    "Alarms and faults": ["alarms", "faults", "dc-faults", "range-fault", "write-reject",
+    "Alarms and faults": ["alarms", "faults", "dc-faults", "cloud-faults", "range-fault", "write-reject",
                           "addressing", "episode", "debug-mode"],
 }
 for _group, _names in GROUPS.items():
@@ -413,6 +448,9 @@ def check_body(action: str, body: dict) -> str | None:
     missing = [k for k in spec.get("required", []) if k not in body]
     if missing:
         return f"{action}: missing {missing}"
+    any_of = spec.get("required_any")
+    if any_of and not any(k in body for k in any_of):
+        return f"{action}: give {', '.join(any_of[:-1])} or {any_of[-1]}, or both"
     return None
 
 

@@ -163,6 +163,10 @@ function running() {
       if (g.modbus_listening) return 'Modbus TCP Server closing…';
       return 'Modbus TCP Server off';
     },
+    // -- the FranklinWH Cloud API (#314): one listener for the account, every gateway on it -------
+    cloudText(g) {
+      return g.cloud_address ? 'Cloud API on · ' + this.addr(g.cloud_address) : 'Cloud API off (start with --cloud-port)';
+    },
     async dcModbus(on) {
       const gw = this.active;
       const key = gw + '/dc-modbus';
@@ -347,7 +351,10 @@ function running() {
     },
     monTotals(m) {
       const t = m.totals;
-      return t.connections + ' connected · ' + t.accepted + ' seen since start · ' + t.refused_1h + ' refused in the last hour · ' + t.requests_per_s + ' req/s';
+      const n = m.cloud ? Object.values(m.cloud.unserved || {}).reduce((a, b) => a + b, 0) : 0;
+      const c = m.cloud ? ' · Cloud API ' + m.cloud.logins + ' logins, ' + m.cloud.requests + ' requests' +
+                          (n ? ', ' + n + ' not emulated' : '') : '';
+      return t.connections + ' connected · ' + t.accepted + ' seen since start · ' + t.refused_1h + ' refused in the last hour · ' + t.requests_per_s + ' req/s' + c;
     },
     monProcess(p) {
       const up = Math.floor(p.uptime_s / 3600) + ' h ' + Math.floor(p.uptime_s % 3600 / 60) + ' min';
@@ -362,7 +369,7 @@ function running() {
     monListener(l) {
       if (!l) return '—';
       if (!l.listening) return 'not listening';
-      const who = l.clients.map(c => c.peer + ' (' + Math.round(c.connected_s) + ' s, ' + c.requests + ' req)');
+      const who = l.clients.map(c => c.peer + (c.app ? ' ' + c.app : '') + ' (' + Math.round(c.connected_s) + ' s, ' + c.requests + ' req)');
       const parts = [who.length ? who.join(', ') : l.accepted ? 'none now' : 'none since start'];
       if (!who.length && l.last_client) {        // #154: who was here, so a short visit still shows
         const c = l.last_client;
@@ -371,7 +378,12 @@ function running() {
       if (l.accepted) parts.push(l.accepted + ' since start');
       if (l.refused_1h) parts.push(l.refused_1h + ' refused, last ' + l.last_refused.peer + ' ' + Math.round(l.last_refused.ago_s) + ' s ago');
       if (l.requests_per_s) parts.push(l.requests_per_s + ' req/s');
+      const un = Object.keys(l.unserved || {}).length;
+      if (un) parts.push(un + (un === 1 ? ' call' : ' calls') + ' not emulated');
       return parts.join(' · ');
+    },
+    unservedRows(m) {                       // #316: the Cloud API calls not emulated yet, most first
+      return Object.entries((m.cloud && m.cloud.unserved) || {}).sort((a, b) => b[1] - a[1]);
     },
 
     // The emulator restarted, or now runs other code: this page (and its state) is out of date.
@@ -453,6 +465,15 @@ function running() {
       const f = g.faults || {};
       const on = Object.keys(f).filter(k => f[k] && k !== 'range_fault');
       if (f.range_fault) on.push('range ' + f.range_fault.start + '–' + f.range_fault.end);
+      return on;
+    },
+    cloudFaultList(g) {                     // #314: the Cloud API faults set on this gateway
+      const f = g.cloud_faults || {};
+      const on = ['offline', 'timeout', 'empty_composite'].filter(k => f[k]);
+      if (f.rate_limit_per_min != null) on.push('rate limit ' + f.rate_limit_per_min + '/min');
+      if (f.latency_s) on.push('latency ' + f.latency_s + ' s');
+      if (f.bad_reply) on.push(f.bad_reply + (f.bad_reply_count ? ' ×' + f.bad_reply_count : '') +
+                               (f.bad_reply_p < 1 ? ' p=' + f.bad_reply_p : ''));
       return on;
     },
     // Colour classes: mode by native_mode (15507: 1 Backup, 2 Self, 3 TOU); battery by run status.

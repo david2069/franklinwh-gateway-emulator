@@ -1,0 +1,17 @@
+Cloud API phase 2c (#307): storm, generator and grid-limit settings
+Date: 2026-11-14
+
+Break check (cloud.py at 2b, new tests/test_cloud_settings.py): 4 failed
+  test_storm_settings_round_trip (switchStorm etc. 404), test_generator_schedule_reaches_the_model_and_direct_connect,
+  test_grid_limits_change_the_site, test_grid_charge_off_stops_grid_charging
+With the change: 4 passed. Client log: one expected error (advanceBackupTime 5 refused, 30-300).
+
+Acceptance (franklinwh-cloud 0.6.5 via url_base, TokenAuth):
+  set_storm_settings(1, 90, 10, 1) -> True; get_storm_settings reads 1/90/1/10; get_storm_list []
+  set_generator_charge_schedule([11:00-13:30], confirm=True) -> verified True; the generator block and
+    Direct Connect 1902 read charge1 11:00-13:30, charge2 off
+  set_power_control_settings(0, 0): utility grid_charge off, battery_export off; reads 0/0
+  set_power_control_settings(-1, 3.5): grid_charge_max_w 3500; reads -1/3.5; -5 -> code 400
+  TOU GRID_CHARGE all day, no solar: battery charging from the grid; after globalGridChargeMax 0 it stops
+
+Full suite: 813 passed. check_pii --scan: no leaks. mkdocs build --strict: OK.

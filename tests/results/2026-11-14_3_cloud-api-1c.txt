@@ -1,0 +1,18 @@
+Cloud API phase 1c (#301): getFhpPowerByDay, getFhpElectricData
+Date: 2026-11-14
+
+Break check (cloud.py without the energy routes, new tests): 4 failed, 1 passed
+  - test_power_by_day_is_the_day_in_quarter_hours, test_a_day_matches_direct_connect_1303_and_its_power_samples,
+    test_periods_follow_the_clouds_date_rules, test_franklinwh_cloud_reads_the_energy_history: HTTP 404
+  - test_split_conserves_every_source_and_the_home passes (cloud_energy.split alone)
+With the change: tests/test_cloud_energy.py 5 passed, tests/test_cloud.py 11 passed.
+
+Spot check (seed 3, AU, bell weather, backfill 2 days), 2026-11-13 type 1:
+  kwhSuArray 29.43 = kwhSolarLoadArray 10.41 + soChBatArray 11.55 + soOutGridArray 7.46
+  kwhLoadArray 21.42 = solar 10.41 + battery 9.74 + grid 1.27
+  Samples: 00:00 SoC 49.1 discharging 0.617 kW to home; 12:00 SoC 67.6 charging 2.791 kW from solar.
+Day totals equal Direct Connect 1303 for the same day (within 0.02 kWh).
+
+Acceptance: franklinwh-cloud 0.6.5 get_power_by_day (96 samples) and get_power_details(2, Monday) (7 days).
+
+Full suite: 801 passed. check_pii --scan: no leaks. mkdocs build --strict: OK.

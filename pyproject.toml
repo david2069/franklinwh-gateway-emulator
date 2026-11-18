@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "franklinwh-gateway-emulator"
-version = "0.2.3.dev0"
+version = "0.2.4.dev0"
 description = "FranklinWH aGate emulator — Modbus TCP (SunSpec + extension registers), multi-gateway"
 readme = "README.md"
 license = "MIT"
@@ -27,6 +27,8 @@ dev = [
     "pvlib>=0.11",
     "pytest>=7.0",
     "pymodbus>=3.6",
+    "franklinwh-cloud>=0.6.5",                 # the Cloud API's acceptance client (#297)
+    "franklinwh==2026.3.*",                    # richo's library, as homeassistant-franklinwh pins it (#322)
     "franklinwh-modbus @ git+https://github.com/david2069/franklinwh-modbus.git@38a80f8b3f24e573f5ee3c5c0bca3e0526d4566b",  # v0.11.0: ships firmware_quirks.json
 ]
 

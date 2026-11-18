@@ -1,0 +1,18 @@
+Cloud API phase 1b (#299): sendMqtt 203/211/311, selectOffgrid
+Date: 2026-11-14
+
+Break check (cloud.py at 1a, new tests): 4 failed, 7 passed
+  - test_send_mqtt_211_is_the_electrical_reading: 211 -> code 400
+  - test_send_mqtt_311_and_203: 311 -> code 400
+  - test_select_offgrid_tells_a_request_from_an_outage: HTTP 404
+  - test_franklinwh_cloud_client_reads_the_emulator: franklinwh-cloud logged
+    "get_power_info() failed ... cmdType 211 is not emulated yet" and
+    "get_grid_status() failed during gate check"; grid_line_voltage 0
+With the change: tests/test_cloud.py 11 passed.
+
+Acceptance (franklinwh-cloud 0.6.5, url_base only, TokenAuth):
+  get_stats(include_electrical=True): grid_line_voltage and grid_frequency equal the site's
+  line-to-neutral voltage and frequency at that read (AU site: gridLineVol 10 x V, both legs V/2).
+  Off-grid requested: grid_connection_state SIMULATED_OFF_GRID (via selectOffgrid).
+
+Full suite: 796 passed. check_pii --scan: no leaks. mkdocs build --strict: OK.

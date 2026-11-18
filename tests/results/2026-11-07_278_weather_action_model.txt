@@ -1,0 +1,18 @@
+# #278 weather action: set the model and coordinates at runtime — 2026-11-07
+
+Branch weather-action-model, base main 781a9e1.
+
+## New tests
+22 passed in 0.39s
+
+## Break check
+with src stashed, the 3 new or changed tests in tests/test_weather.py fail; restored, 22 passed
+
+## Full suite
+759 passed in 48.44s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

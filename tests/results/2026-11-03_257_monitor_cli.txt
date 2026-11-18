@@ -1,0 +1,18 @@
+# #257 monitor command: clients, TCP connections and connection history from the shell — 2026-11-03
+
+Branch monitor-cli, base main 3101b84.
+
+## New tests
+9 passed in 0.31s
+
+## Break check
+with src stashed, both new tests in tests/test_monitor.py fail (no monitor command); restored, 9 passed
+
+## Full suite
+723 passed in 41.32s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

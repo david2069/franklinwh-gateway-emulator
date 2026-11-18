@@ -1,5 +1,11 @@
 # franklinwh-gateway-emulator
 
+[![release](https://img.shields.io/github/v/release/david2069/franklinwh-gateway-emulator)](https://github.com/david2069/franklinwh-gateway-emulator/releases/latest)
+[![tests](https://github.com/david2069/franklinwh-gateway-emulator/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/david2069/franklinwh-gateway-emulator/actions/workflows/test.yml)
+[![docs](https://github.com/david2069/franklinwh-gateway-emulator/actions/workflows/docs.yml/badge.svg?branch=main)](https://david2069.github.io/franklinwh-gateway-emulator/)
+[![python](https://img.shields.io/badge/python-%3E%3D3.10-blue)](pyproject.toml)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 An emulator of the FranklinWH **aGate** for testing without hardware. It serves the **Direct
 Connect** local protocol (TCP/9000) and **Modbus TCP** (SunSpec chain plus FranklinWH
 extension registers), both in front of one **closed-loop site model**, so control commands

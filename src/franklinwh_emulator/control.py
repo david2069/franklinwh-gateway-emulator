@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING
 
 from .monitor import ProcessMonitor
 from .schema import ACTIONS, check_body, schema
-from .server import Faults
+from .server import BAD_REPLIES, CloudFaults, Faults
 from . import models
 from .site import ALARMS, INV_NAMES, MODE_NAMES, RUN_NAMES
 from .weather import SKIES, sun_position
@@ -75,8 +75,17 @@ class ApiError(Exception):
         self.status = status
 
 
+def _weather_event(site, ts: float) -> dict | None:
+    a = site.weather_events.active(ts)
+    if a is None:
+        return None
+    fmt = lambda t: site.local_datetime(t).isoformat(timespec="minutes")
+    return {"sky": a["sky"], "entry": a["entry"], "start": fmt(a["start"]), "end": fmt(a["end"])}
+
+
 def gateway_state(gw: "Gateway") -> dict:
     snap = gw.site.step()
+    gw.cloud_clients.sweep()                              # idle Cloud API sessions leave (#314)
     site = gw.site
     state = asdict(snap)
     state["alarm_names"] = [n for n, b in ALARMS.items() if snap.alarms & (1 << b)]
@@ -85,6 +94,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "serial": gw.serial,
         "address": list(gw.address),
         "dc_address": list(gw.dc_address) if gw.dc_address else None,
+        "cloud_address": [gw.cloud_api.host, gw.cloud_api.port] if gw.cloud_api else None,
         "profile": gw.profile.name,
         "firmware": gw.profile.firmware + (" (candidate)" if gw.profile.name.endswith("-candidate") else "")
                     if gw.profile.name != "spec" else "SunSpec DER (spec)",
@@ -160,10 +170,17 @@ def gateway_state(gw: "Gateway") -> dict:
         "tou_reserve": site.tou_reserve,
         "weather": None if site.weather is None else {
             "model": site.weather.cfg.model, "sky": site.weather.cfg.sky,
-            "kwp": site.weather.kwp, "poa_w_m2": round(site.weather.poa(snap.ts), 1)},
+            "kwp": site.weather.kwp, "poa_w_m2": round(site.weather.poa(snap.ts), 1),
+            "fallback": site.weather.fallback},       # #268: why Open-Meteo is not in use, or None
+        "weather_event": _weather_event(site, snap.ts),   # #270: the scheduled sky now, or None
         "generator": site.generator.status(),
+        # V2L (#287): the EV supplying the home off-grid, or None when not fitted.
+        "v2l": None if site.v2l is None else site.v2l.status(not site.grid_relay_closed,
+                                                             site.generator.relay_closed,
+                                                             snap.v_ln or 0.0, snap.hz or 0.0),
         "faults": asdict(gw.faults),
         "dc_faults": asdict(gw.dc_faults),
+        "cloud_faults": asdict(gw.cloud_faults),
         "modbus_enabled": gw.modbus_enabled,
         "modbus_listening": gw.server._server is not None,   # :502 open now (lags a 1205 write ~3 s)
         "rebooting": gw.rebooting,                          # both listeners down for a 1721 reboot
@@ -181,6 +198,7 @@ def gateway_state(gw: "Gateway") -> dict:
         "location": asdict(site.location),
         "today_kwh": {k: round(v, 4) for k, v in site.today_kwh().items()},
         "circuits": {str(n): {"name": c.name, "on": c.on, "power_w": round(snap.circuit_w.get(n, 0.0), 1),
+                              "set_w": site.circuit_load_w.get(n),     # #279: watts set at runtime, or None
                               "energy_kwh": round(c.energy_wh / 1000.0, 3),
                               "soc_low_cutoff": c.soc_low_cutoff}
                      for n, c in site.circuits.items()},
@@ -228,6 +246,29 @@ def _pv_temperature(site, ts: float) -> dict | None:
 def _num_or_none(body: dict, key: str):
     v = body[key]
     return None if v is None else float(v)
+
+
+def _weather(gw: "Gateway", body: dict) -> None:
+    """The weather model, its place and the sky (#278). Grouped aGates share one sky (#283): the
+    change reaches every member. Checked on the active one first, so a refusal changes nothing."""
+    if "sky" in body and body["sky"] not in SKIES:
+        raise ApiError(400, f"weather: sky must be one of {sorted(SKIES)}")
+    for m in [gw] + [x for x in gw.group_members if x is not gw]:
+        site = m.site
+        if any(k in body for k in ("model", "latitude", "longitude")):
+            try:
+                site.set_weather_model(body.get("model"), body.get("latitude"), body.get("longitude"))
+            except ValueError as e:
+                raise ApiError(400, str(e)) from None
+        if site.weather is None:
+            if "sky" in body or "flicker" in body:
+                raise ApiError(400, "weather: this gateway is on the bell curve, which has no sky: "
+                                    "send model: synthetic (with latitude and longitude if it has no "
+                                    "location) first")
+            continue
+        for key in ("sky", "flicker"):
+            if key in body:
+                setattr(site.weather.cfg, key, body[key])
 
 
 def _grid(gw: "Gateway", body: dict) -> None:
@@ -399,12 +440,29 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
                 site.step()
                 site.soc = max(0.0, min(100.0, float(body["value"])))
         elif action == "circuit":
-            site.set_circuit(int(body["n"]), bool(body["on"]))
+            w = body.get("w", "keep")
+            site.set_circuit(int(body["n"]), None if body.get("on") is None else bool(body["on"]),
+                             None if w in (None, "auto") else w)
         elif action == "apower":
             site.set_apower(int(body["n"]), bool(body["on"]))
         elif action == "appliance":
             state = body.get("on", None)
             site.force_appliance(body["name"], None if state in (None, "auto") else bool(state))
+        elif action == "v2l":
+            if site.v2l is None:
+                raise ApiError(400, "v2l: this gateway has no V2L: add `v2l: {circuit: 1}` (and the "
+                                    "smart circuits and generator module) to its fleet entry and restart")
+            with site.lock:
+                site.step()
+                if "on" in body:
+                    site.v2l.enabled = bool(body["on"])
+                if "charge_apower" in body:
+                    site.v2l.charge_apower = bool(body["charge_apower"])
+                if "ev_soc" in body:
+                    v = float(body["ev_soc"])
+                    if not 0 <= v <= 100:
+                        raise ApiError(400, "v2l: ev_soc is 0..100 %")
+                    site.v2l.ev_soc = v
         elif action == "generator":
             gen = site.generator
             site.step()
@@ -445,15 +503,7 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
             if "refuel" in body:
                 gen.refuel(None if body["refuel"] is None else float(body["refuel"]))
         elif action == "weather":
-            if site.weather is None:
-                raise ApiError(400, "weather: this gateway has no weather model (it uses the bell "
-                                    "curve): add `weather: {model: synthetic}` to its fleet entry "
-                                    "and restart")
-            for key in ("sky", "flicker"):
-                if key in body:
-                    setattr(site.weather.cfg, key, body[key])
-            if site.weather.cfg.sky not in SKIES:
-                raise ApiError(400, f"weather: sky must be one of {sorted(SKIES)}")
+            _weather(gw, body)
         elif action == "export":
             site.set_export_limit_enforced(bool(body["enforced"]))
         elif action == "range-fault":
@@ -470,6 +520,15 @@ def apply(gw: "Gateway", action: str, body: dict) -> None:
                 raise ApiError(400, f"unknown faults {sorted(bad)}; known {sorted(known)}")
             for k, v in body.items():
                 setattr(target, k, v)
+        elif action == "cloud-faults":
+            known = {f.name for f in fields(CloudFaults)}
+            bad = set(body) - known
+            if bad:
+                raise ApiError(400, f"unknown cloud faults {sorted(bad)}; known {sorted(known)}")
+            if body.get("bad_reply") not in (None, *BAD_REPLIES):
+                raise ApiError(400, f"cloud-faults: bad_reply must be one of {list(BAD_REPLIES)}")
+            for k, v in body.items():
+                setattr(gw.cloud_faults, k, v)
         else:
             raise ApiError(404, f"unknown action {action!r}")
     except (KeyError, TypeError, ValueError) as e:
@@ -556,13 +615,16 @@ class ControlApi:
         rows, conns, refused, rate, accepted = [], 0, 0, 0.0, 0
         for gid, gw in self.gateways.items():
             row = {"id": gid}
-            for name, srv, listening in (("modbus", gw.server, gw.server._server is not None),
-                                         ("dc", gw.dc, gw.dc is not None and gw.dc._server is not None)):
-                if srv is None:
+            cloud = gw.cloud_api
+            for name, table, port, listening in (
+                    ("modbus", gw.server.clients, gw.server.port, gw.server._server is not None),
+                    ("dc", gw.dc and gw.dc.clients, gw.dc and gw.dc.port, gw.dc is not None and gw.dc._server is not None),
+                    ("cloud", gw.cloud_clients, cloud and cloud.port, cloud is not None)):
+                if table is None:
                     row[name] = None
                     continue
-                snap = srv.clients.snapshot()
-                snap.update(listening=listening, port=srv.port,
+                snap = table.snapshot()
+                snap.update(listening=listening, port=port,
                             requests_per_s=self._rate(gid, name, snap["requests"]))
                 conns += len(snap["clients"])
                 accepted += snap["accepted"]
@@ -570,8 +632,12 @@ class ControlApi:
                 rate += snap["requests_per_s"]
                 row[name] = snap
             rows.append(row)
-        active = sum(1 for r in rows if (r["modbus"] and r["modbus"]["clients"]) or (r["dc"] and r["dc"]["clients"]))
+        active = sum(1 for r in rows if any(r[n] and r[n]["clients"] for n in ("modbus", "dc", "cloud")))
+        cloud = next((gw.cloud_api for gw in self.gateways.values() if gw.cloud_api), None)
         return {"process": self.process.snapshot(),
+                "cloud": None if cloud is None else {"address": [cloud.host, cloud.port],
+                                                     "logins": cloud.logins, "requests": cloud.requests,
+                                                     "unserved": dict(cloud.unserved)},
                 "totals": {"gateways": len(rows), "with_clients": active, "connections": conns,
                            "accepted": accepted, "refused_1h": refused, "requests_per_s": round(rate, 2)},
                 "gateways": rows}

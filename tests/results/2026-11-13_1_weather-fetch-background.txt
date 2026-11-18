@@ -1,0 +1,25 @@
+#291 Open-Meteo fetch in the background. Emulator branch fix/291-weather-fetch-background (base 6663383).
+
+Break check: with the fix removed, the new tests fail:
+  test_a_slow_open_meteo_never_holds_up_the_simulation (src/ stashed): the read waited for the fetch (5 s) and got Open-Meteo, not synthetic
+  test_a_network_failure_pauses_every_site_with_one_warning (src/ stashed): 6 fetches, not 1
+  test_sites_fetching_together_log_one_network_failure (logged = True): 3 warnings, not 1
+
+Full suite: 783 passed in 92.89s (0:01:32)
+
+Live, 4 located gateways, empty cache, loopback port 0:
+== Open-Meteo unreachable (FORECAST_API pointed at 192.0.2.1, TEST-NET, which times out)
+WARNING weather: Open-Meteo 2026-11-13 unavailable (URLError: <urlopen error timed out>); synthetic sky until it is
+started 4 located gateways in 0.07 s
+g0 model open-meteo offline False days [] results [] fb Open-Meteo 2026-11-13 unavailable (URLError: <urlopen error 
+g1 model open-meteo offline False days [] results [] fb Open-Meteo 2026-11-13 unavailable (URLError: <urlopen error 
+g2 model open-meteo offline False days [] results [] fb Open-Meteo 2026-11-13 unavailable (URLError: <urlopen error 
+g3 model open-meteo offline False days [] results [] fb Open-Meteo 2026-11-13 unavailable (URLError: <urlopen error 
+stopped in 0.00 s
+== Open-Meteo reachable
+started 4 located gateways in 0.09 s
+g0 model open-meteo offline False days ['2026-11-13'] results [] fb none
+g1 model open-meteo offline False days ['2026-11-13'] results [] fb none
+g2 model open-meteo offline False days ['2026-11-13'] results [] fb none
+g3 model open-meteo offline False days ['2026-11-13'] results [] fb none
+stopped in 0.01 s

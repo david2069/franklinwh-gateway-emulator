@@ -1,0 +1,18 @@
+# #268 Weather: Open-Meteo by default for sites with a location, synthetic fallback — 2026-11-06
+
+Branch weather-default-open-meteo, base main 6d82437.
+
+## New tests
+45 passed in 10.05s
+
+## Break check
+with src stashed, the 4 new tests in tests/test_weather.py fail; restored, they pass; one live Open-Meteo fetch (Sydney city centre, yesterday) returned real data with no fallback
+
+## Full suite
+734 passed in 58.84s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

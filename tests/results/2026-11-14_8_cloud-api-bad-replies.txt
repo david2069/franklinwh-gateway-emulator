@@ -1,0 +1,18 @@
+2026-11-14 #311 Cloud API broken replies and account rate limit
+Branch cloud-transport-faults, base 6358c2b. Python 3.12, franklinwh-cloud 0.6.5. Emulator only; no cloud, no aGate.
+
+== New tests (tests/test_cloud_bad_replies.py)
+============================== 10 passed in 1.01s ==============================
+
+== Break check: _bad_reply returns None and the account limit is skipped
+9 failed, 1 passed (the passing one checks sendMqtt kinds leave other requests alone)
+
+== franklinwh-cloud once, get_power_info (port elided)
+reset: httpx.RemoteProtocolError after 0.0 s: Server disconnected without sending a response.
+truncate: httpx.RemoteProtocolError after 0.0 s: peer closed connection without sending complete message body (received 446 bytes, expected
+hang: franklinwh_cloud.exceptions.FranklinWHTimeoutError after 30.0 s: API request timed out after 30s: http://127.0.0.1:<port>/hes-gateway/terminal/sendMqtt
+
+== Full suite
+832 passed in 60.40s (0:01:00)
+
+== check_pii --scan: no leaks. mkdocs build --strict: ok

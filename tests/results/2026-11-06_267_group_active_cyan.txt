@@ -1,0 +1,18 @@
+# #267 UI group diagram: draw the active aGate in cyan — 2026-11-06
+
+Branch group-active-cyan, base main e5da5ca.
+
+## New tests
+41 passed in 0.32s
+
+## Break check
+with src stashed, the active-title/line assertions and test_active_agate_is_cyan_not_a_status_colour fail; restored, both pass
+
+## Full suite
+730 passed in 77.12s (0:01:17)
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

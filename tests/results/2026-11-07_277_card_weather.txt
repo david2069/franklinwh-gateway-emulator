@@ -1,0 +1,18 @@
+# #277 UI cards: show each gateway's weather — 2026-11-07
+
+Branch card-weather, base main 6699705.
+
+## New tests
+44 passed in 0.50s
+
+## Break check
+with src stashed, test_card_weather_text fails; restored, it passes
+
+## Full suite
+755 passed in 57.91s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

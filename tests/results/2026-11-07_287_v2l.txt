@@ -1,0 +1,18 @@
+# #287 V2L: an EV supplying the home off-grid through the generator input — 2026-11-07
+
+Branch v2l, base main 97cff25.
+
+## New tests
+142 passed in 4.92s
+
+## Break check
+with src stashed, the 7 V2L tests (tests/test_v2l.py and the board E drawing) fail; restored, they pass; validate: both examples ok
+
+## Full suite
+778 passed in 53.20s
+
+## mkdocs build --strict
+
+[90m  To disable this warning, set NO_MKDOCS_2_WARNING=1.[0m
+
+ok

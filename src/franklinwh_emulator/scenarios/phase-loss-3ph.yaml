@@ -7,9 +7,11 @@ description: >
 start: "2026-01-15T20:00:00"
 duration: 10m
 record_every: 5s
+# Weather pinned to the bell day so the checks repeat exactly (#268: a location alone
+# now means Open-Meteo).
 fleet:
   groups:
-    au3: {seed: 11, location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}}
+    au3: {seed: 11, location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000"}, weather: {model: bell}}
   gateways:
     - {id: au3-l1, group: au3, phases: [L1], seed: 11, initial_soc: 70}
     - {id: au3-l2, group: au3, phases: [L2], seed: 13, initial_soc: 70, solar_peak_w: 0}
