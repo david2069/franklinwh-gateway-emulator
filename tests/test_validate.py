@@ -15,17 +15,33 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILTINS = sorted((ROOT / "src/franklinwh_emulator/scenarios").glob("*.yaml"))
 
 
-def test_example_fleet_is_clean_and_starts():
-    d = load_yaml(str(ROOT / "examples/fleet.yaml"))
+EXAMPLE_FLEETS = ["examples/fleet.yaml", "examples/fleet-north-america.yaml"]   # (#335)
+
+
+@pytest.mark.parametrize("path", EXAMPLE_FLEETS)
+def test_example_fleet_is_clean_and_starts(path):
+    d = load_yaml(str(ROOT / path))
     assert validate_fleet(d) == []
     Fleet.from_dict(d)        # what validation said is buildable is buildable
 
 
-def test_example_gateways_have_a_service_rating():
+@pytest.mark.parametrize("path", EXAMPLE_FLEETS)
+def test_example_gateways_have_a_service_rating(path):
     """Each example shows its service rating on the diagram's Meter box (#156)."""
     from franklinwh_emulator.gateway import expand_groups
-    entries, _ = expand_groups(load_yaml(str(ROOT / "examples/fleet.yaml")))   # grouped: the group's (#241)
+    entries, _ = expand_groups(load_yaml(str(ROOT / path)))   # grouped: the group's (#241)
     assert [g["id"] for g in entries if not (g.get("service") or {}).get("main_breaker_a")] == []
+
+
+def test_north_america_example_adds_its_homes_to_the_example_fleet():
+    base = load_yaml(str(ROOT / "examples/fleet.yaml"))["gateways"]
+    na = load_yaml(str(ROOT / "examples/fleet-north-america.yaml"))["gateways"]
+    assert na[:len(base)] == base
+    added = na[len(base):]
+    assert len(added) == 15 and {g["location"]["country"] for g in added} == {"US", "CA"}
+    f = Fleet.from_dict({"gateways": added})
+    assert {f[g["id"]].site.model.region for g in added} == {"NA"}
+    assert {f[g["id"]].site.grid.nominal_hz for g in added} == {60.0}
 
 
 @pytest.mark.parametrize("path", BUILTINS, ids=lambda p: p.stem)

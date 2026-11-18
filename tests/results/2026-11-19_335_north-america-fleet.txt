@@ -1,0 +1,41 @@
+# #335 North America example fleet, 2026-11-19
+
+## Break check: Halifax's service rating removed, country CA -> Ca (then restored)
+FAILED tests/test_validate.py::test_example_fleet_is_clean_and_starts[examples/fleet-north-america.yaml]
+FAILED tests/test_validate.py::test_example_gateways_have_a_service_rating[examples/fleet-north-america.yaml]
+FAILED tests/test_validate.py::test_north_america_example_adds_its_homes_to_the_example_fleet
+3 failed, 41 passed in 6.65s
+
+## After restoring
+44 passed in 8.64s
+
+## validate
+examples/fleet-north-america.yaml: fleet ok (25 gateways)
+
+## Started in process: each added home's model, grid, local time and SoC
+redding-ca         NA ieee1547-cat2 60Hz aPowers=2 10:06 PST soc=39
+boise-id           NA ieee1547-cat2 60Hz aPowers=1 11:06 MST soc=25
+houston-tx         NA ieee1547-cat2 60Hz aPowers=2 12:06 CST soc=33
+tampa-fl           NA ieee1547-cat2 60Hz aPowers=1 13:06 EST soc=37
+buffalo-ny         NA ieee1547-cat2 60Hz aPowers=1 13:06 EST soc=27
+chicago-il         NA ieee1547-cat2 60Hz aPowers=1 12:06 CST soc=39
+seattle-wa         NA ieee1547-cat2 60Hz aPowers=1 10:06 PST soc=31
+st-louis-mo        NA ieee1547-cat2 60Hz aPowers=2 12:06 CST soc=38
+cincinnati-oh      NA ieee1547-cat2 60Hz aPowers=1 13:06 EST soc=26
+atlanta-ga         NA ieee1547-cat2 60Hz aPowers=2 13:06 EST soc=44
+oklahoma-city-ok   NA ieee1547-cat2 60Hz aPowers=1 12:06 CST soc=39
+ottawa-on          NA ieee1547-cat2 60Hz aPowers=1 13:06 EST soc=40
+halifax-ns         NA ieee1547-cat2 60Hz aPowers=1 14:06 AST soc=45
+long-beach-ny      NA ieee1547-cat2 60Hz aPowers=2 13:06 EST soc=29
+atlantic-city-nj   NA ieee1547-cat2 60Hz aPowers=1 13:06 EST soc=31
+started and stopped: 25 gateways
+
+## Full suite
+858 passed, 44 warnings in 54.01s
+
+## mkdocs build --strict
+INFO    -  Documentation built in 0.38 seconds
+
+## check_pii --scan
+Scanned 382 files and the unpushed commit authors.
+✅ SUCCESS: No PII leaks found!
