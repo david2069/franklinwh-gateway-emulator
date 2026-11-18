@@ -37,11 +37,28 @@ def test_north_america_example_adds_its_homes_to_the_example_fleet():
     base = load_yaml(str(ROOT / "examples/fleet.yaml"))["gateways"]
     na = load_yaml(str(ROOT / "examples/fleet-north-america.yaml"))["gateways"]
     assert na[:len(base)] == base
-    added = na[len(base):]
-    assert len(added) == 15 and {g["location"]["country"] for g in added} == {"US", "CA"}
-    f = Fleet.from_dict({"gateways": added})
-    assert {f[g["id"]].site.model.region for g in added} == {"NA"}
-    assert {f[g["id"]].site.grid.nominal_hz for g in added} == {60.0}
+    homes = [g for g in na if (g.get("location") or {}).get("country") in ("US", "CA")]
+    assert len(homes) == len(na) - len(base) + 1          # + us-split, Phoenix's first home
+    per_place = {}
+    for g in homes:
+        per_place.setdefault(g["location"]["city"], []).append(g["id"])
+    assert len(per_place) == 16 and min(map(len, per_place.values())) >= 2      # (#338)
+    f = Fleet.from_dict({"gateways": homes})
+    looks = []
+    for g in homes:
+        s = f[g["id"]].site
+        assert (s.model.region, s.grid.nominal_hz) == ("NA", 60.0)
+        looks.append((f[g["id"]].profile.name, s.model.agate.code, tuple(u.code for u in s.unit_models),
+                      g.get("solar_peak_w", 1) > 0, tuple(sorted((g.get("pv_inputs") or {}).items())),
+                      bool(s.dc_pv), s.generator.hw.installed, s.v2l is not None, len(s.circuits or ()),
+                      tuple(c.get("name") for c in g.get("loads") or ())))
+    assert len(set(looks)) == len(looks)                  # every home different (#338)
+    assert {x[0] for x in looks} == {"agate-v10r01b04d00", "agate-v12r02b60d00-candidate"}
+    assert {x[1] for x in looks} == {100, 101, 103, 104}
+    assert any(len(set(x[2])) > 1 for x in looks)         # mixed aPowers
+    assert all(any(x[i] for x in looks) and not all(x[i] for x in looks) for i in (3, 4, 5, 6, 7, 8))
+    names = {n for x in looks for n in x[9]}
+    assert {"hvac", "evse", "hot_water", "pool_pump", "well_pump"} <= names
 
 
 @pytest.mark.parametrize("path", BUILTINS, ids=lambda p: p.stem)
