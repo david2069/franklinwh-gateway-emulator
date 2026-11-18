@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.0 (2026-11-18)
+
 ### Added
 - UI: a start-up screen, from the owner's design board F: a welcome, the active gateway's last 7 days of solar and home use (kWh a day), and the emulator's own mark with "Unofficial · not affiliated with FranklinWH" and the version. First load of a browser session only; fades once the page has loaded, or on a click or Esc. New control API read `GET /gateways/<id>/days?n=7` (#329). See docs/ui.md (Start-up screen), docs/control-api.md (Days).
 - Docs: Cloud API clients (new page): how each kind of client reaches the Cloud API: by base URL (franklinwh-cloud, richo's franklinwh library), by DNS and a TLS front with a test CA for clients with no base URL setting (homeassistant-franklinwh, richo's library unmodified; the openssl commands and a standard-library Python front), and the official app through HTTP Toolkit; which are tested and which aren't (#327). See docs/cloud-clients.md, docs/cloud-api.md.

@@ -1,0 +1,2 @@
+852 passed in 49.92s
+v0.3.0 release commit: full suite on the 3.12 venv; PII scan clean; mkdocs --strict ok
