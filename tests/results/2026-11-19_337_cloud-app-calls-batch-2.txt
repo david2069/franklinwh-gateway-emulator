@@ -1,0 +1,52 @@
+#337 (#316 step 3, batch 2): the official app's next 14 calls and sendMqtt 317, 327, 337, 2026-11-19
+
+Shapes come from the owner's HTTP Toolkit HARs on the mini PC (50 files, 42 with FranklinWH
+requests). They were read over SSH by scripts copied to /tmp, run, and then deleted along with
+their output. Only aggregates left the machine:
+- method + path counts and sendMqtt cmdType counts;
+- field names and types merged over every capture;
+- value formats (digits -> 9, letters -> A/a);
+- small integer enums and fixed labels;
+- server message text, with digit runs masked.
+No values (serials, addresses, names, SSIDs, passwords) were taken.
+
+## Picked: the next most frequent unserved (captures / calls)
+30/115 GET terminal/getPersonalInfo          29/95  GET newApi/.../getUserResources/v2
+28/193 GET terminal/backupHistorySummary     28/108 GET terminal/recommend/recommendFlag
+27/219 GET terminal/selectSimBtn             25/149 POST terminal/v2/loginOut
+24/212 GET terminal/selectDeviceOverallInfo  22/388 GET terminal/tou/getBonusInfo
+22/315 POST terminal/tou/calculate/expected/earnings   21/260 GET terminal/site/get/DeviceDetail
+20/935 GET terminal/selectGatewayAlarm       20/135 GET terminal/obtainApowersInfo
+19/63  GET terminal/obtainAgateInfo          19/2471 GET terminal/sim/cardShow
+sendMqtt 317 (37 captures), 327 (36) and 337 (34): replies 318, 328 and 338.
+- 317 reads paraType 6 (461 calls, commSetPara) and paraType 12 (12 calls, sysConfigPara, num 17).
+- 317 writes optType 1, paraType 6 (4 calls).
+- 327 and 337 read with opt 0 and write with opt 1.
+
+## Break check: three replies changed (then restored)
+Changes: 317's "num" removed, getPersonalInfo's "avatar" removed, sim/cardShow unrouted.
+FAILED tests/test_cloud_app.py::test_every_start_up_call_has_the_captured_fields
+FAILED tests/test_cloud_app.py::test_sendmqtt_317_327_337_have_the_captured_fields
+FAILED tests/test_cloud_app.py::test_batch_two_values_come_from_the_site - As...
+3 failed, 4 passed in 0.22s
+7 passed in 0.21s
+
+## Full suite
+862 passed, 44 warnings in 54.26s
+
+## Served, of the 143 captured method+paths (each one routed in process)
+before: served 45 unserved 98
+served 59 unserved 84
+next unserved by captures:
+18 79 GET /hes-gateway/terminal/site/list/siteAndDeviceInfo
+16 24 GET /hes-gateway/terminal/listAppUserDevice
+16 28 GET /hes-gateway/terminal/newCompliance/getComplianceNameList
+16 28 GET /hes-gateway/terminal/newCompliance/getComplianceDetailById
+15 76 GET /hes-gateway/common/obtainGeographyList
+14 79 POST /hes-gateway/terminal/tou/getCustomEnergyDispatchList
+
+## check_pii --scan
+Scanned, no PII leaks found.
+
+## mkdocs build --strict
+Documentation built.
