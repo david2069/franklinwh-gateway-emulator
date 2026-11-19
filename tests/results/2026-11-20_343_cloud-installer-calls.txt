@@ -1,0 +1,36 @@
+# #343 (#316 step 3, batch 3): the installer app's manage/ calls, 2026-11-20
+
+## Source
+The same aggregates as tests/results/2026-11-20_341_cloud-app-low-frequency.txt (50 HAR files on
+the mini PC; field names, types, envelope keys, codes, success flags and masked message text only;
+scripts and output deleted there). manage/component/progressOrderCount and manage/sendMqtt (cmdType
+203 and 327 captured) from the deeper pass.
+
+## Served (143 captured method + paths)
+Every captured method + path sent to an emulator built from this branch (on top of #341), with a
+token and a gatewayId; manage/sendMqtt with cmdType 327.
+  after #341:          112 served, 31 unserved (the installer app's)
+  after this change:   143 served, 0 unserved; every captured sendMqtt cmdType served
+
+## Tests
+tests/test_cloud_installer.py (5 tests): every manage/ call's envelope, message, result type and
+keys against the captured set; the twins answer as the user app's terminal/ calls (obtainAgateInfo
+without msaSn); manage/sendMqtt relays 327; the gateway list filtered by country and state and
+paged; status counts; countries and states; personal info, upgrade, install and the smart-circuit
+block; a forced alarm counts as a fault; no token, an unknown gateway, and the Monitor's unserved
+list empty.
+
+  tests/test_cloud*.py: 78 passed
+
+## Break check (restored after)
+obtainAgateInfo keeps msaSn, manage/sendMqtt unregistered, and every gateway counted standby:
+   FAILED tests/test_cloud_installer.py::test_every_installer_call_has_the_captured_fields
+   FAILED tests/test_cloud_installer.py::test_the_twins_answer_as_the_user_app
+   FAILED tests/test_cloud_installer.py::test_status_follows_the_site - assert 0 == 1
+   3 failed, 2 passed
+Restored: cmp against the saved copy, identical; 5 passed.
+
+## Checks
+  full suite: 875 passed, 44 warnings in 54.46s
+  python3 scripts/check_pii.py --scan: No PII leaks found
+  mkdocs build --strict: built, no warnings
