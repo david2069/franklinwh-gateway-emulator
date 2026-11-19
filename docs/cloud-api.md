@@ -250,6 +250,43 @@ Then the next 14 (#337), made in 19 to 30 of the captures, and three more sendMq
 | `sendMqtt` 327 → 328 | the aPower LED: `lightStat` one per aPower, the timer off; `opt` 1 writes the keys sent |
 | `sendMqtt` 337 → 338 | the aGate's Wi-Fi and access point (placeholder names and passwords); `opt` 1 writes the keys sent |
 
+Then the rest of the user app's calls (#341), made in 1 to 18 of the 50 captures, the in-app
+assistant and four more sendMqtt commands (cloud_more.py). The same rules apply, and where a
+capture shows a value whose meaning isn't established, the emulator's choice is named:
+
+| Call | What comes back |
+|---|---|
+| `GET hes-gateway/terminal/site/list/siteAndDeviceInfo`, `site/get/SiteDetail?siteId=` | one site per gateway, numbered 1.. in fleet order (`siteId`), named by its fleet id, with its city-level address, status, aGate code and aPower count |
+| `GET hes-gateway/terminal/listAppUserDevice` | the account's gateways: name, status, firmware (`version`, `protocolVer`), address, timezone (`timeZone` the standard offset, `dst` whether daylight saving is on), `activeTime`/`createTime` the `commissioned` date |
+| `GET hes-gateway/terminal/getEquipmentLocationDetail?gatewayId=` | the fleet entry's `location`: city-level `latitude`/`longitude`, `zoneInfo`, `timezone` (standard UTC offset, hours) and `dst`, country, state, city, postcode |
+| `GET hes-gateway/common/obtainGeographyList`, `POST terminal/getProvincesListBYGatewayId?gatewayId=` | the countries whose cloud ids are known (2 US, 3 Australia); with `countryId`, that country's states among the fleet's gateways, numbered 1.. by name; the gateway's own country and state. `nameZh` repeats the English name |
+| `GET hes-gateway/terminal/newCompliance/getComplianceNameList?gatewayId=`, `getComplianceDetailById?systemId=` | the emulator's grid codes at the site's frequency (numbered 1.. by name), `currentId` the site's; a code's numbers and trip stages (threshold, seconds) as one read-only catalog section |
+| `GET hes-gateway/terminal/getCompliance?gatewayId=&paraType=` | every captured `gridConnFuntionPara` key, as placeholders (0, 0.0, empty): what each number means isn't established. `ComplianceRuleType` is the site's grid code id |
+| `GET hes-gateway/terminal/getDeviceInfo?gatewayId=` | the older call: `getDeviceInfoV2`'s values, with its key set as captured |
+| `GET hes-gateway/terminal/getGatewaySystemSetting`, `system/getSystemSetting` | the install profile as Direct Connect 1702 has it (`electricSupply` the service amps, the grid limits, -1 on firmware without them), the off-grid flag and aPower count |
+| `GET hes-gateway/terminal/solar/selectAnyOneSolarOpen?gatewayId=` | which PV inputs are fitted (Direct Connect's solar block: remote PV through the aPbox, PV1 on the aGate) and `mpptEnFlag` (an aPower S) |
+| `GET hes-gateway/terminal/getOffGridFlag`, `common/getDeviceRealTimeData` | the composite's off-grid flag; the displayed SoC |
+| `GET hes-gateway/terminal/selectIotUserRuntimeDataLog?gatewayId=` | the composite's `runtimeData` with the captured key set, Direct Connect 1412's readings for the relays and temperatures it lacks |
+| `GET hes-gateway/terminal/v2/warrantyInfo?gatewayId=` | the component warranties (`components:` in the fleet file): the aGate's and each aPower's expiry, the aPowers' throughput (MWh) and what is left; no installer or supplier contact |
+| `GET hes-gateway/terminal/selectWorkingHours?day=`, `iotDayPowerStatistics?date=` | the day's power curve from the site's history (kW, a point per quarter-hour, and which flows are on; the colours 0); the second as strings with SoC and kWh stored, `mode` the site's mode now |
+| `GET hes-gateway/terminal/electricStatistics?startDate=&endDate=`, `countLoad?date=&type=` | daily kWh from the history (at most 366 days); where the home's energy came from over a day, week, month or year, with each share as a percentage string |
+| `GET hes-gateway/terminal/iotChargePowers`, `chargePowerTotal` | every backup (the grid relay's openings, newest first, paged) and their total time |
+| `GET hes-gateway/terminal/listDeviceMessagesByType?eventTypes=` | the gateway's event log as device messages, newest first; `eventTypes` are the classes below |
+| `GET hes-gateway/terminal/selectEventClassification`, `POST setEventPushToUser` | five event classes of the emulator's own (Grid, Battery, Alarms, Mode, System, over its event kinds); the notification settings sent are kept and read back. No pushes are sent |
+| `GET hes-gateway/terminal/getHotSpotInfo/v2`, `getHotSpotInfo` | the aGate's access point as sendMqtt 337 keeps it; the older call its name |
+| `POST hes-gateway/terminal/tou/getCustomEnergyDispatchList`, `getRecommendEnergyDispatchList` | the TOU editor's dispatches; for each block sent, Home recommended (the emulator's choice) |
+| `POST hes-gateway/terminal/tou/getGatewayTouList` | the older call: `getGatewayTouListV2`'s list |
+| `POST hes-gateway/terminal/tou/getTouCompanyListPageV2`, `GET tou/getTariffListByCompanyId`, `tou/getTariffDetailByIdV2` | no utility or tariff catalogue: empty lists, and code 400 for a tariff id |
+| `GET hes-gateway/terminal/site/check/OverlapSite`, `POST site/update/DeviceDetail`, `site/update/SiteDetail` | as every capture: code 4091 (message null), and 4094 "Successful." with `success` false; nothing is changed |
+| `GET hes-gateway/terminal/selectTerPushMessageListApp`, `selectTerPushMessageList`, `selectTerPushMessageUnread`, `selectTerPushMessageV2`, `POST updateTerPushMessageReadByType` | no push messages: empty lists, 0, and code 400 for a message id |
+| `GET hes-gateway/terminal/span/getSpanSetting`, `getWarnFlagNotice`, `v2/queryTerminalUserInfo`, `common/v2/obtainUrlByKey?key=`, `common/getMaintenanceInfo`, `initialize/selectTerStartupPage`, `tou/getVppTipForUpdateTou` | no SPAN panel, no warning, the account's email, no web page for the key (an empty URL), no maintenance notice, start-up page or VPP tip |
+| `GET hes-gateway/newApi/api-user/app/resource/getUserResources` | the older call: no resources, in that service's own envelope |
+| `GET api-smart/terminal/recommendQuestion`, `POST askQuestion`, `feedback` | the in-app assistant, in its own envelope (`msg` "Request Success", `data`): no suggested questions, a fixed answer saying the emulator has none, feedback accepted |
+| `sendMqtt` 315 → 316 | maintenance: `opt` 1 with `reboot` 1 reboots the emulated aGate (as Direct Connect 1721); `cleanAlarmFlag` 1 clears a forced alarm |
+| `sendMqtt` 335 → 336 | a Wi-Fi scan: the aGate's own network (337's) and one placeholder neighbour, RSSI in dBm (the emulator's choice) |
+| `sendMqtt` 339 → 340 | the connection: the interface 317 keeps, connected to the router and the cloud while 341 has it switched on, the composite's Wi-Fi signal |
+| `sendMqtt` 341 → 342 | which interfaces are switched on (Ethernet and Wi-Fi on, 4G off); `opt` 1 writes the keys sent |
+
 What the app shows for these values hasn't been seen yet: that is #316 step 4, the app pointed
 at the emulator.
 

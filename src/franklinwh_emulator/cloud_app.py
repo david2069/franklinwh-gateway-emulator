@@ -241,11 +241,9 @@ def user_resources(api, q, body) -> dict:
     return {"code": 200, "msg": "请求成功", "data": {"resources": None, "roleResources": []}, "success": True}
 
 
-def backup_history(api, q, body) -> dict:
-    """Backups are the grid relay's openings (site.relay_events): count, total and longest
-    seconds, and the last one (chargeType 2 and energy 0.0, as in every capture). The SoC at
-    either end isn't recorded, so it is null; with no backup yet, lastRecord is null."""
-    gw = api._gateway(q)
+def backup_records(gw: "Gateway") -> list[dict]:
+    """Backups, oldest first: the grid relay's openings (site.relay_events), chargeType 2 and
+    energy 0.0 as in every capture. The SoC at either end isn't recorded, so it is null."""
     site = gw.site
     now = site.step().ts
     spans, start = [], None
@@ -257,17 +255,21 @@ def backup_history(api, q, body) -> dict:
             start = None
     if start is not None:
         spans.append((start, now))                  # still islanded
-    secs = [int(b - a) for a, b in spans]
-    last = None
-    if spans:
-        a, b = spans[-1]
-        when = lambda t: site.local_datetime(t).strftime("%Y-%m-%d %H:%M:%S")
-        last = {"id": len(spans), "gatewayId": gw.serial, "chargeType": 2, "energy": 0.0,
-                "startSoc": None, "endSoc": None, "chargeDate": when(a), "startTime": when(a),
-                "endTime": when(b), "second": secs[-1], "chargeTime": None, "chargeHour": None,
-                "chour": None, "cminute": None, "csecond": None}
-    return _env({"longestDuration": max(secs, default=0), "totalBackup": len(spans),
-                 "totalDuration": sum(secs), "lastRecord": last})
+    when = lambda t: site.local_datetime(t).strftime("%Y-%m-%d %H:%M:%S")
+    return [{"id": n, "gatewayId": gw.serial, "chargeType": 2, "energy": 0.0,
+             "startSoc": None, "endSoc": None, "chargeDate": when(a), "startTime": when(a),
+             "endTime": when(b), "second": int(b - a), "chargeTime": None, "chargeHour": None,
+             "chour": None, "cminute": None, "csecond": None}
+            for n, (a, b) in enumerate(spans, 1)]
+
+
+def backup_history(api, q, body) -> dict:
+    """The backups' count, total and longest seconds, and the last one; with no backup yet,
+    lastRecord is null."""
+    records = backup_records(api._gateway(q))
+    secs = [r["second"] for r in records]
+    return _env({"longestDuration": max(secs, default=0), "totalBackup": len(records),
+                 "totalDuration": sum(secs), "lastRecord": records[-1] if records else None})
 
 
 def recommend_flag(api, q, body) -> dict:
@@ -327,16 +329,20 @@ def expected_earnings(api, q, body) -> dict:
                        "estimatedHighOrNot365": None, "estimatedHighOrNot": 0}}
 
 
+def site_address(gw: "Gateway") -> dict:
+    """The site's address at city level (no street), from the fleet entry's location."""
+    loc = gw.site.location
+    city, state, post = loc.city or "", loc.state or "", loc.postcode or ""
+    return {"country": COUNTRY_NAME.get(loc.country or "", loc.country or ""), "province": state,
+            "city": city, "postCode": post, "alphaCode": loc.country or "",
+            "completeAddress": ", ".join(x for x in (city, " ".join(x for x in (state, post) if x)) if x)}
+
+
 def device_detail(api, q, body) -> dict:
     """The site's name and address at city level (no street): the fleet entry's id and
     location. alphaCode is the country code (the captures' list of codes isn't decoded)."""
     gw = api._gateway(q)
-    loc = gw.site.location
-    city, state, post = loc.city or "", loc.state or "", loc.postcode or ""
-    return _env({"gatewayName": gw.config.id, "address1": "", "address2": None,
-                 "country": COUNTRY_NAME.get(loc.country or "", loc.country or ""), "province": state,
-                 "city": city, "postCode": post, "alphaCode": loc.country or "",
-                 "completeAddress": ", ".join(x for x in (city, " ".join(x for x in (state, post) if x)) if x)})
+    return _env({"gatewayName": gw.config.id, "address1": "", "address2": None, **site_address(gw)})
 
 
 def gateway_alarms(api, q, body) -> dict:

@@ -1,0 +1,50 @@
+# #341 (#316 step 3, batch 3): the app's remaining low-frequency calls, 2026-11-20
+
+## Source
+HTTP Toolkit captures on the mini PC: 50 HAR files (42 at #333/#337). Aggregates only left
+the mini PC: per method + path the number of captures and calls; per target the request field
+names, the reply's field names and types (merged over every capture, nested to depth 9), the
+envelope keys, codes, success flags and message text with digit runs masked. No values. The
+scripts and their output were deleted on the mini PC after each run; the output was checked
+against the personal PII terms (0 hits) before use.
+
+## Served, before and after (143 captured method + paths)
+Every captured method + path sent to an emulator built from this branch, with a token and a
+gatewayId; a path counts as unserved when the Cloud API records it as not emulated (#316 step 2).
+POST hes-gateway/manage/sendMqtt is sent a cmdType it serves (327).
+  before (main, 69e22b8):  59 served, 84 unserved; sendMqtt 315, 335, 339, 341 unserved
+  after (this branch):    112 served, 31 unserved; every sendMqtt cmdType captured served
+  still unserved: the installer app's 30 hes-gateway/manage/* calls and manage/sendMqtt (next PR)
+
+## Tests
+tests/test_cloud_more.py (8 tests): every call's envelope, message, result type and keys against
+the captured set; the assistant's envelope; nested shapes (site devices, compliance catalog items,
+electricVo and its rows, day power points, working-hours points, warranty expiries, dispatches,
+regions and provinces, countries, event classes); values from the site and the fleet file;
+energy from the history; backups, device messages and the event settings; sendMqtt 315/335/339/341
+(341 writes read back by 339; 315 reboots only on opt 1); no token, an unknown gateway, and the
+Monitor's unserved list empty.
+tests/test_cloud_unserved.py, tests/test_cloud.py: their "not emulated" examples were calls now
+served (listAppUserDevice, sendMqtt 339 and 315); they now use a path in no capture and sendMqtt
+211 type 2 (BMS, not emulated) and an unknown cmdType 999.
+
+  tests/test_cloud*.py: 73 passed
+  full suite: 870 passed, 44 warnings in 55.62s
+
+## Break checks (each restored after)
+1. installApboxSolar removed from solar/selectAnyOneSolarOpen's reply:
+   E   AssertionError: ('terminal/solar/selectAnyOneSolarOpen', ['installApboxSolar'])
+   1 failed, 7 passed
+2. countLoad unregistered, and 3. sendMqtt 341 writes not kept:
+   E   assert 404 == 200
+   E   assert 1 == 0
+   FAILED tests/test_cloud_more.py::test_every_call_has_the_captured_fields
+   FAILED tests/test_cloud_more.py::test_energy_follows_the_history
+   FAILED tests/test_cloud_more.py::test_sendmqtt_315_335_339_341
+   FAILED tests/test_cloud_more.py::test_no_token_and_nothing_unserved
+   4 failed, 4 passed
+Restored: cmp against the saved copy, identical; 8 passed.
+
+## Checks
+  python3 scripts/check_pii.py --scan: No PII leaks found (386 files)
+  mkdocs build --strict: built, no warnings
