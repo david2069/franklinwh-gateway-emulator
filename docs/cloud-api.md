@@ -5,6 +5,10 @@ The emulator can also serve the FranklinWH Cloud API: the REST API the FranklinW
 the same gateways as Modbus TCP and Direct Connect, so a cloud client, a Modbus client and a
 Direct Connect client all see one site. The fleet is one cloud account holding every gateway.
 
+Every method and path in the captured app traffic (143 in 50 HTTP Toolkit captures of the
+official app, user and installer) is served, as is every captured `sendMqtt` command type; what
+isn't is listed under [What it serves](#what-it-serves).
+
 It never calls or forwards to the real cloud, and it listens on 127.0.0.1 only unless you choose another address with `--cloud-host`.
 
 ## Start it
@@ -246,7 +250,7 @@ Then the next 14 (#337), made in 19 to 30 of the captures, and three more sendMq
 | `GET hes-gateway/terminal/sim/cardShow?gatewayId=` | HTTP 404 with `{"message": "", "status": 404}`, as 2,449 of 2,471 captured calls |
 | `GET hes-gateway/terminal/recommend/recommendFlag` | no referral offer |
 | `POST hes-gateway/terminal/v2/loginOut` | accepted; the token stays valid until it expires |
-| `sendMqtt` 317 → 318 | `paraType` 6: the network interfaces (`commSetPara`: on Wi-Fi, addresses from the documentation ranges, 192.0.2.x and `AA:BB:CC:…`); `optType` 1 writes the keys sent. `paraType` 12: the install profile (`sysConfigPara`, Direct Connect 1702's values; `fhpRatePower` one aPower's rating, W) |
+| `sendMqtt` 317 → 318 | `paraType` 6: the network interfaces (`commSetPara`: on Wi-Fi, addresses from the documentation ranges, 192.0.2.x and `AA:BB:CC:…`); `optType` 1 writes the keys sent. `paraType` 12: the install profile (`sysConfigPara`, Direct Connect 1702's values; `fhpRatePower` one aPower's rating, W); a `paraType` 12 write (none captured) gets `code 400` |
 | `sendMqtt` 327 → 328 | the aPower LED: `lightStat` one per aPower, the timer off; `opt` 1 writes the keys sent |
 | `sendMqtt` 337 → 338 | the aGate's Wi-Fi and access point (placeholder names and passwords); `opt` 1 writes the keys sent |
 

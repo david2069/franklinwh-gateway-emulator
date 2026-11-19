@@ -10,6 +10,7 @@
 - `examples/fleet-north-america.yaml`: `examples/fleet.yaml` plus 15 split-phase homes across the US and Canada, each with its own timezone (Redding CA, Boise, Houston, Tampa, Buffalo, Chicago, Seattle, St Louis, Cincinnati, Atlanta, Oklahoma City, Ottawa, Halifax, Long Beach NY, Atlantic City; Phoenix is the existing `us-split`) (#335). See docs/configuration.md.
 
 ### Changed
+- Docs: the FranklinWH Cloud API is in the README (intro, quick start, docs table, disclaimer), the docs home, Getting started (`--cloud-port`, `Fleet.start(cloud_port=0)`) and What is emulated (a Cloud API row; only uncaptured calls left as not modelled) (#345).
 - `examples/fleet-north-america.yaml`: two or more homes in each of its 16 places, 31 in all with Phoenix's second, each one different: aGate and aPower models (some mixed), V10R01 or V12R02 firmware, solar or none, remote PV, aPower S DC PV, a generator, V2L and smart-circuit loads (HVAC, EV charger, hot water, pool and well pumps) (#338). See docs/configuration.md.
 
 ## 0.3.0 (2026-11-18)

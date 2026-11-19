@@ -6,6 +6,11 @@ registers), both in front of one **closed-loop site model**, so control commands
 battery and both ports always agree. It runs one gateway or a **fleet**, with an optional
 [web UI](ui.md).
 
+With `--cloud-port` it also serves the **[FranklinWH Cloud API](cloud-api.md)**, the REST API the
+official FranklinWH app, franklinwh-cloud and homeassistant-franklinwh use, from the same
+gateways, so cloud, Modbus TCP and Direct Connect clients all see one site. It never contacts the
+real cloud.
+
 !!! warning "Unofficial, and an emulation"
     Not affiliated with FranklinWH. It can never be 100% accurate: it may behave differently from
     a real aGate, now or in the future, and may have bugs or omissions a real aGate doesn't.
@@ -20,13 +25,13 @@ battery and both ports always agree. It runs one gateway or a **fleet**, with an
 - [Configuration](configuration.md): describe each site (aGate, aPowers, PV, grid, accessories, location) in a fleet file.
 - [Web UI](ui.md): cards, the energy diagram, actions, TOU editor, sessions, grouping.
 - [What is emulated](emulated.md): protocols, firmware profiles, and the choices where sources disagree.
+- [FranklinWH Cloud API](cloud-api.md) and [Cloud API clients](cloud-clients.md): serve the cloud's REST API and point a client (franklinwh-cloud, homeassistant-franklinwh, the official app) at it.
 
 ## Reference
 
 - [Grid, grid codes, export limits and phases](grid.md)
 - [The site model](site-model.md): TOU, energy, location and time, weather, loads, generator
 - [Control API and `ctl`](control-api.md)
-- [FranklinWH Cloud API](cloud-api.md): the cloud's REST API, served from the same gateways
 - [Scenarios](SCENARIOS.md) and [replaying recorded data](replay.md)
 - [Direct Connect](DIRECT_CONNECT.md), [design](DESIGN.md), [calibration](CALIBRATION.md),
   [findings](FINDINGS.md), [weather and loads](WEATHER_AND_LOADS.md)

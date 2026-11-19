@@ -18,12 +18,13 @@ You describe each site in a fleet file: see [Configuration](configuration.md).
 | **House load** | A built-in curve, appliance presets or your own components, or recordings |
 | **Environment** | Location and timezone (with DST), sun position, weather, ambient temperature, installation placement and cabinet temperature |
 | **Metrics** | Power flows (solar, home, battery, grid, generator, per leg and per circuit), SoC, lifetime and daily energy, 15-minute history, temperatures, voltages, frequency, alarms and run status: over Modbus TCP (SunSpec models and FranklinWH extension registers) and Direct Connect, as the aGate serves them |
+| **FranklinWH Cloud API** | With `--cloud-port`: the REST API the official app (user and installer), franklinwh-cloud and homeassistant-franklinwh use, served from the same site: login, gateway list, composite info, energy and history, modes and TOU, smart circuits, generator, settings, alarms and `sendMqtt` commands. Every call in the captured app traffic is served (shapes from the captures, values from the site model). It never contacts the real cloud. See [FranklinWH Cloud API](cloud-api.md) |
 | **Controls** | What a client can do to a real aGate: Modbus M704 setpoints (FORCE), Direct Connect writes (mode, off-grid, smart circuits, generator, Modbus enable, reboot, Debug Mode, …), plus the emulator's own control API and web UI for things a client can't do (cut the grid, set the weather, inject faults) |
 
 **Not modelled** (each gateway's diagram lists these too): per-aPower SoC and power (one
 combined battery), aPower S (DC hybrid), aHub, a non-backup panel, EV battery SoC (V2L keeps its
 own, [V2L](WEATHER_AND_LOADS.md#v2l)), hot-water
-temperature, most of the FranklinWH Cloud API (login, the gateway list, composite info and smart-circuit loads are served: [FranklinWH Cloud API](cloud-api.md)), network connectivity (Ethernet/Wi-Fi/4G). See the
+temperature, Cloud API calls no capture shows (sendMqtt 211 types 2 and 3, 317 paraType 12 writes: [FranklinWH Cloud API](cloud-api.md)), network connectivity (Ethernet/Wi-Fi/4G). See the
 [backlog](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/BACKLOG.md).
 
 ## Protocol detail
