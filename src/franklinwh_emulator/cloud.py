@@ -61,7 +61,8 @@ those; every value is this emulator's own model.
   1902's mode. Grid limits (``getPowerControlSetting``/``setPowerControl``, kW, -1 unlimited,
   0 off): the charge limit is the site's utility ``grid_charge``/``grid_charge_max_w``; a
   discharge limit of 0 turns battery export off, and other values are kept, not enforced.
-* The official app's start-up calls (#333): cloud_app.py.
+* The official app's start-up calls (#333, #337): cloud_app.py; its less frequent calls, the
+  assistant (``/api-smart/``) and sendMqtt 315/335/339/341 (#341): cloud_more.py.
 * ``selectOffgrid``: ``offgridSet``/``offgridState`` as Direct Connect 1412's off-grid read;
   ``get_stats`` asks for it when the grid relay is open, to tell a requested off-grid from an
   outage.
@@ -82,7 +83,7 @@ import secrets
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlsplit
 
-from . import cloud_app, cloud_energy, cloud_tou
+from . import cloud_app, cloud_energy, cloud_more, cloud_tou
 from .dc_payloads import DcPayloads
 from .models import AUNZ, NA
 from .server import MQTT_BAD_REPLIES
@@ -109,6 +110,10 @@ ACCESSORY_TYPES = {"generator_module": 3, "smart_circuits": 4}
 FEED_FLAGS = {1: ("allowed", False), 2: ("allowed", True), 3: ("prohibited", False)}
 REPLY = {203: 201}                     # response cmdType where it is not request + 1
 _DC_STATUS = ("opt", "result", "reason")
+# The official app's calls (#333, #337, #341): (method, path below /hes-gateway/) -> handler,
+# the assistant's by full path, and sendMqtt cmdType -> handler.
+APP_CALLS = {**cloud_app.APP_CALLS, **cloud_more.CALLS}
+MQTT_CALLS = {**cloud_app.MQTT_CALLS, **cloud_more.MQTT_CALLS}
 # franklinwh-cloud's device catalogue region ids (const/device_catalog.json): 2 US, 3 AU.
 # Canada and New Zealand are given their region's id: not established.
 COUNTRY_ID = {NA: 2, AUNZ: 3}
@@ -237,8 +242,8 @@ class CloudApi:
         path = url.path
         if method == "POST" and path == PREFIX + "initialize/appUserOrInstallerLogin":
             return self.login({k: v[0] for k, v in parse_qs(body.decode("utf-8", "replace")).items()})
-        app_call = cloud_app.APP_CALLS.get((method, path[len(GATEWAY_ROOT):])) \
-            if path.startswith(GATEWAY_ROOT) else None
+        app_call = APP_CALLS.get((method, path[len(GATEWAY_ROOT):])) \
+            if path.startswith(GATEWAY_ROOT) else cloud_more.SMART_CALLS.get((method, path))
         if not path.startswith(PREFIX) and path not in ENERGY and path not in ACCESSORY_PATHS \
                 and app_call is None:
             raise CloudError(404, f"no such path: {path}", http=404, unserved=f"{method} {path}")
@@ -259,7 +264,7 @@ class CloudApi:
             self.tou(gw).sync()
             if name == "getDeviceCompositeInfo" and gw.cloud_faults.empty_composite:
                 return _envelope(None)
-        if app_call is not None:                                  # the app's start-up calls (#333)
+        if app_call is not None:                                  # the app's calls (#333, #337, #341)
             return app_call(self, q, body)
         if method == "GET" and name == "getHomeGatewayList":
             return _envelope([self.gateway_entry(gw) for gw in self.gateways.values()])
@@ -415,8 +420,8 @@ class CloudApi:
             return self.power_info(gw)
         if ty == 203:
             return self.composite(gw)["runtimeData"]
-        if ty in cloud_app.MQTT_CALLS:                            # network, LED, Wi-Fi (#337)
-            return cloud_app.MQTT_CALLS[ty](self, gw, req)
+        if ty in MQTT_CALLS:                         # network, LED, Wi-Fi (#337); 315/335/339/341 (#341)
+            return MQTT_CALLS[ty](self, gw, req)
         raise CloudError(400, f"sendMqtt: cmdType {ty} is not emulated yet", unserved=f"sendMqtt cmdType {ty}")
 
     def switch_block(self, gw: "Gateway", req: dict) -> dict:

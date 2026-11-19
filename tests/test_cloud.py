@@ -123,7 +123,7 @@ def test_send_mqtt_353_is_the_smart_circuit_meter(fleet):
     assert res["cmdType"] == 354 and res["snno"] == 7 and res["equipNo"] == gw.serial
     loads = json.loads(res["dataArea"])
     assert loads["SW1ExpPower"] == pytest.approx(1500, abs=1) and "CarSWImpEnergy" in loads
-    other = envelope.replace('"cmdType": 353', '"cmdType": 315')
+    other = envelope.replace('"cmdType": 353', '"cmdType": 999')         # no such command
     req = urllib.request.Request(req.full_url, data=other.encode(), method="POST",
                                  headers={"loginToken": token})
     with urllib.request.urlopen(req, timeout=5) as r:
