@@ -287,6 +287,23 @@ capture shows a value whose meaning isn't established, the emulator's choice is 
 | `sendMqtt` 339 → 340 | the connection: the interface 317 keeps, connected to the router and the cloud while 341 has it switched on, the composite's Wi-Fi signal |
 | `sendMqtt` 341 → 342 | which interfaces are switched on (Ethernet and Wi-Fi on, 4G off); `opt` 1 writes the keys sent |
 
+And the installer app's calls (#343), `hes-gateway/manage/…` in 1 to 13 of the captures
+(cloud_installer.py). The emulator has one account, so the installer sees the fleet's gateways as
+the owner does:
+
+| Call | What comes back |
+|---|---|
+| `GET hes-gateway/manage/selectAppGatewayList?countryId=&stateId=` | the account's gateways, filtered by country and state ids when given, paged: status, firmware, city-level address, `runStatus` (the composite's `run_status`), aGate code; `emsModel` and `simCardStatus` 0 (their meanings aren't established) |
+| `GET hes-gateway/manage/selectAppGatewayStatus` | how many gateways are offline, in fault (an alarm), off-grid, charging, discharging or standby (by the aPower power); the other buckets 0 |
+| `GET hes-gateway/manage/selectCountriesList`, `selectStatesList?countryId=` | the countries and states the fleet's gateways are in, numbered as `obtainGeographyList` numbers them |
+| `GET hes-gateway/manage/selectIotGatewayInstall?gatewayId=` | the aGate's versions; the address and install step null, as every capture |
+| `GET hes-gateway/manage/getDeviceUpgradeResult?gatewayId=`, `listUpgradeSteps` | no upgrade running: the firmware the aGate has, and no steps |
+| `GET hes-gateway/manage/getCommunicationOptimization?gatewayId=` | the smart-circuit and mode block, as sendMqtt 311 reads it |
+| `GET hes-gateway/manage/getPersonalInfo` | the account's login; no name or phone number |
+| `GET hes-gateway/manage/getDeviceInfoV2`, `getDeviceCompositeInfo`, `tou/getEntranceInfo`, `getEquipmentLocationDetail`, `getOffGridFlag`, `selectDeviceOverallInfo`, `obtainApowersInfo`, `obtainAgateInfo` (without `msaSn`), `getHotSpotInfo/v2`, `solar/selectAnyOneSolarOpen`, `message/selectMessage`, `selectSimBtn`, `POST tou/getGatewayTouListV2`, `v2/loginOut` | as the user app's `terminal/` call, in the envelope the installer app's captures show |
+| `GET hes-gateway/manage/getAppGlobalConfig`, `selectProgramFlag`, `selectGatewayPowerAlarm`, `app/message/selectPushUnreadCount`, `tipForUploadingPictures`, `component/progressOrderCount`, `POST app/message/fcmToken/updateManage` | nothing: no feature entrance, VPP programme, power alarm, unread message, picture prompt or service order; the push token accepted and not kept |
+| `POST hes-gateway/manage/sendMqtt` | the installer app's relay: the same commands as `terminal/sendMqtt` |
+
 What the app shows for these values hasn't been seen yet: that is #316 step 4, the app pointed
 at the emulator.
 
