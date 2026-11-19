@@ -1,0 +1,19 @@
+# #345 Docs: the Cloud API in the README, home, getting started and What is emulated, 2026-11-20
+
+## Getting started's Python snippet, run as written (401: reachable, no token)
+401
+
+## Mentions of the Cloud API per page (before -> after)
+README.md: 0 -> 6
+docs/index.md: 1 -> 2
+docs/getting-started.md: 0 -> 3
+docs/emulated.md: 1 -> 2
+
+## Full suite
+875 passed, 44 warnings in 54.48s
+
+## mkdocs build --strict
+INFO    -  Documentation built in 0.38 seconds
+
+## check_pii --scan
+✅ SUCCESS: No PII leaks found!

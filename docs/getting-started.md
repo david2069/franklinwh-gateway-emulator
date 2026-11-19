@@ -9,6 +9,7 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # Python 3.10 or la
 .venv/bin/franklinwh-emulator serve --port 5020 --dc-port 9000 --seed 7   # factory: Modbus off until 1205
 .venv/bin/franklinwh-emulator serve --port 5020 --dc-port 9000 --setup in-service --grid-code ausgrid
 .venv/bin/franklinwh-emulator fleet examples/fleet.yaml
+.venv/bin/franklinwh-emulator fleet examples/fleet.yaml --cloud-port 8503   # plus the Cloud API
 .venv/bin/franklinwh-emulator scenario run outage-during-vpp --out results/   # timed + checked
 .venv/bin/python -m pytest
 ```
@@ -27,6 +28,19 @@ gw.stop()
 with Fleet.from_yaml("examples/fleet.yaml") as fleet:
     fleet["site"].address
 ```
+
+With the [FranklinWH Cloud API](cloud-api.md) as well (0 = any free port):
+
+```python
+fleet = Fleet.from_yaml("examples/fleet.yaml")
+fleet.start(cloud_port=0)
+url_base = f"http://127.0.0.1:{fleet.cloud.port}/"        # franklinwh-cloud's url_base
+fleet.stop()
+```
+
+The account is `owner@example.com` / `emulator` unless the fleet file's `cloud:` says otherwise.
+[Cloud API clients](cloud-clients.md) shows how to point franklinwh-cloud,
+homeassistant-franklinwh or the official app at it.
 
 Inside an asyncio app, use `await gw.start_async()` / `await gw.stop_async()` to serve on
 your own loop.

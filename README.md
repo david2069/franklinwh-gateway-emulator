@@ -12,6 +12,13 @@ extension registers), both in front of one **closed-loop site model**, so contro
 actually move the battery and both ports always agree. It can run one gateway or a **fleet** of
 them.
 
+With `--cloud-port` it also serves the **FranklinWH Cloud API**, the REST API the official
+FranklinWH app, [franklinwh-cloud](https://github.com/david2069/franklinwh-cloud) and
+[homeassistant-franklinwh](https://github.com/richo/homeassistant-franklinwh) use, from the same
+gateways: a cloud client, a Modbus client and a Direct Connect client all see one site. It never
+contacts the real cloud. See [FranklinWH Cloud API](docs/cloud-api.md) and
+[Cloud API clients](docs/cloud-clients.md).
+
 **As on a real aGate, Modbus TCP starts off.** Every aGate runs a Direct Connect listener; Modbus
 TCP comes on when a Direct Connect `1205` `sunsMdEn` write enables it (about 3 s later). That is
 `setup: factory`, the default. A gateway that is already set up is `setup: in-service`: Modbus TCP
@@ -33,9 +40,10 @@ unmodified `FranklinWHController` connects, scans, reads and dispatches against 
 > **UNOFFICIAL SOFTWARE — NOT AFFILIATED WITH OR ENDORSED BY FRANKLINWH.**
 >
 > This is an **emulator**, not an aGate. It imitates FranklinWH's undocumented **Direct Connect**
-> local API (reverse-engineered by third parties) and its **SunSpec Modbus TCP** API (with
-> undocumented FranklinWH extensions), from incomplete documentation and observations of a few
-> real devices. It **can never be 100% accurate**: it may behave differently from a real aGate,
+> local API (reverse-engineered by third parties), its **SunSpec Modbus TCP** API (with
+> undocumented FranklinWH extensions) and the **FranklinWH Cloud API** (the app's REST API,
+> reverse-engineered from captured app traffic), from incomplete documentation and observations
+> of a few real devices. It **can never be 100% accurate**: it may behave differently from a real aGate,
 > now or in the future, and may have bugs, errors or omissions a real aGate doesn't have.
 > Software that works here may still fail, or do harm, on real hardware. **Verify on real
 > hardware before relying on any result.**
@@ -67,6 +75,7 @@ git clone https://github.com/david2069/franklinwh-gateway-emulator.git
 cd franklinwh-gateway-emulator
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # Python 3.10 or later
 .venv/bin/franklinwh-emulator ui examples/fleet.yaml      # web UI: open http://127.0.0.1:8502/
+.venv/bin/franklinwh-emulator ui examples/fleet.yaml --cloud-port 8503   # plus the Cloud API
 .venv/bin/franklinwh-emulator serve --port 5020 --dc-port 9000 --setup in-service   # one gateway
 .venv/bin/python -m pytest
 ```
@@ -88,6 +97,7 @@ from [`docs/`](docs/), so these links also work on GitHub:
 | [Grid, grid codes, export limits and phases](docs/grid.md) | outages, trips, CSIP-AUS, phases |
 | [The site model](docs/site-model.md) | TOU, energy, location and time, weather, loads, generator |
 | [Control API and `ctl`](docs/control-api.md) | drive the emulator from scripts and tests |
+| [FranklinWH Cloud API](docs/cloud-api.md) · [Cloud API clients](docs/cloud-clients.md) | the cloud's REST API from the same gateways; pointing franklinwh-cloud, homeassistant-franklinwh or the official app at it |
 | [Scenarios](docs/SCENARIOS.md) · [Replay](docs/replay.md) | timed, checked test runs; recorded data |
 | [Direct Connect](docs/DIRECT_CONNECT.md) · [Design](docs/DESIGN.md) · [Calibration](docs/CALIBRATION.md) · [Findings](docs/FINDINGS.md) | reference |
 | [Changelog](CHANGELOG.md) · [Backlog](BACKLOG.md) | |
