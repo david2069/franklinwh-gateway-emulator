@@ -62,7 +62,7 @@ FAILED tests/test_validate.py::test_example_homes_tou_plans[examples/fleet-au-nz
 1 failed, 1 passed
 
 Full suite: .venv/bin/python -m pytest -q -p no:cacheprovider
-899 passed, 44 warnings in 92.76s (on db46647); after rebasing on 7ccb905: 900 passed
+899 passed, 44 warnings in 92.76s (on db46647); after rebasing on 7ccb905: 900 passed; on a6a0f51 (#371): 903 passed
 mkdocs build --strict: built, no warnings.
 python3 scripts/check_pii.py --scan: Scanned 410 files; no PII leaks found.
 
