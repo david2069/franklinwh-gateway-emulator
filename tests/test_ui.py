@@ -43,7 +43,7 @@ def test_page_and_its_files(ui):
     page = body.decode()
     refs = re.findall(r'(?:src|href)="/static/([^"]+)"', page)
     assert set(refs) == {"style.css", "app.js", "diagram.js", "actions.js", "tou.js",
-                         "groups.js", "units.js", "splash.js", "map.js", "alpinejs-3.14.1.min.js"}
+                         "groups.js", "units.js", "splash.js", "map.js", "drawer.js", "alpinejs-3.14.1.min.js"}
     for name in refs:
         status, ctype, _ = get(f"{base}/static/{name}")
         assert status == 200

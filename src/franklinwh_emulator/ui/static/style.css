@@ -42,15 +42,38 @@ header .version { font: 12px var(--mono); color: var(--text-2); border: 1px soli
 .layout-toggle:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
 main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 .col-main { min-width: 0; }
-/* Actions beside the gateways on wide screens: their own scrolling column. */
+/* Actions beside the gateways on wide screens: their own scrolling column, on the right or (#361)
+   the left. Left mirrors right: the grid flows right to left, its children left to right. */
 @media (min-width: 1100px) {
-  main.layout-right { max-width: none; display: grid; gap: 20px;
+  main.layout-right, main.layout-left { max-width: none; display: grid; gap: 20px;
                       grid-template-columns: minmax(0, 1fr) minmax(380px, 36%); align-items: start; }
-  main.layout-right > .status { grid-column: 1 / -1; }
-  main.layout-right .col-side { margin-top: 0; position: sticky; top: 0; max-height: 100vh;
+  main.layout-left { direction: rtl; }
+  main.layout-left > * { direction: ltr; }
+  main.layout-right > .status, main.layout-left > .status { grid-column: 1 / -1; }
+  main.layout-right .col-side, main.layout-left .col-side { margin-top: 0; position: sticky; top: 0; max-height: 100vh;
                                 overflow-y: auto; padding-bottom: 16px; }
-  main.layout-right .forms { grid-template-columns: 1fr; }
+  main.layout-right .forms, main.layout-left .forms { grid-template-columns: 1fr; }
+  /* With the drawer open the page is one column, kept clear of the drawer: nothing is covered. */
+  main.drawer-open { display: block; max-width: none; }
+  main.drawer-on-right { padding-right: calc(var(--drawer-w) + 16px); }
+  main.drawer-on-left { padding-left: calc(var(--drawer-w) + 16px); }
 }
+
+/* The actions drawer (#361): not modal, no backdrop; the page beside it stays usable. `main` outranks
+   the docked column's sticky rules. */
+:root { --drawer-w: min(460px, 100vw); }
+main .actions.drawer { position: fixed; top: 0; bottom: 0; max-height: none; z-index: 30; width: var(--drawer-w); margin: 0;
+                  overflow-y: auto; overscroll-behavior: contain; padding: 0 16px 16px; background: var(--bg);
+                  box-shadow: 0 0 24px rgba(0, 0, 0, .28); }
+main .actions.drawer-right { right: 0; border-left: 1px solid var(--line); }
+main .actions.drawer-left { left: 0; border-right: 1px solid var(--line); }
+main .actions.drawer .forms { grid-template-columns: 1fr; }
+.drawer-btns { display: flex; gap: 6px; margin-left: auto; }
+.drawer-btns[hidden] { display: none; }
+.drawer-btns button { font: 600 16px var(--sans); color: var(--text-2); background: var(--panel);
+                      border: 1px solid var(--line); border-radius: 8px; min-width: 40px; min-height: 40px; cursor: pointer; }
+.drawer-btns button:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
+@media (max-width: 600px) { :root { --drawer-w: 100vw; } }
 .actions-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; position: sticky; top: 0;
                z-index: 1; background: var(--bg); padding: 8px 0; }
 .actions-top h2 { margin: 0; }
@@ -160,7 +183,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 /* Out-of-date banner (the emulator restarted or changed) */
 .stale { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 16px; padding: 10px 12px;
          border: 1px solid var(--warn); border-radius: 8px; color: var(--warn); background: var(--panel-2); }
-main.layout-right > .stale { grid-column: 1 / -1; }
+main.layout-right > .stale, main.layout-left > .stale { grid-column: 1 / -1; }
 .stale span { flex: 1 1 260px; }
 .stale button { font: 600 14px var(--sans); border-radius: 8px; padding: 0 14px; min-height: 36px; cursor: pointer;
                 color: var(--bg); background: var(--warn); border: 0; }
@@ -178,7 +201,7 @@ main.layout-right > .stale { grid-column: 1 / -1; }
 .session button:disabled { opacity: .5; cursor: default; }
 .session-msg { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 16px; padding: 10px 12px;
   border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); font-size: 14px; }
-main.layout-right > .session-msg { grid-column: 1 / -1; }
+main.layout-right > .session-msg, main.layout-left > .session-msg { grid-column: 1 / -1; }
 .session-msg.ok { border-color: var(--ok); color: var(--ok); }
 .session-msg.bad { border-color: var(--bad); color: var(--bad); }
 .session-msg span { flex: 1 1 300px; }
@@ -433,7 +456,8 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
 @media (prefers-reduced-motion: reduce) { .splash-leave { transition: none; } }
 
 /* The map of where the gateways are (map.js, #352): the shipped outline, themed here. */
-.fleet-map { margin: 0 0 14px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
+.fleet-map { margin: 0 0 14px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel);
+             isolation: isolate; }   /* Leaflet's layers (z-index 400-1000) stay under the drawer (#361) */
 #fleet-map { height: 380px; background: var(--bg); font: 13px var(--sans); }
 #fleet-map .map-land { fill: var(--panel-2); fill-opacity: 1; stroke: var(--line); }
 #fleet-map .map-border { fill: none; stroke: var(--muted); stroke-opacity: 0.7; }

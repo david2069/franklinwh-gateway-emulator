@@ -36,7 +36,12 @@ function running() {
     eventsOpen: false,
     stale: '',          // why this page is out of date (the emulator restarted or changed)
     staleNewCode: false,
-    layout: 'right',  // where the actions go: 'right' (beside, on wide screens) or 'below'
+    layout: 'right',  // where the actions go (drawer.js): 'left' | 'right' (beside, on wide screens) | 'below' | 'drawer'
+    drawer: false,    // the actions drawer is open (right-click or long press on a card or marker, #361)
+    drawerSide: 'right',
+    _drawerReturn: null,   // where focus goes back when the drawer closes
+    _press: null,          // the long-press timer on a card
+    _pressed: false,       // a long press just opened the drawer: skip the click that follows
     groupBy: 'none',  // cards grouped by location (groups.js): none | country | state | city | postcode | site
     compact: false,   // one-line cards
     mapOn: false,     // the map of where the gateways are (map.js, #352)
@@ -61,7 +66,8 @@ function running() {
       const shownAt = Date.now();
       try {
         this.active = localStorage.getItem('emulator.active');
-        this.layout = localStorage.getItem('emulator.layout') || 'right';
+        this.layout = layoutFrom(localStorage.getItem('emulator.layout'));
+        this.drawerSide = sideFrom(localStorage.getItem('emulator.drawerSide'));
         const gb = localStorage.getItem('emulator.groupBy');
         if (gb && GROUP_BY[gb]) this.groupBy = gb;
         this.compact = localStorage.getItem('emulator.compact') === '1';
@@ -452,7 +458,7 @@ function running() {
         this.mapError = 'The map couldn\'t load: ' + e.message;
       }
     },
-    drawMap() { drawFleetMap(mapPoints(this.gateways), this.active, id => this.select(id)); },
+    drawMap() { drawFleetMap(mapPoints(this.gateways), this.active, id => this.select(id), id => this.openDrawer(id)); },
     mapNote() {
       const n = mapMissing(this.gateways);
       return n ? n + (n === 1 ? ' gateway has no location, so isn\'t shown' : ' gateways have no location, so aren\'t shown') : '';
@@ -461,9 +467,58 @@ function running() {
       this.collapsed = { ...this.collapsed, [label]: !this.collapsed[label] };
       try { localStorage.setItem('emulator.collapsed', JSON.stringify(this.collapsed)); } catch (e) { /* private mode */ }
     },
-    toggleLayout() {
-      this.layout = this.layout === 'right' ? 'below' : 'right';
-      try { localStorage.setItem('emulator.layout', this.layout); } catch (e) { /* private mode */ }
+    setLayout(layout) {
+      this.layout = layoutFrom(layout);
+      this.drawerSide = sideForLayout(this.layout, this.drawerSide);
+      try {
+        localStorage.setItem('emulator.layout', this.layout);
+        localStorage.setItem('emulator.drawerSide', this.drawerSide);
+      } catch (e) { /* private mode */ }
+    },
+
+    // -- the actions drawer (drawer.js, #361) -----------------------------------------------------
+    openDrawer(id, ev) {
+      if (!this.drawer) this._drawerReturn = (ev && ev.currentTarget) || document.activeElement;
+      if (id) this.select(id);
+      this.drawer = true;
+      // The buttons show through :hidden, set in Alpine's microtask before this runs; in the drawer
+      // layout the panel itself shows through x-show, in Alpine's own later timeout, so retry briefly.
+      const focusClose = n => {
+        const b = document.getElementById('drawer-close');
+        if (b) b.focus();
+        if (n && b && document.activeElement !== b) setTimeout(() => focusClose(n - 1), 20);
+      };
+      setTimeout(() => focusClose(10), 0);
+    },
+    closeDrawer() {
+      if (!this.drawer) return;
+      this.drawer = false;
+      const back = this._drawerReturn;
+      this._drawerReturn = null;
+      if (back && back.isConnected && back.focus) back.focus();
+    },
+    flipDrawer() {
+      this.drawerSide = this.drawerSide === 'left' ? 'right' : 'left';
+      try { localStorage.setItem('emulator.drawerSide', this.drawerSide); } catch (e) { /* private mode */ }
+    },
+    // A card: click selects (and opens the drawer when the actions live only there); right-click or
+    // a long press opens the drawer.
+    clickCard(id) {
+      if (this._pressed) { this._pressed = false; return; }
+      this.select(id);
+      if (this.layout === 'drawer') this.openDrawer(id);
+    },
+    pressStart(id, ev) {
+      this.pressEnd();
+      const el = ev.currentTarget;
+      this._press = setTimeout(() => {
+        this._press = null;
+        this._pressed = true;
+        this.openDrawer(id, { currentTarget: el });
+      }, LONG_PRESS_MS);
+    },
+    pressEnd() {
+      if (this._press) { clearTimeout(this._press); this._press = null; }
     },
 
     // -- the detail card's gateway picker (#142): filters narrow the drop-down ------------------

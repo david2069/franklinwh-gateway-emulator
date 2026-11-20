@@ -1,0 +1,93 @@
+# #361 Web UI: the actions drawer and the Left / Right / Below / Drawer drop-down, 2026-11-21
+
+No owner design for this in private/ui-design; it follows the existing card and panel styles.
+
+## Browser check: headless Chrome over CDP, examples/fleet.yaml on free ports, map on
+Driver: a CDP script after the map's (#352). Right-click is a dispatched contextmenu event; the long
+press a dispatched touchstart with no touchend for 800 ms (and a 150 ms tap that must not open it).
+Keys: layout_from_* = the stored value read back (old toggle values and an unknown one);
+left/right_*_x = the actions column's and the cards' left edges; rc_* = after right-clicking the
+third card; under_pointer_at_x200 / cards_clear_of_drawer / backdrop_elements / page_scrolls = the
+drawer isn't modal; esc_* and x_closed = closing; flipped_* = after ←; marker_rc_* = a map marker's
+right-click; press_* = the long press; drawer_layout_* = Actions: drawer; phone_* at 390 px.
+{
+ "layout_from_below": "below",
+ "layout_from_right": "right",
+ "layout_from_sideways": "right",
+ "options": [
+  "left=Actions: left",
+  "right=Actions: right",
+  "below=Actions: below",
+  "drawer=Actions: drawer"
+ ],
+ "left_side_x": 16,
+ "left_main_x": 528,
+ "right_side_x": 892,
+ "right_main_x": 16,
+ "cards": 10,
+ "rc_target": "au-3phase-l1",
+ "rc_active": "au-3phase-l1",
+ "rc_drawer": true,
+ "rc_section_position": "fixed",
+ "rc_drawer_right_edge": "1400 of 1400",
+ "rc_drawer_width": 460,
+ "rc_focus": "drawer-close",
+ "rc_default_menu_prevented": true,
+ "under_pointer_at_x200": "fleet-map",
+ "cards_clear_of_drawer": true,
+ "backdrop_elements": 0,
+ "page_scrolls": true,
+ "click_beside_drawer_selects": true,
+ "esc_closed": true,
+ "esc_focus_back_on_card": true,
+ "flipped_left_edge": 0,
+ "flipped_main_padding_left": "476px",
+ "x_closed": true,
+ "stored_side": "left",
+ "marker_rc_drawer": true,
+ "marker_rc_active": "site",
+ "press_300ms_drawer": false,
+ "press_800ms_drawer": true,
+ "press_active": true,
+ "press_then_click_keeps_drawer": true,
+ "short_tap_drawer": false,
+ "drawer_layout_actions_shown": false,
+ "drawer_layout_click_opens": true,
+ "drawer_layout_focus": "drawer-close",
+ "drawer_layout_remembered": "drawer",
+ "light_drawer_bg": "rgb(244, 246, 249)",
+ "phone_drawer_width": "390 of 390",
+ "phone_overflow_px": 0,
+ "errors": []
+}
+
+Screenshots: dark and light at 1400 px, the drawer on the left, phone at 390 px, Actions: left;
+docs/assets/ui/drawer.png is the dark one, clipped.
+
+## Found while building it
+- The docked column's `main.layout-right .col-side` (sticky) outranked `.actions.drawer`: the drawer
+  stayed in the column. The drawer rules start with `main` (break check 2).
+- Focus didn't reach ×: x-show reveals elements in its own later timeout, so the buttons use
+  `:hidden`, and the focus retries briefly for the drawer layout, where the panel itself uses x-show.
+- On a phone Leaflet's layers (z-index 400-1000) drew over the drawer; `.fleet-map` now isolates
+  its stacking context.
+
+## Break check 1 (pytest): layoutFrom keeps any stored value
+E         At index 6 diff: 'sideways' != 'right'
+1 failed, 1 passed in 0.03s
+Restored: tests/test_ui_drawer.py passes.
+
+## Break check 2 (browser): the drawer rules without `main` (the sticky column wins)
+ "rc_section_position": "sticky",
+ "rc_drawer_right_edge": "476 of 1400",
+ "cards_clear_of_drawer": false,
+With `main`: position fixed, right edge 1400 of 1400, cards clear of the drawer (above).
+
+## Full suite (this worktree's src first on the path)
+888 passed, 44 warnings in 57.94s
+
+## mkdocs build --strict
+INFO    -  Documentation built in 0.37 seconds
+
+## check_pii --scan
+SUCCESS: No PII leaks found!

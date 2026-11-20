@@ -144,7 +144,8 @@ longitude, above the cards. It is off until you turn it on, and the browser reme
 - One marker per place: gateways at the same spot (a group's aGates, or separate sites in one city)
   share it, and a bigger marker means more gateways there. The selected gateway's place is amber.
 - Hover a marker for the place and each gateway's id and SoC; click it to select that gateway for
-  the actions (click again for the next gateway at the same place).
+  the actions (click again for the next gateway at the same place). Right-click it (a long press
+  on a touch screen) to open the [actions drawer](#where-the-actions-go) on that place's gateway.
 - Gateways without a latitude and longitude aren't shown; a line under the map counts them.
 - It works offline. The base is Natural Earth's 1:110m outline (land, country borders, state and
   province lines), shipped with the UI, not online map tiles; Leaflet 1.9.4 draws it, loaded only
@@ -153,6 +154,22 @@ longitude, above the cards. It is off until you turn it on, and the browser reme
 ## Actions
 
 ![An action form with its result](assets/ui/actions.png)
+
+### Where the actions go
+
+![The actions drawer on the right, opened by right-clicking a card; the cards and map stay usable](assets/ui/drawer.png)
+
+The header's drop-down places the actions: **Actions: left** or **Actions: right** (a column
+beside the gateways on wide screens), **Actions: below** (under them) or **Actions: drawer** (only
+in the drawer). The browser remembers the choice. Below 1100 px wide the drop-down is hidden and
+the actions sit below the gateways, as before.
+
+Right-click a gateway card or a map marker (a long press, about half a second, on a touch screen)
+to select that gateway and open its actions in a **drawer** at the side of the window, whatever
+the layout. With **Actions: drawer**, a plain click on a card opens it too. The drawer isn't a
+dialog: nothing is greyed out, and on wide screens the cards and map move aside so none of them is
+covered. ← or → moves it to the other side (remembered); × or Esc closes it, and the keyboard
+focus goes back to the card that opened it. On a phone it takes the full width.
 
 Every control action has a form, built from `GET /schema`. Only the fields you fill are sent; the
 emulator's answer stays in the form. **Activity** lists every action from any source.
