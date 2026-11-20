@@ -2,8 +2,9 @@
 #
 # examples/fleet.yaml plus two homes in each of 10 places across Australia and New Zealand
 # (#357): the AU/NZ aGate (single phase, 230 V, 50 Hz), aPower X-01-AU and X-02-AU (some mixed),
-# AS/NZS 4777.2 Australia A (the only region emulated: WA, the NT and New Zealand use their own,
-# not emulated), older (V10R01) or newer (V12R02) firmware, solar or none, remote PV, large
+# AS/NZS 4777.2 Australia A throughout, the only region the emulator has (New Zealand's own region
+# and Australia B/C are not emulated; which region WA and the NT require is not established here),
+# older (V10R01) or newer (V12R02) firmware, solar or none, remote PV, large
 # arrays, a generator, V2L, two smart circuits or none, Self-Consumption, TOU or Emergency Backup
 # (mostly homes without solar), and export settings: battery export (the AU/NZ default) or off,
 # export capped, or zero export. City-level locations.

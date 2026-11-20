@@ -44,3 +44,8 @@ INFO    -  Documentation built in 0.40 seconds
 
 ## check_pii --scan
 ✅ SUCCESS: No PII leaks found!
+
+## Wording corrected before merge
+The first version said WA, the NT and New Zealand 'use their own' region. Only New Zealand's region
+(AS/NZS 4777.2:2020) is established; WA's and the NT's required region is not established here. Fleet
+header, docs/configuration.md and CHANGELOG now say so. test_validate: 50 passed in 12.04s

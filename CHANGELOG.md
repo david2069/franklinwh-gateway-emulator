@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Added
-- `examples/fleet-au-nz.yaml`: `examples/fleet.yaml` plus two different homes in each of Devonport (Auckland), Hamilton, Christchurch, Queenstown, Perth, Townsville, Canberra, Adelaide, Hobart and Darwin: aPower X-01-AU or X-02-AU (some mixed), V10R01 or V12R02 firmware, solar or none, remote PV, large arrays, a generator, V2L, smart circuits or none, the three modes and export settings; AS/NZS 4777.2 Australia A throughout, the only region emulated (#357). See docs/configuration.md.
+- `examples/fleet-au-nz.yaml`: `examples/fleet.yaml` plus two different homes in each of Devonport (Auckland), Hamilton, Christchurch, Queenstown, Perth, Townsville, Canberra, Adelaide, Hobart and Darwin: aPower X-01-AU or X-02-AU (some mixed), V10R01 or V12R02 firmware, solar or none, remote PV, large arrays, a generator, V2L, smart circuits or none, the three modes and export settings; AS/NZS 4777.2 Australia A throughout, the only region the emulator has (New Zealand's region and Australia B/C are not emulated) (#357). See docs/configuration.md.
 - Web UI: **Map** (header), an optional view of where the gateways are installed, from each one's location: one marker per place with each gateway's id and SoC, click to select; offline (a shipped Natural Earth outline, Leaflet 1.9.4 loaded on first use), as the Direct Connect bridge's CloudFront PoP map (#352). See docs/ui.md.
 
 ### Changed

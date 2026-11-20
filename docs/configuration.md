@@ -33,8 +33,9 @@ file to make them permanent.
    [`examples/fleet-au-nz.yaml`](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/examples/fleet-au-nz.yaml)
    does the same for Australia and New Zealand: two different homes in each of 10 places
    (Devonport, Hamilton, Christchurch, Queenstown, Perth, Townsville, Canberra, Adelaide, Hobart,
-   Darwin) on the single-phase AU/NZ aGate with aPower X-01-AU or X-02-AU. AS/NZS 4777.2
-   Australia A is the only region emulated, so WA, the NT and New Zealand use it too.
+   Darwin) on the single-phase AU/NZ aGate with aPower X-01-AU or X-02-AU. Every home uses AS/NZS
+   4777.2 Australia A, the only region the emulator has: New Zealand's own region and Australia B
+   and C are not emulated, and which region WA and the NT require is not established here.
 2. Start it: `franklinwh-emulator ui my-fleet.yaml` (web UI on http://127.0.0.1:8502/) or
    `franklinwh-emulator fleet my-fleet.yaml` (no UI). It checks the file first and prints every
    problem with its path (e.g. `gateways[1].modbus: port 5020 already used`), then exits.
