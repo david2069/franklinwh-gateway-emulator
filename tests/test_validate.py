@@ -51,7 +51,8 @@ def test_north_america_example_adds_its_homes_to_the_example_fleet():
         looks.append((f[g["id"]].profile.name, s.model.agate.code, tuple(u.code for u in s.unit_models),
                       g.get("solar_peak_w", 1) > 0, tuple(sorted((g.get("pv_inputs") or {}).items())),
                       bool(s.dc_pv), s.generator.hw.installed, s.v2l is not None, len(s.circuits or ()),
-                      tuple(c.get("name") for c in g.get("loads") or ())))
+                      tuple(c.get("name") for c in g.get("loads") or ()),
+                      tuple(sorted((g.get("utility") or {}).items()))))
     assert len(set(looks)) == len(looks)                  # every home different (#338)
     assert {x[0] for x in looks} == {"agate-v10r01b04d00", "agate-v12r02b60d00-candidate"}
     assert {x[1] for x in looks} == {100, 101, 103, 104}
@@ -59,6 +60,16 @@ def test_north_america_example_adds_its_homes_to_the_example_fleet():
     assert all(any(x[i] for x in looks) and not all(x[i] for x in looks) for i in (3, 4, 5, 6, 7, 8))
     names = {n for x in looks for n in x[9]}
     assert {"hvac", "evse", "hot_water", "pool_pump", "well_pump"} <= names
+    sites = [f[g["id"]].site for g in homes]
+    exports = [(s.utility_rules.export if s.utility_rules else "allowed", s.battery_export()) for s in sites]
+    assert {e for e, _ in exports} == {"allowed", "limited", "prohibited"}      # (#349)
+    assert sum(b for _, b in exports) >= 8 and sum(not b for _, b in exports) >= 8
+    assert sum(not s.circuits for s in sites) >= 8
+    at_max = [s for s in sites if s.dc_pv and s.dc_pv["rated_w"] == 15000 * sum(1 for u in s.unit_models if u.mppt_count)]
+    assert len(at_max) >= 3                               # aPower S DC PV at the MPPT maximum
+    # DC PV follows the site's solar shape, so solar_peak_w 0 would silence it
+    assert [g["id"] for g in homes if g.get("dc_pv") and g.get("solar_peak_w") == 0] == []
+    assert sum(g.get("solar_peak_w", 0) >= 12000 for g in homes) >= 3
 
 
 @pytest.mark.parametrize("path", BUILTINS, ids=lambda p: p.stem)

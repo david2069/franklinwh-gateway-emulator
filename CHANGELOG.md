@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Changed
+- `examples/fleet-north-america.yaml`: export settings mixed (the North American factory default of no battery export, battery export on, solar export capped at 5 or 10 kW, zero export), 10 homes without smart circuits, aPower S DC PV at the MPPT maximum (15 kW per aPower S: 30 and 45 kW) and 12 to 15 kW rooftop arrays. Two DC PV homes had `solar_peak_w: 0`, which silences DC PV (it follows the site's solar shape); they now have no AC solar through a 0 PV share (#349). See docs/configuration.md.
+
 ## 0.3.1 (2026-11-20)
 
 ### Added
