@@ -40,6 +40,22 @@ The Australia A values come from the distributor settings summary that reproduce
 standard's tables ([Jemena, effective 18 Dec 2021](https://jemena.com.au/siteassets/asset-folder/documents/electricity/embedded-generation/eg-inverter-requirements-settings-asnzs-4777-2_2020v2.pdf)).
 Ausgrid is an Australia A network
 ([ENA](https://energynetworks.com.au/miscellaneous/power-quality-response-mode-settings)).
+
+**Other AS/NZS 4777.2:2020 regions** (#359). The standard has four region settings: Australia A,
+Australia B, Australia C and New Zealand. Only Australia A is emulated. No public document found
+reproduces the B, C or New Zealand tables (operators refer to the standard's tables, which are
+paywalled), so a site in a B, C or New Zealand area runs Australia A here. Which region the
+networks require, from their own or the industry's published documents:
+
+| Network | Region | Source |
+|---|---|---|
+| Western Power (WA, SWIS) | Australia B | [Western Power, 30 Nov 2021](https://www.westernpower.com.au/news/transition-requirements-for-new-standards-asnzs-4777.22020); [ENA FAQ, 20 Feb 2025](https://www.energynetworks.com.au/assets/uploads/ENA-4777-FAQ-20.2.2025.pdf) |
+| Horizon Power (WA, regional) | Australia C | Horizon Power, Low Voltage EG Connection Technical Requirements (draft, Apr 2025), Table 17; ENA FAQ |
+| TasNetworks (Tasmania) | Australia C | ENA FAQ |
+| Power and Water (NT) | not established | the ENA FAQ lists it under both Australia A and Australia C |
+| Vector (Auckland) | Australia A | [Vector ESP009 v2.0, May 2026](https://media.vector.co.nz/production/documents/esp009technicalrequirementsfortheconnectionofdistributedgenerationlessthan30kva.pdf), 4.3 |
+| Other New Zealand networks | not established | the standard's New Zealand region exists; the Electricity Authority has consulted on Australia A as New Zealand's default, decision awaited ([EEA](https://eea.co.nz/what-we-do/asset-management/voltage-change-explanation/)) |
+
 Ausgrid's 10 kW single-phase export limit comes from its
 [NS194](https://www.ausgrid.com.au/asp-and-contractors/technical-document-library/ns194),
 as confirmed for this Sydney site. The 5 kW/phase used for multi-phase `ausgrid` sites is the
