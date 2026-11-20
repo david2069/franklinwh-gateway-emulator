@@ -1,0 +1,8 @@
+# #375 break check: postcode removed from one home in fleet-au-nz.yaml
+2 failed, 4 passed, 52 deselected in 4.36s
+# full suite (first run failed: the >= 10 split-city threshold didn't fit AU/NZ's 10 cities; now half the cities)
+905 passed, 44 warnings in 65.90s (0:01:05)
+# mkdocs
+INFO    -  Documentation built in 0.43 seconds
+# PII
+✅ SUCCESS: No PII leaks found!
