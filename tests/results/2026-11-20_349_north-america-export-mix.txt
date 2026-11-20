@@ -1,0 +1,58 @@
+# #349 North America fleet: export settings, smart circuits or none, DC PV at the MPPT maximum, large arrays, 2026-11-20
+
+## validate
+examples/fleet-north-america.yaml: fleet ok (41 gateways)
+
+## Break 1: the v0.3.1 fleet file (every home on the factory export setting, 2 without circuits)
+>       assert {e for e, _ in exports} == {"allowed", "limited", "prohibited"}      # (#349)
+1 failed, 43 deselected in 0.17s
+
+## Break 2: boise-id-2 back to solar_peak_w 0 with DC PV (DC PV silent)
+>       assert [g["id"] for g in homes if g.get("dc_pv") and g.get("solar_peak_w") == 0] == []
+1 failed, 43 deselected in 0.19s
+
+## After restoring
+1 passed, 43 deselected in 0.18s
+
+## Stepped in process without listening (the owner's UI holds the ports), 2026-06-28 16:00 UTC: export rule, battery export, circuits, DC PV rating, AC PV and DC PV now
+us-split            export=allowed      battery_export=n circuits=3 dc_pv=  0kW ac_pv=  3.1kW dc_now=  0.0kW 09:00
+redding-ca          export=limited 5kW  battery_export=n circuits=3 dc_pv= 30kW ac_pv=  0.5kW dc_now=  4.0kW 09:00
+redding-ca-2        export=allowed      battery_export=n circuits=0 dc_pv=  0kW ac_pv=  0.0kW dc_now=  0.0kW 09:00
+boise-id            export=limited 5kW  battery_export=n circuits=0 dc_pv=  0kW ac_pv=  0.8kW dc_now=  0.0kW 10:00
+boise-id-2          export=allowed      battery_export=n circuits=3 dc_pv= 10kW ac_pv=  0.0kW dc_now=  2.1kW 10:00
+houston-tx          export=allowed      battery_export=y circuits=3 dc_pv=  0kW ac_pv=  9.8kW dc_now=  0.0kW 11:00
+houston-tx-2        export=allowed      battery_export=n circuits=0 dc_pv=  0kW ac_pv=  0.0kW dc_now=  0.0kW 11:00
+tampa-fl            export=prohibited   battery_export=n circuits=3 dc_pv=  0kW ac_pv=  2.9kW dc_now=  0.0kW 12:00
+tampa-fl-2          export=allowed      battery_export=y circuits=3 dc_pv=  0kW ac_pv=  1.1kW dc_now=  0.0kW 12:00
+buffalo-ny          export=allowed      battery_export=n circuits=0 dc_pv=  0kW ac_pv=  0.0kW dc_now=  0.0kW 12:00
+buffalo-ny-2        export=allowed      battery_export=y circuits=3 dc_pv=  0kW ac_pv=  3.4kW dc_now=  0.0kW 12:00
+chicago-il          export=allowed      battery_export=n circuits=0 dc_pv=  0kW ac_pv=  0.0kW dc_now=  0.0kW 11:00
+chicago-il-2        export=allowed      battery_export=y circuits=3 dc_pv= 12kW ac_pv=  0.0kW dc_now= 10.0kW 11:00
+seattle-wa          export=allowed      battery_export=y circuits=3 dc_pv=  0kW ac_pv=  0.0kW dc_now=  0.0kW 09:00
+seattle-wa-2        export=prohibited   battery_export=n circuits=3 dc_pv=  0kW ac_pv=  0.5kW dc_now=  0.0kW 09:00
+st-louis-mo         export=allowed      battery_export=n circuits=0 dc_pv=  0kW ac_pv=  0.0kW dc_now=  0.0kW 11:00
+st-louis-mo-2       export=prohibited   battery_export=n circuits=3 dc_pv=  0kW ac_pv=  2.9kW dc_now=  0.0kW 11:00
+cincinnati-oh       export=limited 5kW  battery_export=n circuits=3 dc_pv= 15kW ac_pv=  4.9kW dc_now= 12.9kW 12:00
+cincinnati-oh-2     export=prohibited   battery_export=n circuits=0 dc_pv=  0kW ac_pv=  5.1kW dc_now=  0.0kW 12:00
+atlanta-ga          export=allowed      battery_export=y circuits=3 dc_pv=  0kW ac_pv=  1.0kW dc_now=  0.0kW 12:00
+atlanta-ga-2        export=allowed      battery_export=n circuits=3 dc_pv=  0kW ac_pv=  0.0kW dc_now=  0.0kW 12:00
+phoenix-az          export=limited 10kW battery_export=y circuits=3 dc_pv= 45kW ac_pv=  3.3kW dc_now= 27.3kW 09:00
+oklahoma-city-ok    export=allowed      battery_export=n circuits=0 dc_pv=  0kW ac_pv=  0.0kW dc_now=  0.0kW 11:00
+oklahoma-city-ok-2  export=allowed      battery_export=y circuits=3 dc_pv=  0kW ac_pv=  9.0kW dc_now=  0.0kW 11:00
+ottawa-on           export=allowed      battery_export=n circuits=3 dc_pv=  0kW ac_pv=  0.0kW dc_now=  0.0kW 12:00
+ottawa-on-2         export=allowed      battery_export=y circuits=3 dc_pv=  0kW ac_pv=  3.3kW dc_now=  0.0kW 12:00
+halifax-ns          export=allowed      battery_export=n circuits=0 dc_pv=  0kW ac_pv=  0.0kW dc_now=  0.0kW 13:00
+halifax-ns-2        export=allowed      battery_export=y circuits=3 dc_pv=  0kW ac_pv=  4.3kW dc_now=  0.0kW 13:00
+long-beach-ny       export=allowed      battery_export=n circuits=3 dc_pv=  0kW ac_pv=  0.0kW dc_now=  0.0kW 12:00
+long-beach-ny-2     export=limited 5kW  battery_export=n circuits=0 dc_pv=  0kW ac_pv=  1.4kW dc_now=  0.0kW 12:00
+atlantic-city-nj    export=limited 5kW  battery_export=n circuits=3 dc_pv=  0kW ac_pv=  3.6kW dc_now=  0.0kW 12:00
+atlantic-city-nj-2  export=allowed      battery_export=n circuits=3 dc_pv=  0kW ac_pv=  0.0kW dc_now=  0.0kW 12:00
+
+## Full suite
+875 passed, 44 warnings in 57.90s
+
+## mkdocs build --strict
+INFO    -  Documentation built in 0.41 seconds
+
+## check_pii --scan
+✅ SUCCESS: No PII leaks found!
