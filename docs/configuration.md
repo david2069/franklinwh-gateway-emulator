@@ -41,6 +41,8 @@ file to make them permanent.
    [`examples/fleet-global.yaml`](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/examples/fleet-global.yaml)
    has them all in one fleet: `examples/fleet.yaml`, the US and Canadian homes and the Australian
    and New Zealand homes, 71 gateways, on the same ports and seeds as in those two files.
+   Every home in these three files has a city-level postcode (Canada: the forward sortation area
+   only), so the gateways can be filtered and grouped by postcode.
    In the regional homes, every TOU home has its own TOU plan and prices (`tou_schedule`,
    `tou_rates`: plausible, not published tariffs; no grid charging in California), most other
    homes have none (`tou_schedule: []`, [No TOU plan](site-model.md#no-tou-plan)), and a few

@@ -139,6 +139,19 @@ def test_example_homes_tou_plans(path):
         assert no_grid and any(plan(g) for g in homes if g["id"] in no_grid)   # a CA plan, no 8
 
 
+
+@pytest.mark.parametrize("path", ["examples/fleet-us-canada.yaml", "examples/fleet-au-nz.yaml"])
+def test_example_homes_have_a_postcode(path):
+    """#375: every home has a city-level postcode to filter and group by; a city's homes differ
+    where the city has more than one."""
+    base = {g["id"] for g in load_yaml(str(ROOT / "examples/fleet.yaml"))["gateways"]}
+    homes = [g for g in load_yaml(str(ROOT / path))["gateways"] if g["id"] not in base]
+    assert [g["id"] for g in homes if not isinstance(g["location"].get("postcode"), str)] == []
+    by_city = {}
+    for g in homes:
+        by_city.setdefault(g["location"]["city"], set()).add(g["location"]["postcode"])
+    assert sum(len(v) > 1 for v in by_city.values()) >= len(by_city) // 2
+
 def test_au_nz_example_has_two_different_homes_per_place():
     """#357: two homes in each of 10 Australian and New Zealand places, each one different."""
     base = load_yaml(str(ROOT / "examples/fleet.yaml"))["gateways"]

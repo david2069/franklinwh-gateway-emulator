@@ -180,7 +180,7 @@ gateways:
     tou_schedule: []         # no TOU plan (#368)
     utility: {export: limited, export_limit_w: 5000}
     loads: sydney-family
-    location: {latitude: -36.83, longitude: 174.8, timezone: Pacific/Auckland,
+    location: {postcode: "0624", latitude: -36.83, longitude: 174.8, timezone: Pacific/Auckland,
                country: NZ, state: AUK, city: Devonport}
     service: {main_breaker_a: 63}
     modbus: {port: 5100}
@@ -199,7 +199,7 @@ gateways:
       - {name: base, type: base, w: 300, drift: 0.15}
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: aircon, type: hvac, w: 2400, cool_above: 26, heat_below: 12, span: 8, circuit: 1}
-    location: {latitude: -36.83, longitude: 174.8, timezone: Pacific/Auckland,
+    location: {postcode: "0624", latitude: -36.83, longitude: 174.8, timezone: Pacific/Auckland,
                country: NZ, state: AUK, city: Devonport}
     service: {main_breaker_a: 63}
     modbus: {port: 5101}
@@ -225,7 +225,7 @@ gateways:
       - {name: base, type: base, w: 300, drift: 0.15}
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: ev, type: ev, w: 7000, min_w: 1400, arrive: "18:00", depart: "07:30", kwh: 18, mode: offpeak, start: "22:00", circuit: 1}
-    location: {latitude: -37.79, longitude: 175.28, timezone: Pacific/Auckland,
+    location: {postcode: "3204", latitude: -37.79, longitude: 175.28, timezone: Pacific/Auckland,
                country: NZ, state: WKO, city: Hamilton}
     service: {main_breaker_a: 63}
     modbus: {port: 5102}
@@ -245,7 +245,7 @@ gateways:
       - {name: base, type: base, w: 300, drift: 0.15}
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: hot_water, type: schedule, w: 3600, on: ["11:00-13:30"], circuit: 1}
-    location: {latitude: -37.79, longitude: 175.28, timezone: Pacific/Auckland,
+    location: {postcode: "3210", latitude: -37.79, longitude: 175.28, timezone: Pacific/Auckland,
                country: NZ, state: WKO, city: Hamilton}
     service: {main_breaker_a: 63}
     modbus: {port: 5103}
@@ -272,7 +272,7 @@ gateways:
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: aircon, type: hvac, w: 2400, cool_above: 25, heat_below: 8, span: 8, circuit: 1}
       - {name: hot_water, type: schedule, w: 3600, on: ["11:00-13:30"], circuit: 2}
-    location: {latitude: -43.53, longitude: 172.64, timezone: Pacific/Auckland,
+    location: {postcode: "8011", latitude: -43.53, longitude: 172.64, timezone: Pacific/Auckland,
                country: NZ, state: CAN, city: Christchurch}
     service: {main_breaker_a: 63}
     modbus: {port: 5104}
@@ -292,7 +292,7 @@ gateways:
       - {name: base, type: base, w: 300, drift: 0.15}
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: aircon, type: hvac, w: 2400, cool_above: 25, heat_below: 6, span: 8}
-    location: {latitude: -43.53, longitude: 172.64, timezone: Pacific/Auckland,
+    location: {postcode: "8041", latitude: -43.53, longitude: 172.64, timezone: Pacific/Auckland,
                country: NZ, state: CAN, city: Christchurch}
     service: {main_breaker_a: 63}
     modbus: {port: 5105}
@@ -311,7 +311,7 @@ gateways:
       - {name: base, type: base, w: 300, drift: 0.15}
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: aircon, type: hvac, w: 2400, cool_above: 25, heat_below: 4, span: 8, circuit: 2}
-    location: {latitude: -45.03, longitude: 168.66, timezone: Pacific/Auckland,
+    location: {postcode: "9300", latitude: -45.03, longitude: 168.66, timezone: Pacific/Auckland,
                country: NZ, state: OTA, city: Queenstown}
     service: {main_breaker_a: 63}
     modbus: {port: 5106}
@@ -331,7 +331,7 @@ gateways:
       - {name: base, type: base, w: 300, drift: 0.15}
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: aircon, type: hvac, w: 2400, cool_above: 25, heat_below: 2, span: 8, circuit: 1}
-    location: {latitude: -45.03, longitude: 168.66, timezone: Pacific/Auckland,
+    location: {postcode: "9300", latitude: -45.03, longitude: 168.66, timezone: Pacific/Auckland,
                country: NZ, state: OTA, city: Queenstown}
     service: {main_breaker_a: 63}
     modbus: {port: 5107}
@@ -357,7 +357,7 @@ gateways:
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: pool_pump, type: schedule, w: 1100, on: ["10:00-14:00"], circuit: 1}
       - {name: aircon, type: hvac, w: 2400, cool_above: 26, heat_below: 12, span: 8, circuit: 2}
-    location: {latitude: -31.95, longitude: 115.86, timezone: Australia/Perth,
+    location: {postcode: "6000", latitude: -31.95, longitude: 115.86, timezone: Australia/Perth,
                country: AU, state: WA, city: Perth}
     service: {main_breaker_a: 63}
     modbus: {port: 5108}
@@ -376,7 +376,7 @@ gateways:
       - {name: base, type: base, w: 300, drift: 0.15}
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: hot_water, type: schedule, w: 3600, on: ["11:00-13:30"], circuit: 1}
-    location: {latitude: -31.95, longitude: 115.86, timezone: Australia/Perth,
+    location: {postcode: "6050", latitude: -31.95, longitude: 115.86, timezone: Australia/Perth,
                country: AU, state: WA, city: Perth}
     service: {main_breaker_a: 63}
     modbus: {port: 5109}
@@ -400,7 +400,7 @@ gateways:
       - {name: base, type: base, w: 300, drift: 0.15}
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: aircon, type: hvac, w: 2400, cool_above: 24, heat_below: 14, span: 8, circuit: 1}
-    location: {latitude: -19.26, longitude: 146.82, timezone: Australia/Brisbane,
+    location: {postcode: "4810", latitude: -19.26, longitude: 146.82, timezone: Australia/Brisbane,
                country: AU, state: QLD, city: Townsville}
     service: {main_breaker_a: 63}
     modbus: {port: 5110}
@@ -420,7 +420,7 @@ gateways:
       - {name: base, type: base, w: 300, drift: 0.15}
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: aircon, type: hvac, w: 2400, cool_above: 24, heat_below: 14, span: 8, circuit: 1}
-    location: {latitude: -19.26, longitude: 146.82, timezone: Australia/Brisbane,
+    location: {postcode: "4812", latitude: -19.26, longitude: 146.82, timezone: Australia/Brisbane,
                country: AU, state: QLD, city: Townsville}
     service: {main_breaker_a: 63}
     modbus: {port: 5111}
@@ -448,7 +448,7 @@ gateways:
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: ev, type: ev, w: 7000, min_w: 1400, arrive: "18:00", depart: "07:30", kwh: 18, mode: solar, start: "22:00", circuit: 1}
       - {name: aircon, type: hvac, w: 2400, cool_above: 27, heat_below: 6, span: 8, circuit: 2}
-    location: {latitude: -35.28, longitude: 149.13, timezone: Australia/Sydney,
+    location: {postcode: "2600", latitude: -35.28, longitude: 149.13, timezone: Australia/Sydney,
                country: AU, state: ACT, city: Canberra}
     service: {main_breaker_a: 63}
     modbus: {port: 5112}
@@ -464,7 +464,7 @@ gateways:
     tou_schedule: []         # no TOU plan (#368)
     accessories: {smart_circuits: false}
     loads: small-flat
-    location: {latitude: -35.28, longitude: 149.13, timezone: Australia/Sydney,
+    location: {postcode: "2612", latitude: -35.28, longitude: 149.13, timezone: Australia/Sydney,
                country: AU, state: ACT, city: Canberra}
     service: {main_breaker_a: 63}
     modbus: {port: 5113}
@@ -484,7 +484,7 @@ gateways:
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: hot_water, type: schedule, w: 3600, on: ["11:00-13:30"], circuit: 1}
       - {name: aircon, type: hvac, w: 2400, cool_above: 27, heat_below: 9, span: 8, circuit: 2}
-    location: {latitude: -34.93, longitude: 138.6, timezone: Australia/Adelaide,
+    location: {postcode: "5000", latitude: -34.93, longitude: 138.6, timezone: Australia/Adelaide,
                country: AU, state: SA, city: Adelaide}
     service: {main_breaker_a: 63}
     modbus: {port: 5114}
@@ -509,7 +509,7 @@ gateways:
       - {name: base, type: base, w: 300, drift: 0.15}
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: ev, type: ev, w: 7000, min_w: 1400, arrive: "18:00", depart: "07:30", kwh: 18, mode: offpeak, start: "22:00", circuit: 1}
-    location: {latitude: -34.93, longitude: 138.6, timezone: Australia/Adelaide,
+    location: {postcode: "5065", latitude: -34.93, longitude: 138.6, timezone: Australia/Adelaide,
                country: AU, state: SA, city: Adelaide}
     service: {main_breaker_a: 63}
     modbus: {port: 5115}
@@ -528,7 +528,7 @@ gateways:
       - {name: base, type: base, w: 300, drift: 0.15}
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: aircon, type: hvac, w: 2400, cool_above: 26, heat_below: 10, span: 8, circuit: 1}
-    location: {latitude: -42.88, longitude: 147.33, timezone: Australia/Hobart,
+    location: {postcode: "7000", latitude: -42.88, longitude: 147.33, timezone: Australia/Hobart,
                country: AU, state: TAS, city: Hobart}
     service: {main_breaker_a: 63}
     modbus: {port: 5116}
@@ -553,7 +553,7 @@ gateways:
       - {name: base, type: base, w: 300, drift: 0.15}
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: hot_water, type: schedule, w: 3600, on: ["11:00-13:30"], circuit: 2}
-    location: {latitude: -42.88, longitude: 147.33, timezone: Australia/Hobart,
+    location: {postcode: "7005", latitude: -42.88, longitude: 147.33, timezone: Australia/Hobart,
                country: AU, state: TAS, city: Hobart}
     service: {main_breaker_a: 63}
     modbus: {port: 5117}
@@ -574,7 +574,7 @@ gateways:
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: aircon, type: hvac, w: 2400, cool_above: 24, heat_below: 18, span: 8, circuit: 1}
       - {name: pool_pump, type: schedule, w: 1100, on: ["10:00-14:00"], circuit: 2}
-    location: {latitude: -12.46, longitude: 130.84, timezone: Australia/Darwin,
+    location: {postcode: "0800", latitude: -12.46, longitude: 130.84, timezone: Australia/Darwin,
                country: AU, state: NT, city: Darwin}
     service: {main_breaker_a: 63}
     modbus: {port: 5118}
@@ -595,7 +595,7 @@ gateways:
       - {name: base, type: base, w: 300, drift: 0.15}
       - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
       - {name: aircon, type: hvac, w: 2400, cool_above: 24, heat_below: 18, span: 8}
-    location: {latitude: -12.46, longitude: 130.84, timezone: Australia/Darwin,
+    location: {postcode: "0810", latitude: -12.46, longitude: 130.84, timezone: Australia/Darwin,
                country: AU, state: NT, city: Darwin}
     service: {main_breaker_a: 63}
     modbus: {port: 5119}
