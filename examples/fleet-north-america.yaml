@@ -1,12 +1,15 @@
 # franklinwh-emulator fleet ./examples/fleet-north-america.yaml
 #
-# examples/fleet.yaml plus two or more homes in each of 16 places across the US and Canada
-# (#335, #338): split phase 120/240 V (ac_type 1), IEEE 1547-2018 Category II, a 200 A service,
+# examples/fleet.yaml plus two or more homes in each of 21 places across the US (Hawaii and
+# Puerto Rico included) and Canada (#335, #338, #351): split phase 120/240 V (ac_type 1),
+# IEEE 1547-2018 Category II (Hawaii: Category III, plausible), a 200 A service,
 # city-level locations. Phoenix's first home is us-split below. Every home differs: aGate and
 # aPower models (some mixed), older (V10R01) or newer (V12R02) firmware, solar or none, remote PV
 # through the aPbox, aPower S DC PV (up to the MPPT maximum), large arrays, a generator, V2L,
 # smart circuits or none, and export settings: the factory default for North American models
-# (no battery export), battery export on, solar export capped, or zero export.
+# (no battery export), battery export on, solar export capped, or zero export; Self-Consumption,
+# TOU or Emergency Backup (mostly homes without solar); grid charging prohibited in California.
+# Hawaii has every North American aPower model.
 #
 # Every key outside `gateways` is optional. Per gateway:
 #   id, seed, serial, host, port (or modbus: {host, port}), directconnect: {port} (every aGate
@@ -165,7 +168,7 @@ gateways:
     modbus: {port: 5025}
 
   # North America (#335, #338): 120/240 V split phase, IEEE 1547 Category II, each home different.
-  # Redding, CA: two aPower S with DC PV on their MPPT inputs; hot summers on the AC; 30 kW DC PV, the aPower S maximum, solar export capped at 5 kW.
+  # Redding, CA: two aPower S with DC PV on their MPPT inputs; hot summers on the AC; Self-Consumption, 30 kW DC PV, the aPower S maximum, solar export capped at 5 kW, grid charging prohibited.
   - id: redding-ca
     seed: 200
     ac_type: 1
@@ -173,8 +176,9 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 103, apower: [4, 4]}
     apower_units: 2
+    native_mode: 2
     dc_pv: {rated_w: 30000}   # the MPPT maximum
-    utility: {export: limited, export_limit_w: 5000}
+    utility: {export: limited, export_limit_w: 5000, grid_charge: false}
     loads:
       - {name: base, type: base, w: 400, drift: 0.15}
       - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
@@ -185,7 +189,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5040}
     directconnect: {port: 9040}
-  # Redding, CA: wildfire power shutoffs: an older aGate X-10 on V10R01, a generator, a well pump, no solar; factory export setting (no battery export), no smart circuits.
+  # Redding, CA: wildfire power shutoffs: an older aGate X-10 on V10R01, a generator, a well pump, no solar; Emergency Backup, factory export setting (no battery export), grid charging prohibited, no smart circuits.
   - id: redding-ca-2
     seed: 201
     ac_type: 1
@@ -193,8 +197,10 @@ gateways:
     profile: agate-v10r01b04d00
     model: {agate: 100, apower: 1}
     apower_units: 1
+    native_mode: 1
     solar_peak_w: 0
     generator: {installed: true, rated_w: 12000}
+    utility: {grid_charge: false}
     accessories: {smart_circuits: false}
     loads:
       - {name: base, type: base, w: 400, drift: 0.15}
@@ -205,7 +211,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5041}
     directconnect: {port: 9041}
-  # Boise, ID: older aGate X-10 and aPower X on V10R01 firmware; rooftop solar; a well pump; solar export capped at 5 kW, no smart circuits.
+  # Boise, ID: older aGate X-10 and aPower X on V10R01 firmware; rooftop solar; a well pump; Self-Consumption, solar export capped at 5 kW, no smart circuits.
   - id: boise-id
     seed: 202
     ac_type: 1
@@ -213,6 +219,7 @@ gateways:
     profile: agate-v10r01b04d00
     model: {agate: 100, apower: 0}
     apower_units: 1
+    native_mode: 2
     utility: {export: limited, export_limit_w: 5000}
     accessories: {smart_circuits: false}
     loads:
@@ -225,7 +232,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5042}
     directconnect: {port: 9042}
-  # Boise, ID: two aPower S with DC PV, an EV charging on solar surplus; factory export setting (no battery export).
+  # Boise, ID: two aPower S with DC PV, an EV charging on solar surplus; Self-Consumption, factory export setting (no battery export).
   - id: boise-id-2
     seed: 203
     ac_type: 1
@@ -233,6 +240,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 103, apower: [5, 5]}
     apower_units: 2
+    native_mode: 2
     pv_inputs: {proximal: 0.0}   # DC PV only, no AC solar
     dc_pv: {rated_w: 10000}
     loads:
@@ -245,7 +253,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5043}
     directconnect: {port: 9043}
-  # Houston, TX: hurricane backup: a 22 kW standby generator, two aPower 2s, solar, AC and a pool pump; a large 13 kW rooftop array, battery export on.
+  # Houston, TX: hurricane backup: a 22 kW standby generator, two aPower 2s, solar, AC and a pool pump; TOU, a large 13 kW rooftop array, battery export on.
   - id: houston-tx
     seed: 204
     ac_type: 1
@@ -253,6 +261,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 104, apower: [3, 3]}
     apower_units: 2
+    native_mode: 3
     generator: {installed: true, rated_w: 22000}
     solar_peak_w: 13000
     utility: {battery_export: true}
@@ -266,7 +275,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5044}
     directconnect: {port: 9044}
-  # Houston, TX: aGate X-20 on V10R01, one aPower 2, no solar, no accessory modules; factory export setting (no battery export).
+  # Houston, TX: aGate X-20 on V10R01, one aPower 2, no solar, no accessory modules; Emergency Backup, factory export setting (no battery export).
   - id: houston-tx-2
     seed: 205
     ac_type: 1
@@ -274,6 +283,7 @@ gateways:
     profile: agate-v10r01b04d00
     model: {agate: 101, apower: 3}
     apower_units: 1
+    native_mode: 1
     solar_peak_w: 0
     accessories: {smart_circuits: false, generator_module: false, apbox: false}
     location: {latitude: 29.76, longitude: -95.37, timezone: America/Chicago,
@@ -281,7 +291,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5045}
     directconnect: {port: 9045}
-  # Tampa, FL: aGate X-20 on V10R01, one aPower X, solar on the aGate and a remote array (aPbox); zero export.
+  # Tampa, FL: aGate X-20 on V10R01, one aPower X, solar on the aGate and a remote array (aPbox); Self-Consumption, zero export.
   - id: tampa-fl
     seed: 206
     ac_type: 1
@@ -289,6 +299,7 @@ gateways:
     profile: agate-v10r01b04d00
     model: {agate: 101, apower: 1}
     apower_units: 1
+    native_mode: 2
     pv_inputs: {proximal: 0.5, remote1: 0.5}
     utility: {export: prohibited}
     loads:
@@ -301,7 +312,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5046}
     directconnect: {port: 9046}
-  # Tampa, FL: an aPower S, rooftop solar and an EV on V2L for hurricane outages; battery export on.
+  # Tampa, FL: an aPower S, rooftop solar and an EV on V2L for hurricane outages; TOU, battery export on.
   - id: tampa-fl-2
     seed: 207
     ac_type: 1
@@ -309,6 +320,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 103, apower: 4}
     apower_units: 1
+    native_mode: 3
     v2l: {circuit: 1, ev_kwh: 82, ev_soc: 80, max_w: 7600, min_soc: 20}   # EV values: placeholders (#287)
     utility: {battery_export: true}
     loads:
@@ -320,7 +332,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5047}
     directconnect: {port: 9047}
-  # Buffalo, NY: no solar; a portable generator for winter storms; electric heat; factory export setting (no battery export), no smart circuits.
+  # Buffalo, NY: no solar; a portable generator for winter storms; electric heat; Emergency Backup, factory export setting (no battery export), no smart circuits.
   - id: buffalo-ny
     seed: 208
     ac_type: 1
@@ -328,6 +340,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 103, apower: 3}
     apower_units: 1
+    native_mode: 1
     solar_peak_w: 0
     generator: {installed: true, rated_w: 9000}
     accessories: {smart_circuits: false}
@@ -340,7 +353,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5048}
     directconnect: {port: 9048}
-  # Buffalo, NY: three aPower 2s, solar on the house and the barn (aPbox), hot water and an EV; a large 14 kW rooftop array, battery export on.
+  # Buffalo, NY: three aPower 2s, solar on the house and the barn (aPbox), hot water and an EV; TOU, a large 14 kW rooftop array, battery export on.
   - id: buffalo-ny-2
     seed: 209
     ac_type: 1
@@ -348,6 +361,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 104, apower: [3, 3, 3]}
     apower_units: 3
+    native_mode: 3
     pv_inputs: {proximal: 0.7, remote1: 0.3}
     solar_peak_w: 14000
     utility: {battery_export: true}
@@ -361,7 +375,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5049}
     directconnect: {port: 9049}
-  # Chicago, IL: no solar, no accessory modules; aGate X-10 on V10R01 with a later aPower X; factory export setting (no battery export).
+  # Chicago, IL: no solar, no accessory modules; aGate X-10 on V10R01 with a later aPower X; Emergency Backup, factory export setting (no battery export).
   - id: chicago-il
     seed: 210
     ac_type: 1
@@ -369,6 +383,7 @@ gateways:
     profile: agate-v10r01b04d00
     model: {agate: 100, apower: 6}
     apower_units: 1
+    native_mode: 1
     solar_peak_w: 0
     accessories: {smart_circuits: false, generator_module: false, apbox: false}
     location: {latitude: 41.88, longitude: -87.63, timezone: America/Chicago,
@@ -376,7 +391,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5050}
     directconnect: {port: 9050}
-  # Chicago, IL: two aPower S with DC PV and a generator; battery export on.
+  # Chicago, IL: two aPower S with DC PV and a generator; TOU, battery export on.
   - id: chicago-il-2
     seed: 211
     ac_type: 1
@@ -384,6 +399,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 103, apower: [4, 4]}
     apower_units: 2
+    native_mode: 3
     pv_inputs: {proximal: 0.0}   # DC PV only, no AC solar
     dc_pv: {rated_w: 12000}
     generator: {installed: true, rated_w: 15000}
@@ -397,7 +413,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5051}
     directconnect: {port: 9051}
-  # Seattle, WA: no solar; an aPower S; the EV charger and hot water on smart circuits; battery export on.
+  # Seattle, WA: no solar; an aPower S; the EV charger and hot water on smart circuits; TOU, battery export on.
   - id: seattle-wa
     seed: 212
     ac_type: 1
@@ -405,6 +421,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 103, apower: 5}
     apower_units: 1
+    native_mode: 3
     solar_peak_w: 0
     utility: {battery_export: true}
     loads:
@@ -417,7 +434,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5052}
     directconnect: {port: 9052}
-  # Seattle, WA: aGate X-20 on V10R01, an aPower X and an aPower 2 (mixed), rooftop solar; zero export.
+  # Seattle, WA: aGate X-20 on V10R01, an aPower X and an aPower 2 (mixed), rooftop solar; Self-Consumption, zero export.
   - id: seattle-wa-2
     seed: 213
     ac_type: 1
@@ -425,6 +442,7 @@ gateways:
     profile: agate-v10r01b04d00
     model: {agate: 101, apower: [1, 3]}
     apower_units: 2
+    native_mode: 2
     utility: {export: prohibited}
     loads:
       - {name: base, type: base, w: 400, drift: 0.15}
@@ -435,7 +453,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5053}
     directconnect: {port: 9053}
-  # St Louis, MO: an aPower X joined later by an aPower 2 (mixed) on V10R01; no solar; a generator; factory export setting (no battery export), no smart circuits.
+  # St Louis, MO: an aPower X joined later by an aPower 2 (mixed) on V10R01; no solar; a generator; Self-Consumption, factory export setting (no battery export), no smart circuits.
   - id: st-louis-mo
     seed: 214
     ac_type: 1
@@ -443,6 +461,7 @@ gateways:
     profile: agate-v10r01b04d00
     model: {agate: 101, apower: [0, 3]}
     apower_units: 2
+    native_mode: 2
     solar_peak_w: 0
     generator: {installed: true, rated_w: 12000}
     accessories: {smart_circuits: false}
@@ -455,7 +474,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5054}
     directconnect: {port: 9054}
-  # St Louis, MO: an aPower S, solar on a detached garage (aPbox) and an EV on V2L; zero export.
+  # St Louis, MO: an aPower S, solar on a detached garage (aPbox) and an EV on V2L; TOU, zero export.
   - id: st-louis-mo-2
     seed: 215
     ac_type: 1
@@ -463,6 +482,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 104, apower: 5}
     apower_units: 1
+    native_mode: 3
     pv_inputs: {remote1: 1.0}
     v2l: {circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 3800, min_soc: 20}   # EV values: placeholders (#287)
     utility: {export: prohibited}
@@ -475,7 +495,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5055}
     directconnect: {port: 9055}
-  # Cincinnati, OH: solar on a detached garage through the aPbox only; an aPower S; 15 kW DC PV, the aPower S maximum, solar export capped at 5 kW.
+  # Cincinnati, OH: solar on a detached garage through the aPbox only; an aPower S; Self-Consumption, 15 kW DC PV, the aPower S maximum, solar export capped at 5 kW.
   - id: cincinnati-oh
     seed: 216
     ac_type: 1
@@ -483,6 +503,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 104, apower: 4}
     apower_units: 1
+    native_mode: 2
     pv_inputs: {remote1: 1.0}
     dc_pv: {rated_w: 15000}   # the MPPT maximum
     utility: {export: limited, export_limit_w: 5000}
@@ -495,7 +516,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5056}
     directconnect: {port: 9056}
-  # Cincinnati, OH: aGate X-10 on V10R01, an aPower X, rooftop solar and a small generator; zero export, no smart circuits.
+  # Cincinnati, OH: aGate X-10 on V10R01, an aPower X, rooftop solar and a small generator; Self-Consumption, zero export, no smart circuits.
   - id: cincinnati-oh-2
     seed: 217
     ac_type: 1
@@ -503,6 +524,7 @@ gateways:
     profile: agate-v10r01b04d00
     model: {agate: 100, apower: 0}
     apower_units: 1
+    native_mode: 2
     generator: {installed: true, rated_w: 8000}
     utility: {export: prohibited}
     accessories: {smart_circuits: false}
@@ -515,7 +537,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5057}
     directconnect: {port: 9057}
-  # Atlanta, GA: two aPower 2s, solar, and an EV on V2L that supplies the home off-grid; battery export on.
+  # Atlanta, GA: two aPower 2s, solar, and an EV on V2L that supplies the home off-grid; TOU, battery export on.
   - id: atlanta-ga
     seed: 218
     ac_type: 1
@@ -523,6 +545,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 103, apower: [3, 3]}
     apower_units: 2
+    native_mode: 3
     v2l: {circuit: 1, ev_kwh: 75, ev_soc: 80, max_w: 7600, min_soc: 20}   # EV values: placeholders (#287)
     utility: {battery_export: true}
     loads:
@@ -534,7 +557,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5058}
     directconnect: {port: 9058}
-  # Atlanta, GA: aGate X-20 on V10R01, an aPower X, no solar, a 20 kW generator, AC and a pool pump; factory export setting (no battery export).
+  # Atlanta, GA: aGate X-20 on V10R01, an aPower X, no solar, a 20 kW generator, AC and a pool pump; Self-Consumption, factory export setting (no battery export).
   - id: atlanta-ga-2
     seed: 219
     ac_type: 1
@@ -542,6 +565,7 @@ gateways:
     profile: agate-v10r01b04d00
     model: {agate: 101, apower: 1}
     apower_units: 1
+    native_mode: 2
     solar_peak_w: 0
     generator: {installed: true, rated_w: 20000}
     loads:
@@ -554,7 +578,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5059}
     directconnect: {port: 9059}
-  # Phoenix, AZ: three aPower S with DC PV and rooftop solar; AC and a pool pump; 45 kW DC PV, the aPower S maximum, solar export capped at 10 kW, battery export on.
+  # Phoenix, AZ: three aPower S with DC PV and rooftop solar; AC and a pool pump; TOU, 45 kW DC PV, the aPower S maximum, solar export capped at 10 kW, battery export on.
   - id: phoenix-az
     seed: 220
     ac_type: 1
@@ -562,6 +586,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 104, apower: [4, 4, 4]}
     apower_units: 3
+    native_mode: 3
     dc_pv: {rated_w: 45000}   # the MPPT maximum
     utility: {export: limited, export_limit_w: 10000, battery_export: true}
     loads:
@@ -574,7 +599,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5060}
     directconnect: {port: 9060}
-  # Oklahoma City, OK: rural: a well pump and a generator, no solar, V10R01; factory export setting (no battery export), no smart circuits.
+  # Oklahoma City, OK: rural: a well pump and a generator, no solar, V10R01; Self-Consumption, factory export setting (no battery export), no smart circuits.
   - id: oklahoma-city-ok
     seed: 221
     ac_type: 1
@@ -582,6 +607,7 @@ gateways:
     profile: agate-v10r01b04d00
     model: {agate: 100, apower: 1}
     apower_units: 1
+    native_mode: 2
     solar_peak_w: 0
     generator: {installed: true, rated_w: 14000}
     accessories: {smart_circuits: false}
@@ -595,7 +621,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5061}
     directconnect: {port: 9061}
-  # Oklahoma City, OK: two aPower 2s, rooftop solar, an EV charging on solar surplus; a large 12 kW rooftop array, battery export on.
+  # Oklahoma City, OK: two aPower 2s, rooftop solar, an EV charging on solar surplus; TOU, a large 12 kW rooftop array, battery export on.
   - id: oklahoma-city-ok-2
     seed: 222
     ac_type: 1
@@ -603,6 +629,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 103, apower: [3, 3]}
     apower_units: 2
+    native_mode: 3
     solar_peak_w: 12000
     utility: {battery_export: true}
     loads:
@@ -615,7 +642,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5062}
     directconnect: {port: 9062}
-  # Ottawa, ON: cold winters: heat and hot water on smart circuits, no solar; factory export setting (no battery export).
+  # Ottawa, ON: cold winters: heat and hot water on smart circuits, no solar; Self-Consumption, factory export setting (no battery export).
   - id: ottawa-on
     seed: 223
     ac_type: 1
@@ -623,6 +650,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 103, apower: 3}
     apower_units: 1
+    native_mode: 2
     solar_peak_w: 0
     loads:
       - {name: base, type: base, w: 400, drift: 0.15}
@@ -634,7 +662,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5063}
     directconnect: {port: 9063}
-  # Ottawa, ON: an aPower 2, rooftop solar, a generator for ice storms, an EV; battery export on.
+  # Ottawa, ON: an aPower 2, rooftop solar, a generator for ice storms, an EV; TOU, battery export on.
   - id: ottawa-on-2
     seed: 224
     ac_type: 1
@@ -642,6 +670,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 104, apower: 3}
     apower_units: 1
+    native_mode: 3
     generator: {installed: true, rated_w: 12000}
     utility: {battery_export: true}
     loads:
@@ -654,7 +683,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5064}
     directconnect: {port: 9064}
-  # Halifax, NS: storm backup: aGate X-20 on V10R01, an aPower X and a generator; no solar; factory export setting (no battery export), no smart circuits.
+  # Halifax, NS: storm backup: aGate X-20 on V10R01, an aPower X and a generator; no solar; Emergency Backup, factory export setting (no battery export), no smart circuits.
   - id: halifax-ns
     seed: 225
     ac_type: 1
@@ -662,6 +691,7 @@ gateways:
     profile: agate-v10r01b04d00
     model: {agate: 101, apower: 0}
     apower_units: 1
+    native_mode: 1
     solar_peak_w: 0
     generator: {installed: true, rated_w: 10000}
     accessories: {smart_circuits: false}
@@ -674,7 +704,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5065}
     directconnect: {port: 9065}
-  # Halifax, NS: two aPower 2s, rooftop solar and an EV on V2L; battery export on.
+  # Halifax, NS: two aPower 2s, rooftop solar and an EV on V2L; Self-Consumption, battery export on.
   - id: halifax-ns-2
     seed: 226
     ac_type: 1
@@ -682,6 +712,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 103, apower: [3, 3]}
     apower_units: 2
+    native_mode: 2
     v2l: {circuit: 1, ev_kwh: 64, ev_soc: 80, max_w: 3800, min_soc: 20}   # EV values: placeholders (#287)
     utility: {battery_export: true}
     loads:
@@ -693,7 +724,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5066}
     directconnect: {port: 9066}
-  # Long Beach, NY: two aPower S, no solar, an EV charger charging off-peak; factory export setting (no battery export).
+  # Long Beach, NY: two aPower S, no solar, an EV charger charging off-peak; TOU, factory export setting (no battery export).
   - id: long-beach-ny
     seed: 227
     ac_type: 1
@@ -701,6 +732,7 @@ gateways:
     profile: agate-v12r02b60d00-candidate
     model: {agate: 104, apower: [5, 5]}
     apower_units: 2
+    native_mode: 3
     solar_peak_w: 0
     loads:
       - {name: base, type: base, w: 400, drift: 0.15}
@@ -711,7 +743,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5067}
     directconnect: {port: 9067}
-  # Long Beach, NY: aGate X-20 on V10R01, a later aPower X, rooftop solar, AC; solar export capped at 5 kW, no smart circuits.
+  # Long Beach, NY: aGate X-20 on V10R01, a later aPower X, rooftop solar, AC; Self-Consumption, solar export capped at 5 kW, no smart circuits.
   - id: long-beach-ny-2
     seed: 228
     ac_type: 1
@@ -719,6 +751,7 @@ gateways:
     profile: agate-v10r01b04d00
     model: {agate: 101, apower: 6}
     apower_units: 1
+    native_mode: 2
     utility: {export: limited, export_limit_w: 5000}
     accessories: {smart_circuits: false}
     loads:
@@ -730,7 +763,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5068}
     directconnect: {port: 9068}
-  # Atlantic City, NJ: solar and a pool pump; one aPower 2 on V10R01; a large 15 kW rooftop array, solar export capped at 5 kW.
+  # Atlantic City, NJ: solar and a pool pump; one aPower 2 on V10R01; TOU, a large 15 kW rooftop array, solar export capped at 5 kW.
   - id: atlantic-city-nj
     seed: 229
     ac_type: 1
@@ -738,6 +771,7 @@ gateways:
     profile: agate-v10r01b04d00
     model: {agate: 103, apower: 3}
     apower_units: 1
+    native_mode: 3
     solar_peak_w: 15000
     utility: {export: limited, export_limit_w: 5000}
     loads:
@@ -750,14 +784,217 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5069}
     directconnect: {port: 9069}
-  # Atlantic City, NJ: aGate X-10 on V10R01, an aPower X and an aPower 2 (mixed), a generator, no solar, an EV; factory export setting (no battery export).
-  - id: atlantic-city-nj-2
+  # Honolulu, HI: aPower X (APR-05K1V1-US) on V10R01, rooftop solar, Customer Self-Supply style; Self-Consumption, zero export.
+  - id: honolulu-hi
     seed: 230
+    ac_type: 1
+    grid_code: ieee1547-cat3   # plausible for Hawaii (HECO ride-through); not verified
+    profile: agate-v10r01b04d00
+    model: {agate: 103, apower: 0}
+    apower_units: 1
+    native_mode: 2
+    utility: {export: prohibited}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hot_water, type: schedule, w: 4500, on: ["05:30-07:00", "18:00-19:30"], circuit: 1}
+    location: {latitude: 21.31, longitude: -157.86, timezone: Pacific/Honolulu,
+               country: US, state: HI, city: Honolulu}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5070}
+    directconnect: {port: 9070}
+  # Honolulu, HI: an aPower 2, no solar: a backup battery; Emergency Backup, factory export setting (no battery export).
+  - id: honolulu-hi-2
+    seed: 231
+    ac_type: 1
+    grid_code: ieee1547-cat3   # plausible for Hawaii (HECO ride-through); not verified
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 104, apower: 3}
+    apower_units: 1
+    native_mode: 1
+    solar_peak_w: 0
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 26, heat_below: 15, span: 8, circuit: 1}
+    location: {latitude: 21.31, longitude: -157.86, timezone: Pacific/Honolulu,
+               country: US, state: HI, city: Honolulu}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5071}
+    directconnect: {port: 9071}
+  # Hilo, HI: an aPower X (APR-05K11V1-US) on V10R01, rooftop solar; TOU, battery export on.
+  - id: hilo-hi
+    seed: 232
+    ac_type: 1
+    grid_code: ieee1547-cat3   # plausible for Hawaii (HECO ride-through); not verified
+    profile: agate-v10r01b04d00
+    model: {agate: 101, apower: 1}
+    apower_units: 1
+    native_mode: 3
+    utility: {battery_export: true}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: evse, type: ev, w: 9600, min_w: 1440, arrive: "18:00", depart: "07:30", kwh: 20, mode: solar, start: "23:00", circuit: 1}
+    location: {latitude: 19.71, longitude: -155.09, timezone: Pacific/Honolulu,
+               country: US, state: HI, city: Hilo}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5072}
+    directconnect: {port: 9072}
+  # Hilo, HI: an aPower S (APRS-10K15V1-US) with DC PV only; Self-Consumption, zero export.
+  - id: hilo-hi-2
+    seed: 233
+    ac_type: 1
+    grid_code: ieee1547-cat3   # plausible for Hawaii (HECO ride-through); not verified
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 103, apower: 4}
+    apower_units: 1
+    native_mode: 2
+    pv_inputs: {proximal: 0.0}   # DC PV only, no AC solar
+    dc_pv: {rated_w: 15000}
+    utility: {export: prohibited}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hot_water, type: schedule, w: 4500, on: ["05:30-07:00", "18:00-19:30"], circuit: 1}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 26, heat_below: 15, span: 8, circuit: 2}
+    location: {latitude: 19.71, longitude: -155.09, timezone: Pacific/Honolulu,
+               country: US, state: HI, city: Hilo}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5073}
+    directconnect: {port: 9073}
+  # Kahului, HI: an aPower S (APRS-11K15V2-US), a 10 kW rooftop array and DC PV; TOU, solar export capped at 3 kW.
+  - id: kahului-hi
+    seed: 234
+    ac_type: 1
+    grid_code: ieee1547-cat3   # plausible for Hawaii (HECO ride-through); not verified
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 104, apower: 5}
+    apower_units: 1
+    native_mode: 3
+    solar_peak_w: 10000
+    dc_pv: {rated_w: 8000}
+    utility: {export: limited, export_limit_w: 3000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: pool_pump, type: schedule, w: 1500, on: ["09:00-15:00"], circuit: 1}
+    location: {latitude: 20.89, longitude: -156.47, timezone: Pacific/Honolulu,
+               country: US, state: HI, city: Kahului}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5074}
+    directconnect: {port: 9074}
+  # Kahului, HI: a later aPower X (APR-05K15V1-US) on V10R01, no solar, a generator; Emergency Backup, factory export setting (no battery export).
+  - id: kahului-hi-2
+    seed: 235
+    ac_type: 1
+    grid_code: ieee1547-cat3   # plausible for Hawaii (HECO ride-through); not verified
+    profile: agate-v10r01b04d00
+    model: {agate: 100, apower: 6}
+    apower_units: 1
+    native_mode: 1
+    solar_peak_w: 0
+    generator: {installed: true, rated_w: 10000}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: well_pump, type: cycle, w: 1100, period: 30m, duty: 0.15, circuit: 1}
+    location: {latitude: 20.89, longitude: -156.47, timezone: Pacific/Honolulu,
+               country: US, state: HI, city: Kahului}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5075}
+    directconnect: {port: 9075}
+  # San Juan, PR: two aPower 2s and a 10 kW rooftop array for frequent outages; Emergency Backup, factory export setting (no battery export).
+  - id: san-juan-pr
+    seed: 236
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 103, apower: [3, 3]}
+    apower_units: 2
+    native_mode: 1
+    solar_peak_w: 10000
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 26, heat_below: 15, span: 8, circuit: 1}
+      - {name: hot_water, type: schedule, w: 4500, on: ["05:30-07:00", "18:00-19:30"], circuit: 2}
+    location: {latitude: 18.47, longitude: -66.11, timezone: America/Puerto_Rico,
+               country: US, state: PR, city: San Juan}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5076}
+    directconnect: {port: 9076}
+  # San Juan, PR: aGate X-20 on V10R01, an aPower X, no solar, a 7 kW generator; Emergency Backup, factory export setting (no battery export), no smart circuits.
+  - id: san-juan-pr-2
+    seed: 237
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v10r01b04d00
+    model: {agate: 101, apower: 1}
+    apower_units: 1
+    native_mode: 1
+    solar_peak_w: 0
+    generator: {installed: true, rated_w: 7000}
+    accessories: {smart_circuits: false}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 27, heat_below: 15, span: 8}
+    location: {latitude: 18.47, longitude: -66.11, timezone: America/Puerto_Rico,
+               country: US, state: PR, city: San Juan}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5077}
+    directconnect: {port: 9077}
+  # Ponce, PR: two aPower S with 20 kW of DC PV and rooftop solar; Self-Consumption, battery export on.
+  - id: ponce-pr
+    seed: 238
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 104, apower: [4, 4]}
+    apower_units: 2
+    native_mode: 2
+    dc_pv: {rated_w: 20000}
+    utility: {battery_export: true}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hvac, type: hvac, w: 3500, cool_above: 26, heat_below: 15, span: 8, circuit: 1}
+      - {name: pool_pump, type: schedule, w: 1500, on: ["09:00-15:00"], circuit: 2}
+    location: {latitude: 18.01, longitude: -66.61, timezone: America/Puerto_Rico,
+               country: US, state: PR, city: Ponce}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5078}
+    directconnect: {port: 9078}
+  # Ponce, PR: aGate X-10 on V10R01, an aPower X, rooftop solar; Self-Consumption, zero export, no smart circuits.
+  - id: ponce-pr-2
+    seed: 239
+    ac_type: 1
+    grid_code: ieee1547-cat2
+    profile: agate-v10r01b04d00
+    model: {agate: 100, apower: 0}
+    apower_units: 1
+    native_mode: 2
+    utility: {export: prohibited}
+    accessories: {smart_circuits: false}
+    loads:
+      - {name: base, type: base, w: 400, drift: 0.15}
+      - {name: fridge, type: cycle, w: 150, period: 40m, duty: 0.35}
+      - {name: hot_water, type: schedule, w: 4500, on: ["05:30-07:00", "18:00-19:30"]}
+    location: {latitude: 18.01, longitude: -66.61, timezone: America/Puerto_Rico,
+               country: US, state: PR, city: Ponce}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5079}
+    directconnect: {port: 9079}
+  # Atlantic City, NJ: aGate X-10 on V10R01, an aPower X and an aPower 2 (mixed), a generator, no solar, an EV; Self-Consumption, factory export setting (no battery export).
+  - id: atlantic-city-nj-2
+    seed: 240
     ac_type: 1
     grid_code: ieee1547-cat2
     profile: agate-v10r01b04d00
     model: {agate: 100, apower: [0, 3]}
     apower_units: 2
+    native_mode: 2
     solar_peak_w: 0
     generator: {installed: true, rated_w: 10000}
     loads:
@@ -767,5 +1004,5 @@ gateways:
     location: {latitude: 39.36, longitude: -74.42, timezone: America/New_York,
                country: US, state: NJ, city: Atlantic City}
     service: {main_breaker_a: 200}
-    modbus: {port: 5070}
-    directconnect: {port: 9070}
+    modbus: {port: 5080}
+    directconnect: {port: 9080}

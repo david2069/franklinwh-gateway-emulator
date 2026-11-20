@@ -42,7 +42,7 @@ def test_north_america_example_adds_its_homes_to_the_example_fleet():
     per_place = {}
     for g in homes:
         per_place.setdefault(g["location"]["city"], []).append(g["id"])
-    assert len(per_place) == 16 and min(map(len, per_place.values())) >= 2      # (#338)
+    assert len(per_place) == 21 and min(map(len, per_place.values())) >= 2      # (#338, #351)
     f = Fleet.from_dict({"gateways": homes})
     looks = []
     for g in homes:
@@ -52,7 +52,7 @@ def test_north_america_example_adds_its_homes_to_the_example_fleet():
                       g.get("solar_peak_w", 1) > 0, tuple(sorted((g.get("pv_inputs") or {}).items())),
                       bool(s.dc_pv), s.generator.hw.installed, s.v2l is not None, len(s.circuits or ()),
                       tuple(c.get("name") for c in g.get("loads") or ()),
-                      tuple(sorted((g.get("utility") or {}).items()))))
+                      tuple(sorted((g.get("utility") or {}).items())), g.get("native_mode")))
     assert len(set(looks)) == len(looks)                  # every home different (#338)
     assert {x[0] for x in looks} == {"agate-v10r01b04d00", "agate-v12r02b60d00-candidate"}
     assert {x[1] for x in looks} == {100, 101, 103, 104}
@@ -70,6 +70,19 @@ def test_north_america_example_adds_its_homes_to_the_example_fleet():
     # DC PV follows the site's solar shape, so solar_peak_w 0 would silence it
     assert [g["id"] for g in homes if g.get("dc_pv") and g.get("solar_peak_w") == 0] == []
     assert sum(g.get("solar_peak_w", 0) >= 12000 for g in homes) >= 3
+    # (#351) Self-Consumption, TOU and Emergency Backup; backup homes mostly without solar
+    modes = [s.native_mode for s in sites]
+    assert min(modes.count(1), modes.count(3)) >= 5 and modes.count(2) > modes.count(1)
+    backup = [g for g in homes if g.get("native_mode") == 1]
+    assert sum(g.get("solar_peak_w") == 0 for g in backup) > len(backup) / 2
+    assert all(s.utility_rules and s.utility_rules.grid_charge is False
+               for g, s in zip(homes, sites) if g["location"]["state"] == "CA")
+    hawaii = [s for g, s in zip(homes, sites) if g["location"]["state"] == "HI"]
+    from franklinwh_emulator import models
+    assert {u.code for s in hawaii for u in s.unit_models} == {
+        m.code for m in models.APOWERS.values() if m.region == models.NA}          # every NA aPower
+    assert any(g.get("solar_peak_w") == 0 for g in homes if g["location"]["state"] == "HI")   # some without solar
+    assert sum(g["location"]["state"] == "PR" for g in homes) >= 4
 
 
 @pytest.mark.parametrize("path", BUILTINS, ids=lambda p: p.stem)

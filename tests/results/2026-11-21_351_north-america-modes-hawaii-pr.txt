@@ -1,0 +1,80 @@
+# #351 North America fleet: modes, California grid charging, Hawaii and Puerto Rico, 2026-11-21
+
+## validate
+examples/fleet-north-america.yaml: fleet ok (51 gateways)
+
+## Break 1: every home's native_mode set to 2 (all Self-Consumption, as before)
+>       assert min(modes.count(1), modes.count(3)) >= 5 and modes.count(2) > modes.count(1)
+1 failed, 43 deselected in 0.23s
+
+## Break 2: kahului-hi-2's aPower model 6 changed to 0 (one NA aPower model missing in Hawaii)
+>       assert {u.code for s in hawaii for u in s.unit_models} == {
+1 failed, 43 deselected in 0.24s
+
+## Break 3: redding-ca-2 allowed to grid charge
+>       assert all(s.utility_rules and s.utility_rules.grid_charge is False
+1 failed, 43 deselected in 0.21s
+
+## After restoring
+1 passed, 43 deselected in 0.20s
+
+## Stepped in process without listening, 2026-06-28 16:00 UTC: mode, grid charge, export, aPowers, AC/DC PV now, local time
+us-split            AZ Self   grid_charge=y export=allowed      batt_export=n ieee1547-cat2 X-10           ac= 3.1 dc= 0.0kW 09:00 MST
+redding-ca          CA Self   grid_charge=n export=limited 5kW  batt_export=n ieee1547-cat2 S-10+S-10      ac= 0.5 dc= 4.0kW 09:00 PDT
+redding-ca-2        CA Backup grid_charge=n export=allowed      batt_export=n ieee1547-cat2 X-10           ac= 0.0 dc= 0.0kW 09:00 PDT
+boise-id            ID Self   grid_charge=y export=limited 5kW  batt_export=n ieee1547-cat2 X-10           ac= 0.8 dc= 0.0kW 10:00 MDT
+boise-id-2          ID Self   grid_charge=y export=allowed      batt_export=n ieee1547-cat2 S-10+S-10      ac= 0.0 dc= 2.1kW 10:00 MDT
+houston-tx          TX TOU    grid_charge=y export=allowed      batt_export=y ieee1547-cat2 X-20+X-20      ac= 9.8 dc= 0.0kW 11:00 CDT
+houston-tx-2        TX Backup grid_charge=y export=allowed      batt_export=n ieee1547-cat2 X-20           ac= 0.0 dc= 0.0kW 11:00 CDT
+tampa-fl            FL Self   grid_charge=y export=prohibited   batt_export=n ieee1547-cat2 X-10           ac= 2.9 dc= 0.0kW 12:00 EDT
+tampa-fl-2          FL TOU    grid_charge=y export=allowed      batt_export=y ieee1547-cat2 S-10           ac= 1.1 dc= 0.0kW 12:00 EDT
+buffalo-ny          NY Backup grid_charge=y export=allowed      batt_export=n ieee1547-cat2 X-20           ac= 0.0 dc= 0.0kW 12:00 EDT
+buffalo-ny-2        NY TOU    grid_charge=y export=allowed      batt_export=y ieee1547-cat2 X-20+X-20+X-20 ac= 3.4 dc= 0.0kW 12:00 EDT
+chicago-il          IL Backup grid_charge=y export=allowed      batt_export=n ieee1547-cat2 X-10           ac= 0.0 dc= 0.0kW 11:00 CDT
+chicago-il-2        IL TOU    grid_charge=y export=allowed      batt_export=y ieee1547-cat2 S-10+S-10      ac= 0.0 dc=10.0kW 11:00 CDT
+seattle-wa          WA TOU    grid_charge=y export=allowed      batt_export=y ieee1547-cat2 S-10           ac= 0.0 dc= 0.0kW 09:00 PDT
+seattle-wa-2        WA Self   grid_charge=y export=prohibited   batt_export=n ieee1547-cat2 X-10+X-20      ac= 0.5 dc= 0.0kW 09:00 PDT
+st-louis-mo         MO Self   grid_charge=y export=allowed      batt_export=n ieee1547-cat2 X-10+X-20      ac= 0.0 dc= 0.0kW 11:00 CDT
+st-louis-mo-2       MO TOU    grid_charge=y export=prohibited   batt_export=n ieee1547-cat2 S-10           ac= 2.9 dc= 0.0kW 11:00 CDT
+cincinnati-oh       OH Self   grid_charge=y export=limited 5kW  batt_export=n ieee1547-cat2 S-10           ac= 4.9 dc=12.9kW 12:00 EDT
+cincinnati-oh-2     OH Self   grid_charge=y export=prohibited   batt_export=n ieee1547-cat2 X-10           ac= 5.1 dc= 0.0kW 12:00 EDT
+atlanta-ga          GA TOU    grid_charge=y export=allowed      batt_export=y ieee1547-cat2 X-20+X-20      ac= 1.0 dc= 0.0kW 12:00 EDT
+atlanta-ga-2        GA Self   grid_charge=y export=allowed      batt_export=n ieee1547-cat2 X-10           ac= 0.0 dc= 0.0kW 12:00 EDT
+phoenix-az          AZ TOU    grid_charge=y export=limited 10kW batt_export=y ieee1547-cat2 S-10+S-10+S-10 ac= 3.3 dc=27.3kW 09:00 MST
+oklahoma-city-ok    OK Self   grid_charge=y export=allowed      batt_export=n ieee1547-cat2 X-10           ac= 0.0 dc= 0.0kW 11:00 CDT
+oklahoma-city-ok-2  OK TOU    grid_charge=y export=allowed      batt_export=y ieee1547-cat2 X-20+X-20      ac= 9.0 dc= 0.0kW 11:00 CDT
+ottawa-on           True Self   grid_charge=y export=allowed      batt_export=n ieee1547-cat2 X-20           ac= 0.0 dc= 0.0kW 12:00 EDT
+ottawa-on-2         True TOU    grid_charge=y export=allowed      batt_export=y ieee1547-cat2 X-20           ac= 3.3 dc= 0.0kW 12:00 EDT
+halifax-ns          NS Backup grid_charge=y export=allowed      batt_export=n ieee1547-cat2 X-10           ac= 0.0 dc= 0.0kW 13:00 ADT
+halifax-ns-2        NS Self   grid_charge=y export=allowed      batt_export=y ieee1547-cat2 X-20+X-20      ac= 4.3 dc= 0.0kW 13:00 ADT
+long-beach-ny       NY TOU    grid_charge=y export=allowed      batt_export=n ieee1547-cat2 S-10+S-10      ac= 0.0 dc= 0.0kW 12:00 EDT
+long-beach-ny-2     NY Self   grid_charge=y export=limited 5kW  batt_export=n ieee1547-cat2 X-10           ac= 1.4 dc= 0.0kW 12:00 EDT
+atlantic-city-nj    NJ TOU    grid_charge=y export=limited 5kW  batt_export=n ieee1547-cat2 X-20           ac= 3.6 dc= 0.0kW 12:00 EDT
+honolulu-hi         HI Self   grid_charge=y export=prohibited   batt_export=n ieee1547-cat3 X-10           ac= 0.0 dc= 0.0kW 06:00 HST
+honolulu-hi-2       HI Backup grid_charge=y export=allowed      batt_export=n ieee1547-cat3 X-20           ac= 0.0 dc= 0.0kW 06:00 HST
+hilo-hi             HI TOU    grid_charge=y export=allowed      batt_export=y ieee1547-cat3 X-10           ac= 0.0 dc= 0.0kW 06:00 HST
+hilo-hi-2           HI Self   grid_charge=y export=prohibited   batt_export=n ieee1547-cat3 S-10           ac= 0.0 dc= 0.0kW 06:00 HST
+kahului-hi          HI TOU    grid_charge=y export=limited 3kW  batt_export=n ieee1547-cat3 S-10           ac= 0.0 dc= 0.0kW 06:00 HST
+kahului-hi-2        HI Backup grid_charge=y export=allowed      batt_export=n ieee1547-cat3 X-10           ac= 0.0 dc= 0.0kW 06:00 HST
+san-juan-pr         PR Backup grid_charge=y export=allowed      batt_export=n ieee1547-cat2 X-20+X-20      ac= 2.3 dc= 0.0kW 12:00 AST
+san-juan-pr-2       PR Backup grid_charge=y export=allowed      batt_export=n ieee1547-cat2 X-10           ac= 0.0 dc= 0.0kW 12:00 AST
+ponce-pr            PR Self   grid_charge=y export=allowed      batt_export=y ieee1547-cat2 S-10+S-10      ac= 1.3 dc= 4.6kW 12:00 AST
+ponce-pr-2          PR Self   grid_charge=y export=prohibited   batt_export=n ieee1547-cat2 X-10           ac= 3.2 dc= 0.0kW 12:00 AST
+atlantic-city-nj-2  NJ Self   grid_charge=y export=allowed      batt_export=n ieee1547-cat2 X-10+X-20      ac= 0.0 dc= 0.0kW 12:00 EDT
+
+## Hawaii at local noon (2026-06-28 22:00 UTC): AC and DC PV
+honolulu-hi    ac= 1.2kW dc= 0.0kW 12:00 HST
+honolulu-hi-2  ac= 0.0kW dc= 0.0kW 12:00 HST
+hilo-hi        ac= 3.7kW dc= 0.0kW 12:00 HST
+hilo-hi-2      ac= 0.0kW dc=13.2kW 12:00 HST
+kahului-hi     ac= 8.8kW dc= 7.1kW 12:00 HST
+kahului-hi-2   ac= 0.0kW dc= 0.0kW 12:00 HST
+
+## Full suite
+875 passed, 44 warnings in 57.27s
+
+## mkdocs build --strict
+INFO    -  Documentation built in 0.41 seconds
+
+## check_pii --scan
+✅ SUCCESS: No PII leaks found!
