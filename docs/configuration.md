@@ -19,7 +19,7 @@ file to make them permanent.
 ## How to set it up
 
 1. Copy `examples/fleet.yaml` and edit it: one entry under `gateways:` per site.
-   [`examples/fleet-north-america.yaml`](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/examples/fleet-north-america.yaml)
+   [`examples/fleet-us-canada.yaml`](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/examples/fleet-us-canada.yaml)
    is the same fleet plus two or more split-phase homes in each of 21 places across the US (Hawaii
    and Puerto Rico included) and Canada (IEEE 1547 Category II; Hawaii Category III, plausible),
    each in its own timezone, every one different: aGate and aPower
@@ -38,6 +38,9 @@ file to make them permanent.
    Townsville, Canberra and Adelaide; Perth (Western Power, Australia B) and Hobart (TasNetworks, Australia C)
    need regions that aren't emulated, and the NT's and the other New Zealand networks' regions are
    not established ([Grid codes](grid.md#grid-codes)).
+   [`examples/fleet-global.yaml`](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/examples/fleet-global.yaml)
+   has them all in one fleet: `examples/fleet.yaml`, the US and Canadian homes and the Australian
+   and New Zealand homes, 71 gateways, on the same ports and seeds as in those two files.
 2. Start it: `franklinwh-emulator ui my-fleet.yaml` (web UI on http://127.0.0.1:8502/) or
    `franklinwh-emulator fleet my-fleet.yaml` (no UI). It checks the file first and prints every
    problem with its path (e.g. `gateways[1].modbus: port 5020 already used`), then exits.

@@ -1,4 +1,4 @@
-# franklinwh-emulator fleet ./examples/fleet-north-america.yaml
+# franklinwh-emulator fleet ./examples/fleet-us-canada.yaml
 #
 # examples/fleet.yaml plus two or more homes in each of 21 places across the US (Hawaii and
 # Puerto Rico included) and Canada (#335, #338, #351): split phase 120/240 V (ac_type 1),
