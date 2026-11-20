@@ -26,7 +26,7 @@ function running() {
     saveName: '',
     saveSnapshot: false,
     forceEvents: {},   // GET /events presets (#87)
-    force: { event: '', all: true, ids: [], duration: '', msg: null },
+    force: { event: '', sel: { all: true, ids: [] }, filters: {}, open: false, duration: '', msg: null },
     restoreName: '',
     sessionMsg: null,  // {ok, text, details}: the last save/restore, shown until the next
     log: [],           // the emulator's action log (newest last)
@@ -305,7 +305,7 @@ function running() {
       }
     },
     async fireEvent() {
-      const body = { event: this.force.event, targets: this.force.all ? 'all' : this.force.ids };
+      const body = { event: this.force.event, targets: forceTargets(this.gateways, this.force.sel) };
       if (this.force.duration) body.duration_s = Number(this.force.duration);
       try {
         const r = await this._post('/events', body);
@@ -541,14 +541,30 @@ function running() {
       return Object.values(this.pickFilters).some(Boolean) ? n + ' of ' + this.gateways.length + ' gateways' : '';
     },
     setPickFilter(f, v) {
-      this.pickFilters = { ...this.pickFilters, [f]: v };
-      // A value the narrower filters no longer offer is cleared.
-      for (const [g] of PICK_FILTERS) {
-        if (this.pickFilters[g] && !this.pickOptions(g).includes(this.pickFilters[g])) this.pickFilters[g] = '';
-      }
+      this.pickFilters = withFilter(this.gateways, this.pickFilters, f, v);   // narrower values no longer offered cleared
       const list = pickGateways(this.gateways, this.pickFilters);
       if (list.length && !list.some(x => x.id === this.active)) this.select(list[0].id);
       try { localStorage.setItem('emulator.pickFilters', JSON.stringify(this.pickFilters)); } catch (e) { /* private mode */ }
+    },
+
+    // -- Force events' gateways (#374): the picker's filters and a multi-select drop-down --------
+    forceOptions(f) { return pickValues(this.gateways, this.force.filters, f); },
+    setForceFilter(f, v) { this.force.filters = withFilter(this.gateways, this.force.filters, f, v); },
+    forceList() { return pickGateways(this.gateways, this.force.filters); },
+    forceHas(id) { return this.force.sel.all || this.force.sel.ids.includes(id); },
+    forceCount() { return forceSelText(this.gateways, this.force.filters, this.force.sel); },
+    forceToggle(id) { this.force.sel = forceToggle(this.gateways, this.force.sel, id); },
+    forceAllMatching() { this.force.sel = forceSelectMatching(this.gateways, this.force.filters, this.force.sel); },
+    forceClear() { this.force.sel = { all: false, ids: [] }; },
+    forceMenu(open) {
+      this.force.open = open;
+      if (open) this.$nextTick(() => { const b = document.querySelector('#force-menu button'); if (b) b.focus(); });
+    },
+    forceMenuEsc(e) {               // Esc closes the list (not the drawer), focus back on its button
+      if (!this.force.open) return;
+      e.stopPropagation();
+      this.force.open = false;
+      const b = document.getElementById('force-gw'); if (b) b.focus();
     },
 
     select(id) {

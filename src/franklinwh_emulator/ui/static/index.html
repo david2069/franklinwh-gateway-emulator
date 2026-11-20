@@ -388,14 +388,42 @@
         <select id="force-event" x-model="force.event">
           <template x-for="(p, name) in forceEvents" :key="name"><option :value="name" x-text="name + ' (' + p.action + ' ' + JSON.stringify(p.with) + ')'"></option></template>
         </select>
-        <fieldset>
+        <!-- Gateways (#374): the picker's filters, then a multi-select drop-down of the gateways they match -->
+        <fieldset class="force-gws">
           <legend>Gateways</legend>
-          <label><input type="checkbox" x-model="force.all"> all</label>
-          <template x-for="g in gateways" :key="g.id"><label x-show="!force.all"><input type="checkbox" :value="g.id" x-model="force.ids"> <span x-text="g.id"></span></label></template>
+          <div class="force-filters">
+            <template x-for="[f, label] in PICK_FILTERS" :key="f">
+              <span class="pick-filter">
+                <label :for="'force-' + f" x-text="label"></label>
+                <select :id="'force-' + f" @change="setForceFilter(f, $event.target.value)">
+                  <option value="" :selected="!force.filters[f]">any</option>
+                  <template x-for="v in forceOptions(f)" :key="v"><option :value="v" x-text="v" :selected="v === force.filters[f]"></option></template>
+                </select>
+              </span>
+            </template>
+          </div>
+          <div class="multi" @click.outside="force.open = false" @keydown.escape="forceMenuEsc($event)">
+            <button type="button" id="force-gw" class="multi-btn" @click="forceMenu(!force.open)"
+                    :aria-expanded="force.open.toString()" aria-controls="force-menu">
+              <span x-text="forceCount()"></span><span class="caret" aria-hidden="true">▾</span>
+            </button>
+            <div id="force-menu" class="multi-menu" x-show="force.open" x-cloak role="group" aria-label="Gateways matching the filters">
+              <div class="multi-actions">
+                <button type="button" class="secondary" @click="forceAllMatching()" x-text="'Select all matching (' + forceList().length + ')'"></button>
+                <button type="button" class="secondary" @click="forceClear()">Clear</button>
+              </div>
+              <p class="empty" x-show="!forceList().length">No gateway matches the filters.</p>
+              <ul class="multi-list">
+                <template x-for="g in forceList()" :key="g.id">
+                  <li><label><input type="checkbox" :checked="forceHas(g.id)" @change="forceToggle(g.id)"> <span x-text="g.id"></span></label></li>
+                </template>
+              </ul>
+            </div>
+          </div>
         </fieldset>
         <label for="force-dur">Clear after (s, optional)</label>
         <input id="force-dur" type="number" min="1" step="1" x-model="force.duration" placeholder="stays until cleared">
-        <button type="submit" :disabled="!force.event || (!force.all && !force.ids.length)">Fire</button>
+        <button type="submit" :disabled="!force.event || (!force.sel.all && !force.sel.ids.length)">Fire</button>
       </form>
       <p x-show="force.msg" :class="{ bad: force.msg && !force.msg.ok }" x-text="force.msg && force.msg.text"></p>
       <ul class="log" x-show="force.msg && force.msg.results">
