@@ -352,6 +352,39 @@ main.layout-right > .session-msg, main.layout-left > .session-msg { grid-column:
 .pick-gw:focus-visible, .pick-filter select:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
 .picker .pick-count { margin: 0; }
 
+/* Force events (#374): the picker's filters and a multi-select drop-down of the gateways */
+.force-form { display: flex; flex-direction: column; gap: 6px; padding: 0 16px 12px; min-width: 0; }
+.force-form > label { font-size: 13px; color: var(--muted); }
+.force-form select, .force-form > input { font: 13px var(--sans); color: var(--text-2); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; min-height: 36px; max-width: 100%; min-width: 0; }
+.force-form > button { align-self: flex-start; font: 600 14px var(--sans); color: var(--bg); background: var(--ok); border: 0;
+  border-radius: 8px; padding: 0 18px; min-height: 40px; cursor: pointer; }
+.force-form > button:disabled { opacity: .5; cursor: default; }
+.force-gws { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px 10px; margin: 4px 0; min-width: 0; }
+.force-gws legend { font-size: 13px; color: var(--muted); padding: 0 4px; }
+.force-filters { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 8px; }
+.force-filters .pick-filter select { max-width: 11em; }
+.multi { position: relative; min-width: 0; }
+.multi-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left;
+  font: 13px var(--sans); color: var(--text); background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 8px; padding: 0 10px; min-height: 40px; cursor: pointer; }
+.multi-btn[aria-expanded="true"] { border-color: var(--ok); }
+.multi-menu { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 5; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .35); padding: 8px; }
+.multi-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.multi-actions button { font: 13px var(--sans); color: var(--text-2); background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 8px; padding: 0 10px; min-height: 32px; cursor: pointer; }
+.multi-menu .empty { margin: 4px 2px; }
+.multi-list { list-style: none; margin: 0; padding: 0; max-height: min(280px, 45vh); overflow-y: auto; }
+.multi-list label { display: flex; align-items: center; gap: 8px; padding: 2px 6px; min-height: 30px; border-radius: 6px;
+  font: 13px var(--mono); color: var(--text-2); cursor: pointer; word-break: break-word; }
+.multi-list label:hover { background: var(--panel-2); }
+.multi-btn:focus-visible, .multi-actions button:focus-visible, .multi-list input:focus-visible,
+.force-form select:focus-visible, .force-form > input:focus-visible, .force-form > button:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
+.force > p { margin: 0; padding: 0 16px 12px; font: 12px var(--mono); }
+.force > .log { margin: 0; padding: 0 16px 12px 34px; font: 12px var(--mono); max-height: 320px; overflow-y: auto; }
+.force > p.bad, .force > .log li.bad { color: var(--bad); }
+
 /* Energy diagram after the owner's design (#205): private/ui-design boards A and B. */
 .diagram-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 16px; flex-wrap: wrap; margin: 4px 0 8px; }
 .dt-left { min-width: 0; flex: 1 1 320px; }

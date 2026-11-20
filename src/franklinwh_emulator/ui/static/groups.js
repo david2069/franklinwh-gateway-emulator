@@ -79,7 +79,51 @@ function pickValues(gateways, filters, field) {
   return [...vals].sort((a, b) => a.localeCompare(b));
 }
 
-// -- card health (#168) ----------------------------------------------------------------------
+// ``filters`` with field ``f`` set to ``v``; a narrower value the others no longer offer is cleared.
+function withFilter(gateways, filters, f, v) {
+  const out = { ...filters, [f]: v };
+  for (const [g] of PICK_FILTERS) {
+    if (out[g] && !pickValues(gateways, out, g).includes(out[g])) out[g] = '';
+  }
+  return out;
+}
+
+// -- Force events' gateways (#374): the picker's filters and a multi-select drop-down ----------
+// ``sel`` is {all, ids}: all = every gateway (sent as targets "all", as the old "all" box was),
+// else the ids ticked. Selections a filter hides stay selected.
+function forceIds(gateways, sel) { return sel.all ? gateways.map(g => g.id) : sel.ids.slice(); }
+
+// Back to {all, ids}: every gateway ticked is "all" again; ids in fleet order.
+function forceSel(gateways, ids) {
+  const set = new Set(ids);
+  const kept = gateways.map(g => g.id).filter(id => set.has(id));
+  return kept.length && kept.length === gateways.length ? { all: true, ids: [] } : { all: false, ids: kept };
+}
+
+function forceToggle(gateways, sel, id) {
+  const ids = forceIds(gateways, sel);
+  return forceSel(gateways, ids.includes(id) ? ids.filter(x => x !== id) : ids.concat(id));
+}
+
+// "Select all matching": the gateways the filters show are added to the selection.
+function forceSelectMatching(gateways, filters, sel) {
+  return forceSel(gateways, forceIds(gateways, sel).concat(pickGateways(gateways, filters).map(g => g.id)));
+}
+
+// The POST /events targets: "all" or the list of ids.
+function forceTargets(gateways, sel) { return sel.all ? 'all' : forceIds(gateways, sel); }
+
+// The drop-down's button: "All 71 gateways selected", "12 of 71 gateways selected · 3 hidden by filter".
+function forceSelText(gateways, filters, sel) {
+  const ids = forceIds(gateways, sel), n = gateways.length;
+  const shown = new Set(pickGateways(gateways, filters).map(g => g.id));
+  const hidden = ids.filter(id => !shown.has(id)).length;
+  const head = sel.all ? 'All ' + n + ' gateways selected'
+    : !ids.length ? 'No gateways selected' : ids.length + ' of ' + n + ' gateways selected';
+  return head + (hidden ? ' · ' + hidden + ' hidden by filter' : '');
+}
+
+// -- card health (#168)----------------------------------------------------------------------
 // 'fault' (red): an alarm, a tripped main breaker, or an injected fault on any listener.
 // 'offline' (orange): rebooting, an episode with the listeners down, or a listener set offline.
 // Offline wins: a gateway that is down says so first. ``why`` is the card's tooltip.

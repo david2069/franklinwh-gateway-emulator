@@ -29,7 +29,20 @@ SoC, to `emulator-workspace/sessions/<name>.yaml`; after a restart, **Restore** 
 **Force events** (the side panel, or `POST /events {event, targets, duration_s}`) fire one
 preset on many gateways at once: `targets` is `all` (the default) or a list of ids, and
 `duration_s` clears the event that many seconds later. Each preset is an existing action
-(`GET /events` lists them):
+(`GET /events` lists them).
+
+![Force events: the gateways filtered to Australia, 20 of 71 selected, one of them hidden by the filter](assets/ui/force-events.png)
+
+In the panel, **Gateways** has the [gateway picker's](#grouping-and-compact-cards) filters (Country,
+State / province, Postcode, Timezone; `any` by default, each narrowing the others' choices) and a
+drop-down button that says how many are selected, e.g. "20 of 71 gateways selected · 1 hidden by
+filter". Click it (or Enter or Space on it) for a scrolling list of the gateways that match the
+filters, each with a checkbox, and **Select all matching** (adds them to the selection) and
+**Clear** (selects none, hidden ones included). Esc or a click outside closes the list; Esc there
+doesn't close the actions drawer. A gateway that a filter hides stays selected, and the count says
+how many are hidden. Every gateway is selected at first, and with every gateway selected the panel
+sends `targets: all`, as the old **all** box did; otherwise the list of ids. **Fire** stays off
+with none selected. The filters are this panel's own: they don't change the picker's.
 
 | Event | Action | Cleared by |
 |---|---|---|

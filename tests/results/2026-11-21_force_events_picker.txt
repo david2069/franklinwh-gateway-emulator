@@ -1,0 +1,68 @@
+# #374 Web UI: Force events' gateways by filter drop-downs and a multi-select, 2026-11-21
+
+Base: origin/main 31b3a85 (#375, city-level postcodes in the examples). No owner design for this
+form in private/ui-design (searched: no Force events or multi-select board); it follows the
+gateway picker's filters (#142) and the panel's existing styles.
+
+Design: the "Gateways" fieldset has the picker's filters, reused from groups.js (PICK_FILTERS,
+pickField, pickGateways, pickValues; Country, State / province, Postcode, Timezone, in that order,
+always shown, `any` by default; the picker's narrowing moved into withFilter(), which the picker
+now calls too, unchanged), then a button showing the selection ("All 71 gateways selected",
+"20 of 71 gateways selected · 1 hidden by filter", "No gateways selected"). It opens a list of the
+gateways the filters match, one checkbox each, scrolling (max-height min(280px, 45vh)), with
+"Select all matching (N)" (adds them) and "Clear" (none, hidden ones too). Esc or a click outside
+closes it; Esc stops there (the drawer's window Esc handler is not reached) and focus goes back to
+the button; opening it focuses "Select all matching". The filters are the form's own, not stored.
+The fleet `group` is not a filter: it is not in PICK_FILTERS, so it did not fall out of the code.
+
+"all" and "site": "all" was a checkbox sending targets "all" (the server's every gateway); it is
+the default and stays so: the selection is {all: true} at first, and whenever every gateway is
+selected again (by ticks or Select all matching with no filter) the form sends targets "all";
+otherwise the ids in fleet order. "site" is not special: it is the first gateway's id in
+examples/fleet.yaml and fleet-global.yaml ("- id: site"), so it is in the list like any other.
+
+## Unit and static tests: tests/test_ui_force_events.py (JavaScriptCore harness + page/CSS checks)
+2 passed. Selection text and targets (all / some / none / hidden by filter), toggling back to
+"all", Select all matching with and without a filter, fleet order, the picker's narrowing; the
+form has no per-gateway checkbox outside the drop-down, the four filters unconditionally, aria-
+expanded/aria-controls, Esc/click-outside handlers, Esc stopPropagation, targets via forceTargets.
+
+## Browser check: headless Chrome over CDP, examples/fleet-global.yaml (71 gateways), every port 0
+Driver: a scratch CDP script (not committed); the fleet copied with every `port:` set to 0, the UI
+on a free port. Per case: Actions layout stored, reload, Force events opened; Enter on the button
+(keyboard), then Esc, then open again and click at the window's bottom-left corner.
+1400_right | closed: page scrollWidth 1400 of 1400 | form x 893 .. 1383 | filter rows 2 | checkboxes outside the menu 0 | Enter: open True menu x 920 .. 1356 h 336 fits window True page scrollWidth 1400 list scrolls True items 71 focus 'Select all matching (71)' | Esc: {'focus': 'force-gw', 'open': False, 'drawer': False} | click outside: open False
+1400_left | closed: page scrollWidth 1400 of 1400 | form x 17 .. 507 | filter rows 2 | checkboxes outside the menu 0 | Enter: open True menu x 44 .. 480 h 336 fits window True page scrollWidth 1400 list scrolls True items 71 focus 'Select all matching (71)' | Esc: {'focus': 'force-gw', 'open': False, 'drawer': False} | click outside: open False
+1400_below | closed: page scrollWidth 1400 of 1400 | form x 77 .. 1323 | filter rows 1 | checkboxes outside the menu 0 | Enter: open True menu x 104 .. 1296 h 336 fits window True page scrollWidth 1400 list scrolls True items 71 focus 'Select all matching (71)' | Esc: {'focus': 'force-gw', 'open': False, 'drawer': False} | click outside: open False
+1400_drawer | closed: page scrollWidth 1400 of 1400 | form x 958 .. 1383 | filter rows 2 | checkboxes outside the menu 0 | Enter: open True menu x 985 .. 1356 h 336 fits window True page scrollWidth 1400 list scrolls True items 71 focus 'Select all matching (71)' | Esc: {'focus': 'force-gw', 'open': False, 'drawer': True} | click outside: open False
+390_below | closed: page scrollWidth 390 of 390 | form x 17 .. 373 | filter rows 3 | checkboxes outside the menu 0 | Enter: open True menu x 44 .. 346 h 336 fits window True page scrollWidth 390 list scrolls True items 71 focus 'Select all matching (71)' | Esc: {'focus': 'force-gw', 'open': False, 'drawer': False} | click outside: open False
+390_drawer | closed: page scrollWidth 390 of 390 | form x 18 .. 373 | filter rows 3 | checkboxes outside the menu 0 | Enter: open True menu x 45 .. 346 h 336 fits window True page scrollWidth 390 list scrolls True items 71 focus 'Select all matching (71)' | Esc: {'focus': 'force-gw', 'open': False, 'drawer': True} | click outside: open False
+(at 390 px the Actions drop-down is hidden and left/right stack as below, so those were not run)
+
+Behaviour, 1400 px, Actions: right (button text without its caret):
+default "All 71 gateways selected"; filter choices: country 4, state 28, postcode 56, timezone 18
+Clear -> "No gateways selected", Fire disabled
+Country AU -> 19 listed, states ACT NSW NT QLD SA TAS VIC WA; Select all matching -> "19 of 71 gateways selected"
++ State NSW -> "19 of 71 gateways selected · 17 hidden by filter", 2 of 2 listed ticked; one unticked -> "18 of 71 ... · 17 hidden by filter"
+Fire "slow" -> in the form: "slow on 18 of 18 gateways, stays until cleared" and 18 result lines; no toast or other alert shown
+  (cleared afterwards: faults latency_s 0 on the same 18 through the control API)
+keyboard: Enter opens, focus "Select all matching (2)"; Tab Tab -> the first checkbox ("site"); Space -> 19 of 71, Space -> 18 of 71
+filters back to any + Select all matching -> "All 71 gateways selected", targets "all"
+errors (exceptions, console errors) []
+
+docs/assets/ui/force-events.png: 1400 x 760, dark, Actions: right, Country AU, every AU gateway
+plus us-split selected ("20 of 71 gateways selected · 1 hidden by filter"), the list open.
+
+## Break check 1 (pytest): forceSelText without the hidden count
+E       At index 2 diff: 'All 4 gateways selected' != 'All 4 gateways selected · 2 hidden by filter'
+1 failed, 1 passed. Restored: 2 passed.
+
+## Break check 2 (pytest + browser): forceMenuEsc without e.stopPropagation()
+pytest: E  assert ('e.stopPropagation()' in "forceMenuEsc(e) {...")   1 failed, 1 passed
+browser, Esc with the list open: 1400_drawer {'open': False, 'drawer': False}, 390_drawer the same
+(the drawer closed with the list); with the call: 'drawer': True (above). Restored: 2 passed.
+
+## Verification (after rebasing onto 31b3a85)
+.venv/bin/python -m pytest -q -p no:cacheprovider    907 passed, 44 warnings in 62.73s
+.venv/bin/mkdocs build --strict                        exit 0, built (only mkdocs-material's MkDocs 2.0 notice)
+python3 scripts/check_pii.py --scan                    No PII leaks found
