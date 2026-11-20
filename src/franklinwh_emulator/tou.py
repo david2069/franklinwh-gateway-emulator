@@ -40,6 +40,16 @@ DEFAULT_SCHEDULE = [
 ]
 
 
+def site_plan(blocks: Any) -> list[dict]:
+    """A site's plan from its configuration (#368): ``None`` (not set) → DEFAULT_SCHEDULE; ``[]``
+    → no TOU plan (an empty schedule); anything else → ``parse_schedule``."""
+    if blocks is None:
+        return parse_schedule(DEFAULT_SCHEDULE)
+    if isinstance(blocks, list) and not blocks:
+        return []
+    return parse_schedule(blocks)
+
+
 def _minutes(hhmm: str) -> int:
     h, m = hhmm.split(":")
     return int(h) * 60 + int(m)
@@ -108,7 +118,10 @@ def parse_rates(rates: Any) -> dict[int, dict]:
     return out
 
 
-def block_at(schedule: list[dict], minute: float) -> dict:
+def block_at(schedule: list[dict], minute: float) -> dict | None:
+    """The block covering ``minute``; None when the site has no plan (an empty schedule)."""
+    if not schedule:
+        return None
     for b in schedule:
         if b["_start"] <= minute < b["_end"]:
             return b

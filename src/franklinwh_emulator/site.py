@@ -248,7 +248,8 @@ class SiteConfig:
     pv_non_1547: list[str] = field(default_factory=list)
     offgrid_floor_soc: float = 5.0         # islanded discharge floor (1723 offgridSoc)
     # TOU mode: the schedule (franklinwh-cloud block format, tou.py) and prices per tariff
-    # period ({waveType: {buy, sell}}, display only). None → tou.DEFAULT_SCHEDULE.
+    # period ({waveType: {buy, sell}}, display only). None → tou.DEFAULT_SCHEDULE; [] → no
+    # TOU plan (#368): TOU mode then self-consumes (tou.site_plan).
     tou_schedule: list | None = None
     tou_rates: dict | None = None
     # Forced solar (pv solar_w) can't exceed what the solar model gives now (0 at night, #56).
@@ -664,7 +665,7 @@ class Site:
         # Export compliance and the CSIP-AUS client.
         self.serial = ""                   # set by the owning Gateway (for the LFDI)
         self.export_limit_enforced = cfg.export_limit_enforced
-        self.tou_schedule = tou.parse_schedule(cfg.tou_schedule or tou.DEFAULT_SCHEDULE)
+        self.tou_schedule = tou.site_plan(cfg.tou_schedule)
         self.tou_rates = tou.parse_rates(cfg.tou_rates)
         self.export_breach_s = 0.0
         self.export_breach_wh = 0.0
@@ -1319,8 +1320,9 @@ class Site:
 
     # -- control ------------------------------------------------------------------
     def set_tou_schedule(self, blocks: list | None = None, rates: dict | None = None) -> None:
-        """Replace the TOU schedule (None = the default) and/or the rates. Doesn't change the mode."""
-        schedule = tou.parse_schedule(blocks or tou.DEFAULT_SCHEDULE) if blocks is not False else None
+        """Replace the TOU schedule (None = the default, [] = no plan, False = keep it) and/or
+        the rates. Doesn't change the mode."""
+        schedule = tou.site_plan(blocks) if blocks is not False else None
         parsed_rates = tou.parse_rates(rates) if rates is not None else None
         with self.lock:
             self.step()
@@ -1330,10 +1332,14 @@ class Site:
                 self.tou_rates = parsed_rates
 
     def tou_now(self, ts: float) -> dict:
-        """The schedule, the rates and the active block with its time left."""
+        """The schedule, the rates and the active block with its time left. No plan (#368): an
+        empty schedule and ``active`` None."""
         lt = self.local_datetime(ts)
         minute = lt.hour * 60 + lt.minute + lt.second / 60.0
         b = tou.block_at(self.tou_schedule, minute)
+        if b is None:
+            return {"schedule": [], "rates": {str(k): v for k, v in self.tou_rates.items()},
+                    "active": None}
         active = {**tou.public(b), "remaining_min": round(b["_end"] - minute, 1),
                   "rates": self.tou_rates.get(b["waveType"])}
         return {"schedule": [tou.public(x) for x in self.tou_schedule],
@@ -1374,7 +1380,10 @@ class Site:
             return -float(self.rate_w)                 # at the rating; never discharge
         if mode == MODE_TOU:                           # the schedule's block decides (tou.py)
             block = tou.block_at(self.tou_schedule, hour * 60.0)
-            return tou.target_w(block["dispatchId"], net, self.rate_w)
+            if block is not None:
+                return tou.target_w(block["dispatchId"], net, self.rate_w)
+            # No TOU plan (#368): self-consumption, as an all-day gap (gaps run SELF). Plausible,
+            # not verified: what an aGate in TOU mode without a tariff does isn't documented.
         return net                                     # self-consumption
 
     @staticmethod

@@ -394,6 +394,19 @@ def test_tou_schedule_1407(dc, gw):
     assert dc.call(1407, {"opt": 1})["reason"] == 4     # writes are not emulated
 
 
+def test_tou_schedule_1407_without_a_plan(dc, gw):
+    """#368: no TOU plan: no blocks (plausible, not captured); a plan set later is served."""
+    from franklinwh_direct_connect_api import energy
+    gw.site.set_tou_schedule([])
+    r = dc.tou_schedule()
+    assert r["result"] == 0 and (r["touStrategy"], r["workdayLv"], r["weekendLv"]) == (0, 0, 0)
+    assert r["workdayTime"] == r["workdayFlag"] == r["weekendTime"] == r["weekendFlag"] == []
+    assert energy.decode_tou(r, "workday") == []
+    gw.site.set_tou_schedule([{"name": "Peak", "startHourTime": "16:00", "endHourTime": "20:00",
+                               "waveType": 2, "dispatchId": 6}])
+    assert dc.tou_schedule()["workdayFlag"] == [0, 2, 0]
+
+
 def test_replies_echo_the_request_opt(dc, gw):
     """#135: an app capture of the reference aGate: every reply echoes its request's opt."""
     on = {f"Sw{n}Mode": 1 for n in (1, 2, 3)}

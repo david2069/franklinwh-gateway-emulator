@@ -107,6 +107,38 @@ def test_global_example_is_the_example_fleet_with_every_home():
     assert not (ROOT / "examples/fleet-north-america.yaml").exists()
 
 
+@pytest.mark.parametrize("path", ["examples/fleet-us-canada.yaml", "examples/fleet-au-nz.yaml"])
+def test_example_homes_tou_plans(path):
+    """#368: every TOU home has its own plan, most other homes none; no grid charging in a plan
+    where the utility prohibits it."""
+    from franklinwh_emulator import tou
+    base = load_yaml(str(ROOT / "examples/fleet.yaml"))["gateways"]
+    homes = load_yaml(str(ROOT / path))["gateways"][len(base):]
+    f = Fleet.from_dict({"gateways": homes})
+    plan = lambda g: [(b["startHourTime"], b["endHourTime"], b["waveType"], b["dispatchId"])
+                      for b in f[g["id"]].site.tou_schedule]
+    default = [(b["startHourTime"], b["endHourTime"], b["waveType"], b["dispatchId"])
+               for b in tou.parse_schedule(tou.DEFAULT_SCHEDULE)]
+    tou_homes = [g for g in homes if g.get("native_mode") == 3]
+    other = [g for g in homes if g.get("native_mode") != 3]
+    assert tou_homes and all(g.get("tou_schedule") for g in tou_homes)    # set, not the default
+    plans = [plan(g) for g in tou_homes]
+    assert all(plans) and default not in plans
+    assert len({tuple(p) for p in plans}) == len(plans)                    # pairwise distinct
+    assert all(g.get("tou_rates") for g in tou_homes)
+    none = [g for g in other if g.get("tou_schedule") == []]
+    assert len(none) > len(other) / 2 and all(plan(g) == [] for g in none)
+    leftover = [g for g in other if g.get("tou_schedule")]
+    assert leftover and all(g["native_mode"] == 2 for g in leftover)       # Self-Consumption
+    assert len({tuple(plan(g)) for g in tou_homes + leftover}) == len(tou_homes + leftover)
+    assert all("tou_schedule" in g for g in homes)                         # none on the default
+    no_grid = [g["id"] for g in homes if f[g["id"]].site.utility_rules
+               and f[g["id"]].site.utility_rules.grid_charge is False]
+    assert [i for i in no_grid if any(b[3] == 8 for b in plan(next(g for g in homes if g["id"] == i)))] == []
+    if "us-canada" in path:
+        assert no_grid and any(plan(g) for g in homes if g["id"] in no_grid)   # a CA plan, no 8
+
+
 def test_au_nz_example_has_two_different_homes_per_place():
     """#357: two homes in each of 10 Australian and New Zealand places, each one different."""
     base = load_yaml(str(ROOT / "examples/fleet.yaml"))["gateways"]

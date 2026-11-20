@@ -86,6 +86,10 @@ class TouStore:
     def _from_site(self) -> None:
         site = self.gw.site
         blocks = self._blocks()
+        if not blocks:                           # no TOU plan (#368): no seasons
+            self.strategies, self.template = [], self._template()
+            self.site_blocks, self.applied = blocks, None
+            return
         details = [{"id": i + 1, "strategyId": 1, "briefDescribe": None,
                     "solarPriority": None, "loadPriority": None, "useModeFlag": 0,
                     "dispatch": None, **b} for i, b in enumerate(blocks)]
@@ -154,7 +158,11 @@ class TouStore:
     def detail(self) -> dict:
         self.sync()
         site = self.gw.site
-        return {"template": copy.deepcopy(self.template), "strategyList": copy.deepcopy(self.strategies),
+        # No TOU plan (#368): an empty template and no seasons, the shape of franklinwh-cloud's
+        # "no existing TOU config" fixture (tests/test_tou_set.py _make_empty_dispatch_detail);
+        # a fixture, not a capture.
+        template = copy.deepcopy(self.template) if self.strategies else {}
+        return {"template": template, "strategyList": copy.deepcopy(self.strategies),
                 "detailDefaultVo": {
                     "gridMax": -1, "gridChargeMax": -1, "dischargeMax": -1, "gridDischargeMax": -1,
                     "fixedPower": None, "showAdvance": 0, "sgipRiskMax": None,

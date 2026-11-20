@@ -181,7 +181,7 @@ Phase 2b (#305), TOU schedules:
 
 | Call | What it does |
 |---|---|
-| `GET hes-gateway/terminal/tou/getTouDispatchDetail` | the schedule: `template`, `strategyList` (seasons by `month`, then `dayTypeVoList`: `dayType` 3 every day, or 1 weekdays and 2 weekends, each with its `detailVoList` blocks and its `eleticRate*`/`eleticSell*` prices), and `detailDefaultVo.touDispatchList` (the dispatch codes) |
+| `GET hes-gateway/terminal/tou/getTouDispatchDetail` | the schedule: `template`, `strategyList` (seasons by `month`, then `dayTypeVoList`: `dayType` 3 every day, or 1 weekdays and 2 weekends, each with its `detailVoList` blocks and its `eleticRate*`/`eleticSell*` prices), and `detailDefaultVo.touDispatchList` (the dispatch codes). No TOU plan (#368): `template` `{}` and `strategyList` `[]` (franklinwh-cloud's no-config fixture shape, not a capture) |
 | `POST hes-gateway/terminal/tou/saveTouDispatch` | replaces the schedule (`{template, strategyList, …}`) and returns `result.id`. Each month in one season at most, each season `dayType` 3 or both 1 and 2, blocks as for the control API's `tou` (`code 400` otherwise). It doesn't switch the mode: switch to TOU with `updateTouModeV2`, as with current firmware |
 | `POST hes-gateway/terminal/tou/getPcsHintInfo` | an empty hint; franklinwh-cloud's `set_tou_schedule` asks for it before saving |
 

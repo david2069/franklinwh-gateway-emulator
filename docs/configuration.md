@@ -41,6 +41,10 @@ file to make them permanent.
    [`examples/fleet-global.yaml`](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/examples/fleet-global.yaml)
    has them all in one fleet: `examples/fleet.yaml`, the US and Canadian homes and the Australian
    and New Zealand homes, 71 gateways, on the same ports and seeds as in those two files.
+   In the regional homes, every TOU home has its own TOU plan and prices (`tou_schedule`,
+   `tou_rates`: plausible, not published tariffs; no grid charging in California), most other
+   homes have none (`tou_schedule: []`, [No TOU plan](site-model.md#no-tou-plan)), and a few
+   Self-Consumption homes keep one from before they left TOU (#368).
 2. Start it: `franklinwh-emulator ui my-fleet.yaml` (web UI on http://127.0.0.1:8502/) or
    `franklinwh-emulator fleet my-fleet.yaml` (no UI). It checks the file first and prints every
    problem with its path (e.g. `gateways[1].modbus: port 5020 already used`), then exits.
@@ -143,7 +147,7 @@ The tables below come from `validate.config_schema()`; a test checks every key i
 | `self_reserve` | integer | `20` | Self-Consumption reserve, % |
 | `tou_reserve` | integer | `20` | TOU reserve, % |
 | `offgrid_floor_soc` | number | `5.0` | islanded discharge floor, % |
-| `tou_schedule` | array | — | TOU blocks (franklinwh-cloud format): name, startHourTime, endHourTime, waveType, dispatchId; default: solar-charge off-peak, self-consumption 17-21 |
+| `tou_schedule` | array | — | TOU blocks (franklinwh-cloud format): name, startHourTime, endHourTime, waveType, dispatchId; `[]` = no TOU plan (TOU mode self-consumes); default (omitted): solar-charge off-peak, self-consumption 17-21 |
 | `tou_rates` | object | — | prices per tariff period, {waveType: {buy, sell}} in $/kWh (display only) |
 | `export_limit_enforced` | boolean | `False` | enforce the grid code's export limit (default: tracked only) |
 

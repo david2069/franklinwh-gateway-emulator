@@ -1,0 +1,70 @@
+TOU plans: a "no TOU plan" state and distinct example plans (#368)
+Date: 2026-11-21. Branch tou-plans-368 on origin/main db46647. Python 3.12 (.venv).
+
+No-plan representation: tou_schedule: [] (omitted / null keeps tou.DEFAULT_SCHEDULE).
+What each surface returns with no plan:
+  control API state "tou"        {"schedule": [], "rates": {...}, "active": null}      emulator's own
+  battery in TOU mode            self-consumption (an all-day gap)                       plausible, not verified
+  Direct Connect 1407 -> 1408    touStrategy 0, workdayLv/weekendLv 0, empty arrays     plausible, not verified
+  Cloud getTouDispatchDetail     template {}, strategyList []                          franklinwh-cloud test fixture
+                                                                                         _make_empty_dispatch_detail (not a capture)
+  Cloud tariffSettingFlag        false (unchanged; false for every site already)        franklinwh-cloud TOU_SCHEDULE_GUIDE
+  Web UI                         "No TOU plan" note, empty timeline, Edit adds blocks
+Setting a plan later: control API `tou` schedule, cloud saveTouDispatch (franklinwh-cloud
+set_tou_schedule) both tested; `schedule: []` clears; `reset: true` restores the default.
+
+Examples (regional homes; base fleet.yaml gateways untouched):
+  US & Canada: 41 homes: 14 TOU, each its own plan + rates; 27 others: 24 none, 3 leftover
+               (redding-ca, boise-id-2, honolulu-hi). California homes: no GRID_CHARGE blocks.
+  AU/NZ:       20 homes: 5 TOU, each its own plan + rates; 15 others: 13 none, 2 leftover
+               (townsville-qld, hobart-tas-2).
+  All 19 TOU plans and 5 leftover plans pairwise distinct; none equals DEFAULT_SCHEDULE.
+  fleet-global.yaml regenerated: its header + fleet-us-canada.yaml from `defaults:` + the AU/NZ
+  homes (test_global_example_is_the_example_fleet_with_every_home passes).
+  Every plan is plausible, made up for the emulator, not a published tariff.
+
+New tests (all pass):
+  tests/test_tou.py::test_no_plan_is_an_empty_schedule_and_tou_mode_self_consumes
+  tests/test_tou.py::test_no_plan_validates_and_reads_through_the_control_api
+  tests/test_tou.py::test_tou_action_clears_and_sets_a_plan
+  tests/test_directconnect.py::test_tou_schedule_1407_without_a_plan
+  tests/test_cloud_tou.py::test_no_plan_reads_back_empty_and_a_save_sets_one
+  tests/test_validate.py::test_example_homes_tou_plans[examples/fleet-us-canada.yaml]
+  tests/test_validate.py::test_example_homes_tou_plans[examples/fleet-au-nz.yaml]
+
+Break checks (each change disabled, its tests run, restored):
+## BREAK: [] falls back to the default again (site_plan) (src/franklinwh_emulator/tou.py)
+FAILED tests/test_tou.py::test_no_plan_is_an_empty_schedule_and_tou_mode_self_consumes
+FAILED tests/test_tou.py::test_no_plan_validates_and_reads_through_the_control_api
+FAILED tests/test_tou.py::test_tou_action_clears_and_sets_a_plan
+FAILED tests/test_validate.py::test_example_homes_tou_plans[examples/fleet-us-canada.yaml]
+FAILED tests/test_validate.py::test_example_homes_tou_plans[examples/fleet-au-nz.yaml]
+FAILED tests/test_directconnect.py::test_tou_schedule_1407_without_a_plan
+FAILED tests/test_cloud_tou.py::test_no_plan_reads_back_empty_and_a_save_sets_one
+7 failed, 133 passed
+## BREAK: no-plan TOU dispatch not self-consumption (STANDBY) (site.py)
+FAILED tests/test_tou.py::test_no_plan_is_an_empty_schedule_and_tou_mode_self_consumes
+1 failed, 24 passed
+## BREAK: Direct Connect 1408 no-plan branch removed (dc_payloads.py)
+FAILED tests/test_directconnect.py::test_tou_schedule_1407_without_a_plan
+1 failed, 53 passed
+## BREAK: Cloud detail keeps the template with no plan (cloud_tou.py)
+FAILED tests/test_cloud_tou.py::test_no_plan_reads_back_empty_and_a_save_sets_one
+1 failed, 4 passed
+## BREAK: California leftover plan gets a GRID_CHARGE block (fleet-us-canada.yaml)
+FAILED tests/test_validate.py::test_example_homes_tou_plans[examples/fleet-us-canada.yaml]
+1 failed, 1 passed
+## BREAK: Two plans the same (tampa-fl-2 = redding-ca's leftover) (fleet-us-canada.yaml)
+FAILED tests/test_validate.py::test_example_homes_tou_plans[examples/fleet-us-canada.yaml]
+1 failed, 1 passed
+## BREAK: Most no-plan homes back on the default (fleet-au-nz.yaml)
+FAILED tests/test_validate.py::test_example_homes_tou_plans[examples/fleet-au-nz.yaml]
+1 failed, 1 passed
+
+Full suite: .venv/bin/python -m pytest -q -p no:cacheprovider
+899 passed, 44 warnings in 92.76s
+mkdocs build --strict: built, no warnings.
+python3 scripts/check_pii.py --scan: Scanned 410 files; no PII leaks found.
+
+Not verified: what a real aGate/cloud returns, and how the aGate dispatches in TOU mode, when no
+TOU tariff is set; no capture exists. The web UI's no-plan note was not run in a browser.
