@@ -13,7 +13,8 @@ from ..control import ControlApi, Raw
 
 STATIC = Path(__file__).resolve().parent / "static"
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
-         ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml"}
+         ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml",
+         ".json": "application/json"}
 
 
 def static_file(name: str) -> Raw | None:

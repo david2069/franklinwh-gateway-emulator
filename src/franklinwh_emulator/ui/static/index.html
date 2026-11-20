@@ -13,6 +13,7 @@
 <script src="/static/groups.js"></script>
 <script src="/static/units.js"></script>
 <script src="/static/splash.js"></script>
+<script src="/static/map.js"></script>
 <script defer src="/static/alpinejs-3.14.1.min.js"></script>
 </head>
 <body x-data="running()" x-init="start()">
@@ -72,6 +73,8 @@
             x-text="tempUnit === 'C' ? '°C' : '°F'" aria-label="Temperature unit"></button>
     <button type="button" @click="setView('compact', !compact)" :aria-pressed="compact.toString()"
             title="Compact cards: SoC, local time and tags only">Compact</button>
+    <button type="button" @click="setView('mapOn', !mapOn)" :aria-pressed="mapOn.toString()"
+            title="A map of where the gateways are installed, from each one's location">Map</button>
   </div>
   <a class="docs-link" :href="docsUrl('')" target="_blank" rel="noopener" title="The emulator's documentation (opens a new tab)">Docs</a>
   <button type="button" class="layout-toggle" @click="toggleLayout()" :aria-pressed="(layout === 'right').toString()"
@@ -93,6 +96,12 @@
     <button type="button" class="secondary" x-show="!staleNewCode" @click="stale = ''; version = null; checkVersion()">Dismiss</button>
   </div>
   <div class="col-main">
+
+  <section class="fleet-map" x-show="mapOn" x-cloak aria-label="Map of the gateways">
+    <div id="fleet-map" role="application" aria-label="Where the gateways are installed: hover a marker for its gateways, click to select it"></div>
+    <p class="map-note" x-show="mapError" x-text="mapError" role="status"></p>
+    <p class="map-note" x-show="mapNote()" x-text="mapNote()"></p>
+  </section>
 
   <section class="gw-groups" aria-label="Gateways">
    <template x-for="grp in groupGateways(gateways, groupBy)" :key="grp.label">
