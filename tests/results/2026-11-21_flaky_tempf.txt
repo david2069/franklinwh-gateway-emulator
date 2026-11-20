@@ -1,0 +1,7 @@
+# #366: worst |round(t*1.8+32,1) - round(t,1)*1.8-32| over t = -20..45 C step 0.001: 0.14 (old tolerance 0.1, new 0.15)
+# CI failure seen: PR #364, Python 3.13: assert 71.7 == 71.6 ± 0.1
+
+# full suite
+892 passed, 44 warnings in 67.31s (0:01:07)
+# PII
+✅ SUCCESS: No PII leaks found!

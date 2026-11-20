@@ -194,7 +194,8 @@ def test_values_come_from_the_site(fleet):
     assert battery["touMinSoc"] == round(site.active_reserve())
     weather = _call(fleet, "GET", "terminal/weather/getCurrentBriefWeather", token)["result"]
     assert weather["tempC"] == pytest.approx(site.ambient_c(site.clock.now()), abs=0.5)
-    assert weather["tempF"] == pytest.approx(weather["tempC"] * 9 / 5 + 32, abs=0.1)
+    # each rounded to 0.1 from the unrounded temperature: F from the rounded C can be 0.14 off (#366)
+    assert weather["tempF"] == pytest.approx(weather["tempC"] * 9 / 5 + 32, abs=0.15)
     day = sorted(site.history)[-2]
     benefit = _call(fleet, "GET", "terminal/bill/electric/selectBenefitInfo", token, dayTime=day, type=1)["result"]
     kwh = cloud_energy.day_kwh(gw, day)
