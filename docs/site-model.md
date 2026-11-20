@@ -29,9 +29,26 @@ format ([franklinwh-cloud TOU guide](https://david2069.github.io/franklinwh-clou
 active reserve still applies. The guide's limit fields (`maxChargeSoc`, `minDischargeSoc`,
 `gridChargeMax`, …) are kept and shown but not applied: the guide says `minDischargeSoc` is ignored
 by the aGate and the others aren't verified in all firmware. One schedule covers every day
-(seasons and weekdays: not yet). Without one, TOU charges from surplus solar except
-17:00–21:00, when it self-consumes (the emulator's model before schedules). The `tou` action
-replaces it at run time; it never changes the mode.
+(seasons and weekdays: not yet). Without one (`tou_schedule` omitted), TOU charges from
+surplus solar except 17:00–21:00, when it self-consumes (the emulator's model before schedules).
+The `tou` action replaces it at run time; it never changes the mode.
+
+### No TOU plan
+
+`tou_schedule: []` is a site with no TOU plan, as many homes on Self-Consumption or Emergency
+Backup are (#368). What each surface returns then:
+
+| Surface | No plan | Basis |
+|---|---|---|
+| Control API state `tou` | `{"schedule": [], "rates": {…}, "active": null}` | the emulator's own |
+| Battery in TOU mode | self-consumption, as if the whole day were a gap | plausible, not verified: what an aGate in TOU mode without a tariff does isn't documented |
+| Direct Connect 1407 → 1408 | `touStrategy` 0, `workdayLv`/`weekendLv` 0, empty `Time`/`Flag` arrays | plausible, not verified: no capture without a tariff; franklinwh-direct-connect-api's `decode_tou` reads it as no blocks |
+| Cloud `getTouDispatchDetail` | `template` `{}`, `strategyList` `[]`, the dispatch codes as before | franklinwh-cloud's "no existing TOU config" test fixture (a fixture, not a capture) |
+| Cloud `tariffSettingFlag` | `false` (as for every site today) | franklinwh-cloud TOU guide: false = no tariff configured |
+| Web UI | "No TOU plan" and an empty timeline; **Edit** adds blocks | |
+
+A plan set later (the `tou` action's `schedule`, or the cloud's `saveTouDispatch`) applies as
+usual; the `tou` action with `schedule: []` removes it and `reset: true` restores the default.
 
 ## Energy totals and history
 

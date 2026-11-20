@@ -8,7 +8,9 @@
 # (#359, docs/grid.md), older (V10R01) or newer (V12R02) firmware, solar or none, remote PV, large
 # arrays, a generator, V2L, two smart circuits or none, Self-Consumption, TOU or Emergency Backup
 # (mostly homes without solar), and export settings: battery export (the AU/NZ default) or off,
-# export capped, or zero export. City-level locations.
+# export capped, or zero export. City-level locations. TOU plans (#368): each TOU home has its
+# own (tou_schedule, tou_rates: plausible, not a published tariff); most other homes have none
+# (tou_schedule: []), a few keep one from before they left TOU.
 #
 # Every key outside `gateways` is optional. Per gateway:
 #   id, seed, serial, host, port (or modbus: {host, port}), directconnect: {port} (every aGate
@@ -167,7 +169,7 @@ gateways:
     modbus: {port: 5025}
 
   # Australia and New Zealand (#357): one AU/NZ aGate per home, single phase, each home different.
-  # Devonport, AUK: two aPower X-01-AU, rooftop solar, export capped at 5 kW; Self-Consumption.
+  # Devonport, AUK: two aPower X-01-AU, rooftop solar, export capped at 5 kW; Self-Consumption. No TOU plan.
   - id: devonport-akl
     seed: 300
     grid_code: as4777-au-a
@@ -175,6 +177,7 @@ gateways:
     model: {agate: 102, apower: [2, 2]}
     apower_units: 2
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     utility: {export: limited, export_limit_w: 5000}
     loads: sydney-family
     location: {latitude: -36.83, longitude: 174.8, timezone: Pacific/Auckland,
@@ -182,7 +185,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5100}
     directconnect: {port: 9100}
-  # Devonport, AUK: an aPower X-02-AU, no solar: a backup battery; Emergency Backup.
+  # Devonport, AUK: an aPower X-02-AU, no solar: a backup battery; Emergency Backup. No TOU plan.
   - id: devonport-akl-2
     seed: 301
     grid_code: as4777-au-a
@@ -190,6 +193,7 @@ gateways:
     model: {agate: 102, apower: 7}
     apower_units: 1
     native_mode: 1
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     loads:
       - {name: base, type: base, w: 300, drift: 0.15}
@@ -200,7 +204,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5101}
     directconnect: {port: 9101}
-  # Hamilton, WKO: an aPower X-01-AU on V10R01, solar on the house and a shed (aPbox), an EV; TOU.
+  # Hamilton, WKO: an aPower X-01-AU on V10R01, solar on the house and a shed (aPbox), an EV; TOU. TOU plan: 07:00-11:00 and 17:00-21:00 peaks, night 23:00-07:00 grid charging.
   - id: hamilton-nz
     seed: 302
     grid_code: as4777-au-a
@@ -208,6 +212,14 @@ gateways:
     model: {agate: 102, apower: 2}
     apower_units: 1
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Super Off-Peak, startHourTime: "00:00", endHourTime: "07:00", waveType: 4, dispatchId: 8}
+      - {name: On-Peak, startHourTime: "07:00", endHourTime: "11:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "11:00", endHourTime: "17:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "17:00", endHourTime: "21:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "21:00", endHourTime: "23:00", waveType: 0, dispatchId: 6}
+      - {name: Super Off-Peak, startHourTime: "23:00", endHourTime: "24:00", waveType: 4, dispatchId: 8}
+    tou_rates: {4: {buy: 0.17, sell: 0.08}, 0: {buy: 0.25, sell: 0.08}, 2: {buy: 0.36, sell: 0.08}}   # $/kWh, shown only
     pv_inputs: {proximal: 0.6, remote1: 0.4}
     loads:
       - {name: base, type: base, w: 300, drift: 0.15}
@@ -218,7 +230,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5102}
     directconnect: {port: 9102}
-  # Hamilton, WKO: two aPower X-02-AU, a 10 kW array and a generator; Self-Consumption.
+  # Hamilton, WKO: two aPower X-02-AU, a 10 kW array and a generator; Self-Consumption. No TOU plan.
   - id: hamilton-nz-2
     seed: 303
     grid_code: as4777-au-a
@@ -226,6 +238,7 @@ gateways:
     model: {agate: 102, apower: [7, 7]}
     apower_units: 2
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 10000
     generator: {installed: true, rated_w: 8000}
     loads:
@@ -237,7 +250,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5103}
     directconnect: {port: 9103}
-  # Christchurch, CAN: an aPower X-01-AU and an X-02-AU (mixed), solar, a heat pump; TOU.
+  # Christchurch, CAN: an aPower X-01-AU and an X-02-AU (mixed), solar, a heat pump; TOU. TOU plan: 07:00-09:30 and 17:30-20:00 peaks, night 22:00-07:00 grid charging.
   - id: christchurch-nz
     seed: 304
     grid_code: as4777-au-a
@@ -245,6 +258,14 @@ gateways:
     model: {agate: 102, apower: [2, 7]}
     apower_units: 2
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Super Off-Peak, startHourTime: "00:00", endHourTime: "07:00", waveType: 4, dispatchId: 8}
+      - {name: On-Peak, startHourTime: "07:00", endHourTime: "09:30", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "09:30", endHourTime: "17:30", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "17:30", endHourTime: "20:00", waveType: 2, dispatchId: 1}
+      - {name: Mid-Peak, startHourTime: "20:00", endHourTime: "22:00", waveType: 1, dispatchId: 6}
+      - {name: Super Off-Peak, startHourTime: "22:00", endHourTime: "24:00", waveType: 4, dispatchId: 8}
+    tou_rates: {4: {buy: 0.15, sell: 0.1}, 0: {buy: 0.24, sell: 0.1}, 1: {buy: 0.28, sell: 0.1}, 2: {buy: 0.34, sell: 0.1}}   # $/kWh, shown only
     utility: {battery_export: false}
     loads:
       - {name: base, type: base, w: 300, drift: 0.15}
@@ -256,7 +277,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5104}
     directconnect: {port: 9104}
-  # Christchurch, CAN: an aPower X-01-AU, no solar, no smart circuits; Emergency Backup.
+  # Christchurch, CAN: an aPower X-01-AU, no solar, no smart circuits; Emergency Backup. No TOU plan.
   - id: christchurch-nz-2
     seed: 305
     grid_code: as4777-au-a
@@ -264,6 +285,7 @@ gateways:
     model: {agate: 102, apower: 2}
     apower_units: 1
     native_mode: 1
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     accessories: {smart_circuits: false}
     loads:
@@ -275,7 +297,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5105}
     directconnect: {port: 9105}
-  # Queenstown, OTA: an aPower X-02-AU, solar and an EV on V2L; Self-Consumption.
+  # Queenstown, OTA: an aPower X-02-AU, solar and an EV on V2L; Self-Consumption. No TOU plan.
   - id: queenstown-nz
     seed: 306
     grid_code: as4777-au-a
@@ -283,6 +305,7 @@ gateways:
     model: {agate: 102, apower: 7}
     apower_units: 1
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     v2l: {circuit: 1, ev_kwh: 64, ev_soc: 80, max_w: 2200, min_soc: 20}   # EV values: placeholders (#287)
     loads:
       - {name: base, type: base, w: 300, drift: 0.15}
@@ -293,7 +316,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5106}
     directconnect: {port: 9106}
-  # Queenstown, OTA: three aPower X-01-AU on V10R01, no solar, a generator for snow outages; Emergency Backup.
+  # Queenstown, OTA: three aPower X-01-AU on V10R01, no solar, a generator for snow outages; Emergency Backup. No TOU plan.
   - id: queenstown-nz-2
     seed: 307
     grid_code: as4777-au-a
@@ -301,6 +324,7 @@ gateways:
     model: {agate: 102, apower: [2, 2, 2]}
     apower_units: 3
     native_mode: 1
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     generator: {installed: true, rated_w: 9000}
     loads:
@@ -312,7 +336,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5107}
     directconnect: {port: 9107}
-  # Perth, WA: two aPower X-02-AU, a 10 kW array, export capped at 5 kW, a pool pump; TOU.
+  # Perth, WA: two aPower X-02-AU, a 10 kW array, export capped at 5 kW, a pool pump; TOU. TOU plan: 09:00-15:00 super off-peak grid charging, 15:00-21:00 peak.
   - id: perth-wa
     seed: 308
     grid_code: as4777-au-a
@@ -320,6 +344,12 @@ gateways:
     model: {agate: 102, apower: [7, 7]}
     apower_units: 2
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Off-Peak, startHourTime: "00:00", endHourTime: "09:00", waveType: 0, dispatchId: 6}
+      - {name: Super Off-Peak, startHourTime: "09:00", endHourTime: "15:00", waveType: 4, dispatchId: 8}
+      - {name: On-Peak, startHourTime: "15:00", endHourTime: "21:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "21:00", endHourTime: "24:00", waveType: 0, dispatchId: 6}
+    tou_rates: {4: {buy: 0.09, sell: 0.02}, 0: {buy: 0.24, sell: 0.02}, 2: {buy: 0.56, sell: 0.1}}   # $/kWh, shown only
     solar_peak_w: 10000
     utility: {export: limited, export_limit_w: 5000}
     loads:
@@ -332,7 +362,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5108}
     directconnect: {port: 9108}
-  # Perth, WA: an aPower X-01-AU on V10R01, rooftop solar, zero export; Self-Consumption.
+  # Perth, WA: an aPower X-01-AU on V10R01, rooftop solar, zero export; Self-Consumption. No TOU plan.
   - id: perth-wa-2
     seed: 309
     grid_code: as4777-au-a
@@ -340,6 +370,7 @@ gateways:
     model: {agate: 102, apower: 2}
     apower_units: 1
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     utility: {export: prohibited}
     loads:
       - {name: base, type: base, w: 300, drift: 0.15}
@@ -350,7 +381,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5109}
     directconnect: {port: 9109}
-  # Townsville, QLD: an aPower X-02-AU, rooftop solar, aircon; Self-Consumption.
+  # Townsville, QLD: an aPower X-02-AU, rooftop solar, aircon; Self-Consumption. A TOU plan left from before the switch away from TOU: 16:00-21:00 peak.
   - id: townsville-qld
     seed: 310
     grid_code: as4777-au-a
@@ -358,6 +389,12 @@ gateways:
     model: {agate: 102, apower: 7}
     apower_units: 1
     native_mode: 2
+    tou_schedule:            # left from TOU days; plausible, not a published tariff (#368)
+      - {name: Off-Peak, startHourTime: "00:00", endHourTime: "07:00", waveType: 0, dispatchId: 6}
+      - {name: Off-Peak, startHourTime: "07:00", endHourTime: "16:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "16:00", endHourTime: "21:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "21:00", endHourTime: "24:00", waveType: 0, dispatchId: 6}
+    tou_rates: {0: {buy: 0.23, sell: 0.05}, 2: {buy: 0.45, sell: 0.05}}   # $/kWh, shown only
     utility: {export: limited, export_limit_w: 5000}
     loads:
       - {name: base, type: base, w: 300, drift: 0.15}
@@ -368,7 +405,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5110}
     directconnect: {port: 9110}
-  # Townsville, QLD: two aPower X-01-AU on V10R01, no solar, a generator for cyclones; Emergency Backup.
+  # Townsville, QLD: two aPower X-01-AU on V10R01, no solar, a generator for cyclones; Emergency Backup. No TOU plan.
   - id: townsville-qld-2
     seed: 311
     grid_code: as4777-au-a
@@ -376,6 +413,7 @@ gateways:
     model: {agate: 102, apower: [2, 2]}
     apower_units: 2
     native_mode: 1
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     generator: {installed: true, rated_w: 10000}
     loads:
@@ -387,7 +425,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5111}
     directconnect: {port: 9111}
-  # Canberra, ACT: three aPower X-02-AU, a 13 kW array, an EV on solar surplus; TOU.
+  # Canberra, ACT: three aPower X-02-AU, a 13 kW array, an EV on solar surplus; TOU. TOU plan: 07:00-09:00 and 17:00-21:00 peaks, 11:00-15:00 solar soak grid charging.
   - id: canberra-act
     seed: 312
     grid_code: as4777-au-a
@@ -395,6 +433,15 @@ gateways:
     model: {agate: 102, apower: [7, 7, 7]}
     apower_units: 3
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Off-Peak, startHourTime: "00:00", endHourTime: "07:00", waveType: 0, dispatchId: 6}
+      - {name: On-Peak, startHourTime: "07:00", endHourTime: "09:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "09:00", endHourTime: "11:00", waveType: 0, dispatchId: 3}
+      - {name: Super Off-Peak, startHourTime: "11:00", endHourTime: "15:00", waveType: 4, dispatchId: 8}
+      - {name: Off-Peak, startHourTime: "15:00", endHourTime: "17:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "17:00", endHourTime: "21:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "21:00", endHourTime: "24:00", waveType: 0, dispatchId: 6}
+    tou_rates: {4: {buy: 0.1, sell: 0.04}, 0: {buy: 0.22, sell: 0.04}, 2: {buy: 0.42, sell: 0.04}}   # $/kWh, shown only
     solar_peak_w: 13000
     loads:
       - {name: base, type: base, w: 300, drift: 0.15}
@@ -406,7 +453,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5112}
     directconnect: {port: 9112}
-  # Canberra, ACT: a flat: an aPower X-01-AU on V10R01, rooftop solar, no smart circuits; Self-Consumption.
+  # Canberra, ACT: a flat: an aPower X-01-AU on V10R01, rooftop solar, no smart circuits; Self-Consumption. No TOU plan.
   - id: canberra-act-2
     seed: 313
     grid_code: as4777-au-a
@@ -414,6 +461,7 @@ gateways:
     model: {agate: 102, apower: 2}
     apower_units: 1
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     accessories: {smart_circuits: false}
     loads: small-flat
     location: {latitude: -35.28, longitude: 149.13, timezone: Australia/Sydney,
@@ -421,7 +469,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5113}
     directconnect: {port: 9113}
-  # Adelaide, SA: an aPower X-02-AU, rooftop solar, export capped at 1.5 kW; Self-Consumption.
+  # Adelaide, SA: an aPower X-02-AU, rooftop solar, export capped at 1.5 kW; Self-Consumption. No TOU plan.
   - id: adelaide-sa
     seed: 314
     grid_code: as4777-au-a
@@ -429,6 +477,7 @@ gateways:
     model: {agate: 102, apower: 7}
     apower_units: 1
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     utility: {export: limited, export_limit_w: 1500}
     loads:
       - {name: base, type: base, w: 300, drift: 0.15}
@@ -440,7 +489,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5114}
     directconnect: {port: 9114}
-  # Adelaide, SA: an aPower X-01-AU and an X-02-AU (mixed) on V10R01, solar on a garage (aPbox), battery export off; TOU.
+  # Adelaide, SA: an aPower X-01-AU and an X-02-AU (mixed) on V10R01, solar on a garage (aPbox), battery export off; TOU. TOU plan: 06:00-10:00 and 15:00-24:00 peaks, 10:00-15:00 solar sponge grid charging.
   - id: adelaide-sa-2
     seed: 315
     grid_code: as4777-au-a
@@ -448,6 +497,12 @@ gateways:
     model: {agate: 102, apower: [2, 7]}
     apower_units: 2
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Off-Peak, startHourTime: "00:00", endHourTime: "06:00", waveType: 0, dispatchId: 6}
+      - {name: On-Peak, startHourTime: "06:00", endHourTime: "10:00", waveType: 2, dispatchId: 1}
+      - {name: Super Off-Peak, startHourTime: "10:00", endHourTime: "15:00", waveType: 4, dispatchId: 8}
+      - {name: On-Peak, startHourTime: "15:00", endHourTime: "24:00", waveType: 2, dispatchId: 6}
+    tou_rates: {4: {buy: 0.15, sell: 0.03}, 0: {buy: 0.27, sell: 0.03}, 2: {buy: 0.52, sell: 0.03}}   # $/kWh, shown only
     pv_inputs: {remote1: 1.0}
     utility: {battery_export: false}
     loads:
@@ -459,7 +514,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5115}
     directconnect: {port: 9115}
-  # Hobart, TAS: an aPower X-01-AU, no solar, heating on a smart circuit; Self-Consumption.
+  # Hobart, TAS: an aPower X-01-AU, no solar, heating on a smart circuit; Self-Consumption. No TOU plan.
   - id: hobart-tas
     seed: 316
     grid_code: as4777-au-a
@@ -467,6 +522,7 @@ gateways:
     model: {agate: 102, apower: 2}
     apower_units: 1
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     loads:
       - {name: base, type: base, w: 300, drift: 0.15}
@@ -477,7 +533,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5116}
     directconnect: {port: 9116}
-  # Hobart, TAS: two aPower X-02-AU, rooftop solar and an EV on V2L; Self-Consumption.
+  # Hobart, TAS: two aPower X-02-AU, rooftop solar and an EV on V2L; Self-Consumption. A TOU plan left from before the switch away from TOU: 07:00-10:00 and 16:00-21:00 peaks.
   - id: hobart-tas-2
     seed: 317
     grid_code: as4777-au-a
@@ -485,6 +541,13 @@ gateways:
     model: {agate: 102, apower: [7, 7]}
     apower_units: 2
     native_mode: 2
+    tou_schedule:            # left from TOU days; plausible, not a published tariff (#368)
+      - {name: Off-Peak, startHourTime: "00:00", endHourTime: "07:00", waveType: 0, dispatchId: 6}
+      - {name: On-Peak, startHourTime: "07:00", endHourTime: "10:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "10:00", endHourTime: "16:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "16:00", endHourTime: "21:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "21:00", endHourTime: "24:00", waveType: 0, dispatchId: 6}
+    tou_rates: {0: {buy: 0.19, sell: 0.06}, 2: {buy: 0.37, sell: 0.06}}   # $/kWh, shown only
     v2l: {circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 2200, min_soc: 20}   # EV values: placeholders (#287)
     loads:
       - {name: base, type: base, w: 300, drift: 0.15}
@@ -495,7 +558,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5117}
     directconnect: {port: 9117}
-  # Darwin, NT: two aPower X-01-AU, a 10 kW array, zero export, aircon; Self-Consumption.
+  # Darwin, NT: two aPower X-01-AU, a 10 kW array, zero export, aircon; Self-Consumption. No TOU plan.
   - id: darwin-nt
     seed: 318
     grid_code: as4777-au-a
@@ -503,6 +566,7 @@ gateways:
     model: {agate: 102, apower: [2, 2]}
     apower_units: 2
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 10000
     utility: {export: prohibited}
     loads:
@@ -515,7 +579,7 @@ gateways:
     service: {main_breaker_a: 63}
     modbus: {port: 5118}
     directconnect: {port: 9118}
-  # Darwin, NT: an aPower X-02-AU on V10R01, no solar, a generator for the wet season; Emergency Backup.
+  # Darwin, NT: an aPower X-02-AU on V10R01, no solar, a generator for the wet season; Emergency Backup. No TOU plan.
   - id: darwin-nt-2
     seed: 319
     grid_code: as4777-au-a
@@ -523,6 +587,7 @@ gateways:
     model: {agate: 102, apower: 7}
     apower_units: 1
     native_mode: 1
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     generator: {installed: true, rated_w: 7000}
     accessories: {smart_circuits: false}

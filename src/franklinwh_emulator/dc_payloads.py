@@ -434,6 +434,11 @@ class DcPayloads:
         Writes are not emulated (the schedule is set through the control API)."""
         if req.get("opt", 0) != 0:
             return _refused(4)
+        if not self.site.tou_schedule:
+            # No TOU plan (#368): no blocks. Plausible, not verified: no capture of 1408 from an
+            # aGate without a tariff; decode_tou reads the empty arrays as no blocks.
+            return _ok(touStrategy=0, workdayLv=0, workdayTime=[], workdayFlag=[],
+                       weekendLv=0, weekendTime=[], weekendFlag=[])
         times, flags, at = [], [], "00:00"
         for b in sorted(self.site.tou_schedule, key=lambda b: b["startHourTime"]):
             if b["startHourTime"] > at:                  # a gap: off-peak until this block

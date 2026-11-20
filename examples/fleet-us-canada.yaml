@@ -9,7 +9,9 @@
 # smart circuits or none, and export settings: the factory default for North American models
 # (no battery export), battery export on, solar export capped, or zero export; Self-Consumption,
 # TOU or Emergency Backup (mostly homes without solar); grid charging prohibited in California.
-# Hawaii has every North American aPower model.
+# Hawaii has every North American aPower model. TOU plans (#368): each TOU home has its own
+# (tou_schedule, tou_rates: plausible, not a published tariff; no grid charging in California);
+# most other homes have none (tou_schedule: []), a few keep one from before they left TOU.
 #
 # Every key outside `gateways` is optional. Per gateway:
 #   id, seed, serial, host, port (or modbus: {host, port}), directconnect: {port} (every aGate
@@ -168,7 +170,7 @@ gateways:
     modbus: {port: 5025}
 
   # North America (#335, #338): 120/240 V split phase, IEEE 1547 Category II, each home different.
-  # Redding, CA: two aPower S with DC PV on their MPPT inputs; hot summers on the AC; Self-Consumption, 30 kW DC PV, the aPower S maximum, solar export capped at 5 kW, grid charging prohibited.
+  # Redding, CA: two aPower S with DC PV on their MPPT inputs; hot summers on the AC; Self-Consumption, 30 kW DC PV, the aPower S maximum, solar export capped at 5 kW, grid charging prohibited. A TOU plan left from before the switch away from TOU: 16:00-21:00 peak, no grid charging (prohibited).
   - id: redding-ca
     seed: 200
     ac_type: 1
@@ -177,6 +179,11 @@ gateways:
     model: {agate: 103, apower: [4, 4]}
     apower_units: 2
     native_mode: 2
+    tou_schedule:            # left from TOU days; plausible, not a published tariff (#368)
+      - {name: Off-Peak, startHourTime: "00:00", endHourTime: "16:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "16:00", endHourTime: "21:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "21:00", endHourTime: "24:00", waveType: 0, dispatchId: 6}
+    tou_rates: {0: {buy: 0.33, sell: 0.05}, 2: {buy: 0.52, sell: 0.05}}   # $/kWh, shown only
     dc_pv: {rated_w: 30000}   # the MPPT maximum
     utility: {export: limited, export_limit_w: 5000, grid_charge: false}
     loads:
@@ -189,7 +196,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5040}
     directconnect: {port: 9040}
-  # Redding, CA: wildfire power shutoffs: an older aGate X-10 on V10R01, a generator, a well pump, no solar; Emergency Backup, factory export setting (no battery export), grid charging prohibited, no smart circuits.
+  # Redding, CA: wildfire power shutoffs: an older aGate X-10 on V10R01, a generator, a well pump, no solar; Emergency Backup, factory export setting (no battery export), grid charging prohibited, no smart circuits. No TOU plan.
   - id: redding-ca-2
     seed: 201
     ac_type: 1
@@ -198,6 +205,7 @@ gateways:
     model: {agate: 100, apower: 1}
     apower_units: 1
     native_mode: 1
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     generator: {installed: true, rated_w: 12000}
     utility: {grid_charge: false}
@@ -211,7 +219,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5041}
     directconnect: {port: 9041}
-  # Boise, ID: older aGate X-10 and aPower X on V10R01 firmware; rooftop solar; a well pump; Self-Consumption, solar export capped at 5 kW, no smart circuits.
+  # Boise, ID: older aGate X-10 and aPower X on V10R01 firmware; rooftop solar; a well pump; Self-Consumption, solar export capped at 5 kW, no smart circuits. No TOU plan.
   - id: boise-id
     seed: 202
     ac_type: 1
@@ -220,6 +228,7 @@ gateways:
     model: {agate: 100, apower: 0}
     apower_units: 1
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     utility: {export: limited, export_limit_w: 5000}
     accessories: {smart_circuits: false}
     loads:
@@ -232,7 +241,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5042}
     directconnect: {port: 9042}
-  # Boise, ID: two aPower S with DC PV, an EV charging on solar surplus; Self-Consumption, factory export setting (no battery export).
+  # Boise, ID: two aPower S with DC PV, an EV charging on solar surplus; Self-Consumption, factory export setting (no battery export). A TOU plan left from before the switch away from TOU: 05:00 grid charging, 17:00-20:00 peak.
   - id: boise-id-2
     seed: 203
     ac_type: 1
@@ -241,6 +250,12 @@ gateways:
     model: {agate: 103, apower: [5, 5]}
     apower_units: 2
     native_mode: 2
+    tou_schedule:            # left from TOU days; plausible, not a published tariff (#368)
+      - {name: Super Off-Peak, startHourTime: "00:00", endHourTime: "05:00", waveType: 4, dispatchId: 8}
+      - {name: Off-Peak, startHourTime: "05:00", endHourTime: "17:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "17:00", endHourTime: "20:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "20:00", endHourTime: "24:00", waveType: 0, dispatchId: 6}
+    tou_rates: {4: {buy: 0.06, sell: 0.04}, 0: {buy: 0.09, sell: 0.04}, 2: {buy: 0.19, sell: 0.04}}   # $/kWh, shown only
     pv_inputs: {proximal: 0.0}   # DC PV only, no AC solar
     dc_pv: {rated_w: 10000}
     loads:
@@ -253,7 +268,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5043}
     directconnect: {port: 9043}
-  # Houston, TX: hurricane backup: a 22 kW standby generator, two aPower 2s, solar, AC and a pool pump; TOU, a large 13 kW rooftop array, battery export on.
+  # Houston, TX: hurricane backup: a 22 kW standby generator, two aPower 2s, solar, AC and a pool pump; TOU, a large 13 kW rooftop array, battery export on. TOU plan: free nights 21:00-06:00 charge from the grid, 14:00-19:00 peak.
   - id: houston-tx
     seed: 204
     ac_type: 1
@@ -262,6 +277,13 @@ gateways:
     model: {agate: 104, apower: [3, 3]}
     apower_units: 2
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Super Off-Peak, startHourTime: "00:00", endHourTime: "06:00", waveType: 4, dispatchId: 8}
+      - {name: Off-Peak, startHourTime: "06:00", endHourTime: "14:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "14:00", endHourTime: "19:00", waveType: 2, dispatchId: 1}
+      - {name: Mid-Peak, startHourTime: "19:00", endHourTime: "21:00", waveType: 1, dispatchId: 6}
+      - {name: Super Off-Peak, startHourTime: "21:00", endHourTime: "24:00", waveType: 4, dispatchId: 8}
+    tou_rates: {4: {buy: 0.0, sell: 0.03}, 0: {buy: 0.13, sell: 0.05}, 1: {buy: 0.17, sell: 0.05}, 2: {buy: 0.24, sell: 0.05}}   # $/kWh, shown only
     generator: {installed: true, rated_w: 22000}
     solar_peak_w: 13000
     utility: {battery_export: true}
@@ -275,7 +297,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5044}
     directconnect: {port: 9044}
-  # Houston, TX: aGate X-20 on V10R01, one aPower 2, no solar, no accessory modules; Emergency Backup, factory export setting (no battery export).
+  # Houston, TX: aGate X-20 on V10R01, one aPower 2, no solar, no accessory modules; Emergency Backup, factory export setting (no battery export). No TOU plan.
   - id: houston-tx-2
     seed: 205
     ac_type: 1
@@ -284,6 +306,7 @@ gateways:
     model: {agate: 101, apower: 3}
     apower_units: 1
     native_mode: 1
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     accessories: {smart_circuits: false, generator_module: false, apbox: false}
     location: {latitude: 29.76, longitude: -95.37, timezone: America/Chicago,
@@ -291,7 +314,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5045}
     directconnect: {port: 9045}
-  # Tampa, FL: aGate X-20 on V10R01, one aPower X, solar on the aGate and a remote array (aPbox); Self-Consumption, zero export.
+  # Tampa, FL: aGate X-20 on V10R01, one aPower X, solar on the aGate and a remote array (aPbox); Self-Consumption, zero export. No TOU plan.
   - id: tampa-fl
     seed: 206
     ac_type: 1
@@ -300,6 +323,7 @@ gateways:
     model: {agate: 101, apower: 1}
     apower_units: 1
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     pv_inputs: {proximal: 0.5, remote1: 0.5}
     utility: {export: prohibited}
     loads:
@@ -312,7 +336,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5046}
     directconnect: {port: 9046}
-  # Tampa, FL: an aPower S, rooftop solar and an EV on V2L for hurricane outages; TOU, battery export on.
+  # Tampa, FL: an aPower S, rooftop solar and an EV on V2L for hurricane outages; TOU, battery export on. TOU plan: 18:00-21:00 peak.
   - id: tampa-fl-2
     seed: 207
     ac_type: 1
@@ -321,6 +345,11 @@ gateways:
     model: {agate: 103, apower: 4}
     apower_units: 1
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Off-Peak, startHourTime: "00:00", endHourTime: "18:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "18:00", endHourTime: "21:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "21:00", endHourTime: "24:00", waveType: 0, dispatchId: 6}
+    tou_rates: {0: {buy: 0.11, sell: 0.04}, 2: {buy: 0.29, sell: 0.04}}   # $/kWh, shown only
     v2l: {circuit: 1, ev_kwh: 82, ev_soc: 80, max_w: 7600, min_soc: 20}   # EV values: placeholders (#287)
     utility: {battery_export: true}
     loads:
@@ -332,7 +361,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5047}
     directconnect: {port: 9047}
-  # Buffalo, NY: no solar; a portable generator for winter storms; electric heat; Emergency Backup, factory export setting (no battery export), no smart circuits.
+  # Buffalo, NY: no solar; a portable generator for winter storms; electric heat; Emergency Backup, factory export setting (no battery export), no smart circuits. No TOU plan.
   - id: buffalo-ny
     seed: 208
     ac_type: 1
@@ -341,6 +370,7 @@ gateways:
     model: {agate: 103, apower: 3}
     apower_units: 1
     native_mode: 1
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     generator: {installed: true, rated_w: 9000}
     accessories: {smart_circuits: false}
@@ -353,7 +383,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5048}
     directconnect: {port: 9048}
-  # Buffalo, NY: three aPower 2s, solar on the house and the barn (aPbox), hot water and an EV; TOU, a large 14 kW rooftop array, battery export on.
+  # Buffalo, NY: three aPower 2s, solar on the house and the barn (aPbox), hot water and an EV; TOU, a large 14 kW rooftop array, battery export on. TOU plan: overnight grid charging, 16:00-19:00 peak exported.
   - id: buffalo-ny-2
     seed: 209
     ac_type: 1
@@ -362,6 +392,12 @@ gateways:
     model: {agate: 104, apower: [3, 3, 3]}
     apower_units: 3
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Super Off-Peak, startHourTime: "00:00", endHourTime: "07:00", waveType: 4, dispatchId: 8}
+      - {name: Off-Peak, startHourTime: "07:00", endHourTime: "16:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "16:00", endHourTime: "19:00", waveType: 2, dispatchId: 7}
+      - {name: Off-Peak, startHourTime: "19:00", endHourTime: "24:00", waveType: 0, dispatchId: 6}
+    tou_rates: {4: {buy: 0.06, sell: 0.04}, 0: {buy: 0.11, sell: 0.06}, 2: {buy: 0.31, sell: 0.18}}   # $/kWh, shown only
     pv_inputs: {proximal: 0.7, remote1: 0.3}
     solar_peak_w: 14000
     utility: {battery_export: true}
@@ -375,7 +411,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5049}
     directconnect: {port: 9049}
-  # Chicago, IL: no solar, no accessory modules; aGate X-10 on V10R01 with a later aPower X; Emergency Backup, factory export setting (no battery export).
+  # Chicago, IL: no solar, no accessory modules; aGate X-10 on V10R01 with a later aPower X; Emergency Backup, factory export setting (no battery export). No TOU plan.
   - id: chicago-il
     seed: 210
     ac_type: 1
@@ -384,6 +420,7 @@ gateways:
     model: {agate: 100, apower: 6}
     apower_units: 1
     native_mode: 1
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     accessories: {smart_circuits: false, generator_module: false, apbox: false}
     location: {latitude: 41.88, longitude: -87.63, timezone: America/Chicago,
@@ -391,7 +428,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5050}
     directconnect: {port: 9050}
-  # Chicago, IL: two aPower S with DC PV and a generator; TOU, battery export on.
+  # Chicago, IL: two aPower S with DC PV and a generator; TOU, battery export on. TOU plan: overnight 21:00-06:00 grid charging, 13:00-19:00 peak.
   - id: chicago-il-2
     seed: 211
     ac_type: 1
@@ -400,6 +437,13 @@ gateways:
     model: {agate: 103, apower: [4, 4]}
     apower_units: 2
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Super Off-Peak, startHourTime: "00:00", endHourTime: "06:00", waveType: 4, dispatchId: 8}
+      - {name: Off-Peak, startHourTime: "06:00", endHourTime: "13:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "13:00", endHourTime: "19:00", waveType: 2, dispatchId: 1}
+      - {name: Mid-Peak, startHourTime: "19:00", endHourTime: "21:00", waveType: 1, dispatchId: 6}
+      - {name: Super Off-Peak, startHourTime: "21:00", endHourTime: "24:00", waveType: 4, dispatchId: 8}
+    tou_rates: {4: {buy: 0.03, sell: 0.02}, 0: {buy: 0.07, sell: 0.04}, 1: {buy: 0.09, sell: 0.04}, 2: {buy: 0.15, sell: 0.04}}   # $/kWh, shown only
     pv_inputs: {proximal: 0.0}   # DC PV only, no AC solar
     dc_pv: {rated_w: 12000}
     generator: {installed: true, rated_w: 15000}
@@ -413,7 +457,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5051}
     directconnect: {port: 9051}
-  # Seattle, WA: no solar; an aPower S; the EV charger and hot water on smart circuits; TOU, battery export on.
+  # Seattle, WA: no solar; an aPower S; the EV charger and hot water on smart circuits; TOU, battery export on. TOU plan: no solar: grid charging 00:00-06:00, 17:00-21:00 peak.
   - id: seattle-wa
     seed: 212
     ac_type: 1
@@ -422,6 +466,12 @@ gateways:
     model: {agate: 103, apower: 5}
     apower_units: 1
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Off-Peak, startHourTime: "00:00", endHourTime: "06:00", waveType: 0, dispatchId: 8}
+      - {name: Mid-Peak, startHourTime: "06:00", endHourTime: "17:00", waveType: 1, dispatchId: 2}
+      - {name: On-Peak, startHourTime: "17:00", endHourTime: "21:00", waveType: 2, dispatchId: 1}
+      - {name: Mid-Peak, startHourTime: "21:00", endHourTime: "24:00", waveType: 1, dispatchId: 2}
+    tou_rates: {0: {buy: 0.08, sell: 0.04}, 1: {buy: 0.13, sell: 0.04}, 2: {buy: 0.21, sell: 0.04}}   # $/kWh, shown only
     solar_peak_w: 0
     utility: {battery_export: true}
     loads:
@@ -434,7 +484,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5052}
     directconnect: {port: 9052}
-  # Seattle, WA: aGate X-20 on V10R01, an aPower X and an aPower 2 (mixed), rooftop solar; Self-Consumption, zero export.
+  # Seattle, WA: aGate X-20 on V10R01, an aPower X and an aPower 2 (mixed), rooftop solar; Self-Consumption, zero export. No TOU plan.
   - id: seattle-wa-2
     seed: 213
     ac_type: 1
@@ -443,6 +493,7 @@ gateways:
     model: {agate: 101, apower: [1, 3]}
     apower_units: 2
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     utility: {export: prohibited}
     loads:
       - {name: base, type: base, w: 400, drift: 0.15}
@@ -453,7 +504,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5053}
     directconnect: {port: 9053}
-  # St Louis, MO: an aPower X joined later by an aPower 2 (mixed) on V10R01; no solar; a generator; Self-Consumption, factory export setting (no battery export), no smart circuits.
+  # St Louis, MO: an aPower X joined later by an aPower 2 (mixed) on V10R01; no solar; a generator; Self-Consumption, factory export setting (no battery export), no smart circuits. No TOU plan.
   - id: st-louis-mo
     seed: 214
     ac_type: 1
@@ -462,6 +513,7 @@ gateways:
     model: {agate: 101, apower: [0, 3]}
     apower_units: 2
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     generator: {installed: true, rated_w: 12000}
     accessories: {smart_circuits: false}
@@ -474,7 +526,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5054}
     directconnect: {port: 9054}
-  # St Louis, MO: an aPower S, solar on a detached garage (aPbox) and an EV on V2L; TOU, zero export.
+  # St Louis, MO: an aPower S, solar on a detached garage (aPbox) and an EV on V2L; TOU, zero export. TOU plan: 15:00-19:00 peak.
   - id: st-louis-mo-2
     seed: 215
     ac_type: 1
@@ -483,6 +535,11 @@ gateways:
     model: {agate: 104, apower: 5}
     apower_units: 1
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Off-Peak, startHourTime: "00:00", endHourTime: "15:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "15:00", endHourTime: "19:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "19:00", endHourTime: "24:00", waveType: 0, dispatchId: 6}
+    tou_rates: {0: {buy: 0.09, sell: 0.0}, 2: {buy: 0.26, sell: 0.0}}   # $/kWh, shown only
     pv_inputs: {remote1: 1.0}
     v2l: {circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 3800, min_soc: 20}   # EV values: placeholders (#287)
     utility: {export: prohibited}
@@ -495,7 +552,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5055}
     directconnect: {port: 9055}
-  # Cincinnati, OH: solar on a detached garage through the aPbox only; an aPower S; Self-Consumption, 15 kW DC PV, the aPower S maximum, solar export capped at 5 kW.
+  # Cincinnati, OH: solar on a detached garage through the aPbox only; an aPower S; Self-Consumption, 15 kW DC PV, the aPower S maximum, solar export capped at 5 kW. No TOU plan.
   - id: cincinnati-oh
     seed: 216
     ac_type: 1
@@ -504,6 +561,7 @@ gateways:
     model: {agate: 104, apower: 4}
     apower_units: 1
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     pv_inputs: {remote1: 1.0}
     dc_pv: {rated_w: 15000}   # the MPPT maximum
     utility: {export: limited, export_limit_w: 5000}
@@ -516,7 +574,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5056}
     directconnect: {port: 9056}
-  # Cincinnati, OH: aGate X-10 on V10R01, an aPower X, rooftop solar and a small generator; Self-Consumption, zero export, no smart circuits.
+  # Cincinnati, OH: aGate X-10 on V10R01, an aPower X, rooftop solar and a small generator; Self-Consumption, zero export, no smart circuits. No TOU plan.
   - id: cincinnati-oh-2
     seed: 217
     ac_type: 1
@@ -525,6 +583,7 @@ gateways:
     model: {agate: 100, apower: 0}
     apower_units: 1
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     generator: {installed: true, rated_w: 8000}
     utility: {export: prohibited}
     accessories: {smart_circuits: false}
@@ -537,7 +596,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5057}
     directconnect: {port: 9057}
-  # Atlanta, GA: two aPower 2s, solar, and an EV on V2L that supplies the home off-grid; TOU, battery export on.
+  # Atlanta, GA: two aPower 2s, solar, and an EV on V2L that supplies the home off-grid; TOU, battery export on. TOU plan: overnight 23:00-07:00 grid charging, 14:00-19:00 peak.
   - id: atlanta-ga
     seed: 218
     ac_type: 1
@@ -546,6 +605,13 @@ gateways:
     model: {agate: 103, apower: [3, 3]}
     apower_units: 2
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Super Off-Peak, startHourTime: "00:00", endHourTime: "07:00", waveType: 4, dispatchId: 8}
+      - {name: Off-Peak, startHourTime: "07:00", endHourTime: "14:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "14:00", endHourTime: "19:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "19:00", endHourTime: "23:00", waveType: 0, dispatchId: 6}
+      - {name: Super Off-Peak, startHourTime: "23:00", endHourTime: "24:00", waveType: 4, dispatchId: 8}
+    tou_rates: {4: {buy: 0.02, sell: 0.03}, 0: {buy: 0.09, sell: 0.03}, 2: {buy: 0.27, sell: 0.03}}   # $/kWh, shown only
     v2l: {circuit: 1, ev_kwh: 75, ev_soc: 80, max_w: 7600, min_soc: 20}   # EV values: placeholders (#287)
     utility: {battery_export: true}
     loads:
@@ -557,7 +623,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5058}
     directconnect: {port: 9058}
-  # Atlanta, GA: aGate X-20 on V10R01, an aPower X, no solar, a 20 kW generator, AC and a pool pump; Self-Consumption, factory export setting (no battery export).
+  # Atlanta, GA: aGate X-20 on V10R01, an aPower X, no solar, a 20 kW generator, AC and a pool pump; Self-Consumption, factory export setting (no battery export). No TOU plan.
   - id: atlanta-ga-2
     seed: 219
     ac_type: 1
@@ -566,6 +632,7 @@ gateways:
     model: {agate: 101, apower: 1}
     apower_units: 1
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     generator: {installed: true, rated_w: 20000}
     loads:
@@ -578,7 +645,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5059}
     directconnect: {port: 9059}
-  # Phoenix, AZ: three aPower S with DC PV and rooftop solar; AC and a pool pump; TOU, 45 kW DC PV, the aPower S maximum, solar export capped at 10 kW, battery export on.
+  # Phoenix, AZ: three aPower S with DC PV and rooftop solar; AC and a pool pump; TOU, 45 kW DC PV, the aPower S maximum, solar export capped at 10 kW, battery export on. TOU plan: 16:00-19:00 peak exported.
   - id: phoenix-az
     seed: 220
     ac_type: 1
@@ -587,6 +654,11 @@ gateways:
     model: {agate: 104, apower: [4, 4, 4]}
     apower_units: 3
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Off-Peak, startHourTime: "00:00", endHourTime: "16:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "16:00", endHourTime: "19:00", waveType: 2, dispatchId: 7}
+      - {name: Off-Peak, startHourTime: "19:00", endHourTime: "24:00", waveType: 0, dispatchId: 6}
+    tou_rates: {0: {buy: 0.1, sell: 0.07}, 2: {buy: 0.29, sell: 0.07}}   # $/kWh, shown only
     dc_pv: {rated_w: 45000}   # the MPPT maximum
     utility: {export: limited, export_limit_w: 10000, battery_export: true}
     loads:
@@ -599,7 +671,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5060}
     directconnect: {port: 9060}
-  # Oklahoma City, OK: rural: a well pump and a generator, no solar, V10R01; Self-Consumption, factory export setting (no battery export), no smart circuits.
+  # Oklahoma City, OK: rural: a well pump and a generator, no solar, V10R01; Self-Consumption, factory export setting (no battery export), no smart circuits. No TOU plan.
   - id: oklahoma-city-ok
     seed: 221
     ac_type: 1
@@ -608,6 +680,7 @@ gateways:
     model: {agate: 100, apower: 1}
     apower_units: 1
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     generator: {installed: true, rated_w: 14000}
     accessories: {smart_circuits: false}
@@ -621,7 +694,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5061}
     directconnect: {port: 9061}
-  # Oklahoma City, OK: two aPower 2s, rooftop solar, an EV charging on solar surplus; TOU, a large 12 kW rooftop array, battery export on.
+  # Oklahoma City, OK: two aPower 2s, rooftop solar, an EV charging on solar surplus; TOU, a large 12 kW rooftop array, battery export on. TOU plan: 14:00-19:00 peak, evening mid-peak.
   - id: oklahoma-city-ok-2
     seed: 222
     ac_type: 1
@@ -630,6 +703,11 @@ gateways:
     model: {agate: 103, apower: [3, 3]}
     apower_units: 2
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Off-Peak, startHourTime: "00:00", endHourTime: "14:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "14:00", endHourTime: "19:00", waveType: 2, dispatchId: 1}
+      - {name: Mid-Peak, startHourTime: "19:00", endHourTime: "24:00", waveType: 1, dispatchId: 6}
+    tou_rates: {0: {buy: 0.05, sell: 0.03}, 1: {buy: 0.11, sell: 0.03}, 2: {buy: 0.22, sell: 0.03}}   # $/kWh, shown only
     solar_peak_w: 12000
     utility: {battery_export: true}
     loads:
@@ -642,7 +720,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5062}
     directconnect: {port: 9062}
-  # Ottawa, ON: cold winters: heat and hot water on smart circuits, no solar; Self-Consumption, factory export setting (no battery export).
+  # Ottawa, ON: cold winters: heat and hot water on smart circuits, no solar; Self-Consumption, factory export setting (no battery export). No TOU plan.
   - id: ottawa-on
     seed: 223
     ac_type: 1
@@ -651,6 +729,7 @@ gateways:
     model: {agate: 103, apower: 3}
     apower_units: 1
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     loads:
       - {name: base, type: base, w: 400, drift: 0.15}
@@ -662,7 +741,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5063}
     directconnect: {port: 9063}
-  # Ottawa, ON: an aPower 2, rooftop solar, a generator for ice storms, an EV; TOU, battery export on.
+  # Ottawa, ON: an aPower 2, rooftop solar, a generator for ice storms, an EV; TOU, battery export on. TOU plan: Ontario-style winter periods: 07:00-11:00 and 17:00-19:00 peaks, overnight grid charging.
   - id: ottawa-on-2
     seed: 224
     ac_type: 1
@@ -671,6 +750,13 @@ gateways:
     model: {agate: 104, apower: 3}
     apower_units: 1
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Off-Peak, startHourTime: "00:00", endHourTime: "07:00", waveType: 0, dispatchId: 8}
+      - {name: On-Peak, startHourTime: "07:00", endHourTime: "11:00", waveType: 2, dispatchId: 1}
+      - {name: Mid-Peak, startHourTime: "11:00", endHourTime: "17:00", waveType: 1, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "17:00", endHourTime: "19:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "19:00", endHourTime: "24:00", waveType: 0, dispatchId: 6}
+    tou_rates: {0: {buy: 0.08, sell: 0.0}, 1: {buy: 0.12, sell: 0.0}, 2: {buy: 0.16, sell: 0.0}}   # $/kWh, shown only
     generator: {installed: true, rated_w: 12000}
     utility: {battery_export: true}
     loads:
@@ -683,7 +769,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5064}
     directconnect: {port: 9064}
-  # Halifax, NS: storm backup: aGate X-20 on V10R01, an aPower X and a generator; no solar; Emergency Backup, factory export setting (no battery export), no smart circuits.
+  # Halifax, NS: storm backup: aGate X-20 on V10R01, an aPower X and a generator; no solar; Emergency Backup, factory export setting (no battery export), no smart circuits. No TOU plan.
   - id: halifax-ns
     seed: 225
     ac_type: 1
@@ -692,6 +778,7 @@ gateways:
     model: {agate: 101, apower: 0}
     apower_units: 1
     native_mode: 1
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     generator: {installed: true, rated_w: 10000}
     accessories: {smart_circuits: false}
@@ -704,7 +791,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5065}
     directconnect: {port: 9065}
-  # Halifax, NS: two aPower 2s, rooftop solar and an EV on V2L; Self-Consumption, battery export on.
+  # Halifax, NS: two aPower 2s, rooftop solar and an EV on V2L; Self-Consumption, battery export on. No TOU plan.
   - id: halifax-ns-2
     seed: 226
     ac_type: 1
@@ -713,6 +800,7 @@ gateways:
     model: {agate: 103, apower: [3, 3]}
     apower_units: 2
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     v2l: {circuit: 1, ev_kwh: 64, ev_soc: 80, max_w: 3800, min_soc: 20}   # EV values: placeholders (#287)
     utility: {battery_export: true}
     loads:
@@ -724,7 +812,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5066}
     directconnect: {port: 9066}
-  # Long Beach, NY: two aPower S, no solar, an EV charger charging off-peak; TOU, factory export setting (no battery export).
+  # Long Beach, NY: two aPower S, no solar, an EV charger charging off-peak; TOU, factory export setting (no battery export). TOU plan: no solar: grid charging 00:00-06:00, 15:00-19:00 peak.
   - id: long-beach-ny
     seed: 227
     ac_type: 1
@@ -733,6 +821,12 @@ gateways:
     model: {agate: 104, apower: [5, 5]}
     apower_units: 2
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Super Off-Peak, startHourTime: "00:00", endHourTime: "06:00", waveType: 4, dispatchId: 8}
+      - {name: Off-Peak, startHourTime: "06:00", endHourTime: "15:00", waveType: 0, dispatchId: 2}
+      - {name: On-Peak, startHourTime: "15:00", endHourTime: "19:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "19:00", endHourTime: "24:00", waveType: 0, dispatchId: 2}
+    tou_rates: {4: {buy: 0.08, sell: 0.0}, 0: {buy: 0.15, sell: 0.0}, 2: {buy: 0.38, sell: 0.0}}   # $/kWh, shown only
     solar_peak_w: 0
     loads:
       - {name: base, type: base, w: 400, drift: 0.15}
@@ -743,7 +837,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5067}
     directconnect: {port: 9067}
-  # Long Beach, NY: aGate X-20 on V10R01, a later aPower X, rooftop solar, AC; Self-Consumption, solar export capped at 5 kW, no smart circuits.
+  # Long Beach, NY: aGate X-20 on V10R01, a later aPower X, rooftop solar, AC; Self-Consumption, solar export capped at 5 kW, no smart circuits. No TOU plan.
   - id: long-beach-ny-2
     seed: 228
     ac_type: 1
@@ -752,6 +846,7 @@ gateways:
     model: {agate: 101, apower: 6}
     apower_units: 1
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     utility: {export: limited, export_limit_w: 5000}
     accessories: {smart_circuits: false}
     loads:
@@ -763,7 +858,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5068}
     directconnect: {port: 9068}
-  # Atlantic City, NJ: solar and a pool pump; one aPower 2 on V10R01; TOU, a large 15 kW rooftop array, solar export capped at 5 kW.
+  # Atlantic City, NJ: solar and a pool pump; one aPower 2 on V10R01; TOU, a large 15 kW rooftop array, solar export capped at 5 kW. TOU plan: 15:00-20:00 peak.
   - id: atlantic-city-nj
     seed: 229
     ac_type: 1
@@ -772,6 +867,12 @@ gateways:
     model: {agate: 103, apower: 3}
     apower_units: 1
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Off-Peak, startHourTime: "00:00", endHourTime: "10:00", waveType: 0, dispatchId: 6}
+      - {name: Off-Peak, startHourTime: "10:00", endHourTime: "15:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "15:00", endHourTime: "20:00", waveType: 2, dispatchId: 1}
+      - {name: Off-Peak, startHourTime: "20:00", endHourTime: "24:00", waveType: 0, dispatchId: 6}
+    tou_rates: {0: {buy: 0.14, sell: 0.08}, 2: {buy: 0.29, sell: 0.08}}   # $/kWh, shown only
     solar_peak_w: 15000
     utility: {export: limited, export_limit_w: 5000}
     loads:
@@ -784,7 +885,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5069}
     directconnect: {port: 9069}
-  # Honolulu, HI: aPower X (APR-05K1V1-US) on V10R01, rooftop solar, Customer Self-Supply style; Self-Consumption, zero export.
+  # Honolulu, HI: aPower X (APR-05K1V1-US) on V10R01, rooftop solar, Customer Self-Supply style; Self-Consumption, zero export. A TOU plan left from before the switch away from TOU: cheap daytime 09:00-17:00, 17:00-21:00 peak.
   - id: honolulu-hi
     seed: 230
     ac_type: 1
@@ -793,6 +894,12 @@ gateways:
     model: {agate: 103, apower: 0}
     apower_units: 1
     native_mode: 2
+    tou_schedule:            # left from TOU days; plausible, not a published tariff (#368)
+      - {name: Mid-Peak, startHourTime: "00:00", endHourTime: "09:00", waveType: 1, dispatchId: 6}
+      - {name: Off-Peak, startHourTime: "09:00", endHourTime: "17:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "17:00", endHourTime: "21:00", waveType: 2, dispatchId: 1}
+      - {name: Mid-Peak, startHourTime: "21:00", endHourTime: "24:00", waveType: 1, dispatchId: 6}
+    tou_rates: {0: {buy: 0.28, sell: 0.0}, 1: {buy: 0.4, sell: 0.0}, 2: {buy: 0.5, sell: 0.0}}   # $/kWh, shown only
     utility: {export: prohibited}
     loads:
       - {name: base, type: base, w: 400, drift: 0.15}
@@ -803,7 +910,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5070}
     directconnect: {port: 9070}
-  # Honolulu, HI: an aPower 2, no solar: a backup battery; Emergency Backup, factory export setting (no battery export).
+  # Honolulu, HI: an aPower 2, no solar: a backup battery; Emergency Backup, factory export setting (no battery export). No TOU plan.
   - id: honolulu-hi-2
     seed: 231
     ac_type: 1
@@ -812,6 +919,7 @@ gateways:
     model: {agate: 104, apower: 3}
     apower_units: 1
     native_mode: 1
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     loads:
       - {name: base, type: base, w: 400, drift: 0.15}
@@ -822,7 +930,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5071}
     directconnect: {port: 9071}
-  # Hilo, HI: an aPower X (APR-05K11V1-US) on V10R01, rooftop solar; TOU, battery export on.
+  # Hilo, HI: an aPower X (APR-05K11V1-US) on V10R01, rooftop solar; TOU, battery export on. TOU plan: cheap daytime 09:00-17:00, 17:00-22:00 peak.
   - id: hilo-hi
     seed: 232
     ac_type: 1
@@ -831,6 +939,12 @@ gateways:
     model: {agate: 101, apower: 1}
     apower_units: 1
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Mid-Peak, startHourTime: "00:00", endHourTime: "09:00", waveType: 1, dispatchId: 6}
+      - {name: Off-Peak, startHourTime: "09:00", endHourTime: "17:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "17:00", endHourTime: "22:00", waveType: 2, dispatchId: 1}
+      - {name: Mid-Peak, startHourTime: "22:00", endHourTime: "24:00", waveType: 1, dispatchId: 6}
+    tou_rates: {0: {buy: 0.3, sell: 0.15}, 1: {buy: 0.42, sell: 0.15}, 2: {buy: 0.52, sell: 0.15}}   # $/kWh, shown only
     utility: {battery_export: true}
     loads:
       - {name: base, type: base, w: 400, drift: 0.15}
@@ -841,7 +955,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5072}
     directconnect: {port: 9072}
-  # Hilo, HI: an aPower S (APRS-10K15V1-US) with DC PV only; Self-Consumption, zero export.
+  # Hilo, HI: an aPower S (APRS-10K15V1-US) with DC PV only; Self-Consumption, zero export. No TOU plan.
   - id: hilo-hi-2
     seed: 233
     ac_type: 1
@@ -850,6 +964,7 @@ gateways:
     model: {agate: 103, apower: 4}
     apower_units: 1
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     pv_inputs: {proximal: 0.0}   # DC PV only, no AC solar
     dc_pv: {rated_w: 15000}
     utility: {export: prohibited}
@@ -863,7 +978,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5073}
     directconnect: {port: 9073}
-  # Kahului, HI: an aPower S (APRS-11K15V2-US), a 10 kW rooftop array and DC PV; TOU, solar export capped at 3 kW.
+  # Kahului, HI: an aPower S (APRS-11K15V2-US), a 10 kW rooftop array and DC PV; TOU, solar export capped at 3 kW. TOU plan: midday 09:00-15:00 grid charging, 17:00-22:00 peak.
   - id: kahului-hi
     seed: 234
     ac_type: 1
@@ -872,6 +987,13 @@ gateways:
     model: {agate: 104, apower: 5}
     apower_units: 1
     native_mode: 3
+    tou_schedule:            # plausible, not a published tariff (#368)
+      - {name: Mid-Peak, startHourTime: "00:00", endHourTime: "09:00", waveType: 1, dispatchId: 6}
+      - {name: Super Off-Peak, startHourTime: "09:00", endHourTime: "15:00", waveType: 4, dispatchId: 8}
+      - {name: Off-Peak, startHourTime: "15:00", endHourTime: "17:00", waveType: 0, dispatchId: 3}
+      - {name: On-Peak, startHourTime: "17:00", endHourTime: "22:00", waveType: 2, dispatchId: 1}
+      - {name: Mid-Peak, startHourTime: "22:00", endHourTime: "24:00", waveType: 1, dispatchId: 6}
+    tou_rates: {4: {buy: 0.22, sell: 0.1}, 0: {buy: 0.36, sell: 0.1}, 1: {buy: 0.44, sell: 0.1}, 2: {buy: 0.55, sell: 0.1}}   # $/kWh, shown only
     solar_peak_w: 10000
     dc_pv: {rated_w: 8000}
     utility: {export: limited, export_limit_w: 3000}
@@ -884,7 +1006,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5074}
     directconnect: {port: 9074}
-  # Kahului, HI: a later aPower X (APR-05K15V1-US) on V10R01, no solar, a generator; Emergency Backup, factory export setting (no battery export).
+  # Kahului, HI: a later aPower X (APR-05K15V1-US) on V10R01, no solar, a generator; Emergency Backup, factory export setting (no battery export). No TOU plan.
   - id: kahului-hi-2
     seed: 235
     ac_type: 1
@@ -893,6 +1015,7 @@ gateways:
     model: {agate: 100, apower: 6}
     apower_units: 1
     native_mode: 1
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     generator: {installed: true, rated_w: 10000}
     loads:
@@ -904,7 +1027,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5075}
     directconnect: {port: 9075}
-  # San Juan, PR: two aPower 2s and a 10 kW rooftop array for frequent outages; Emergency Backup, factory export setting (no battery export).
+  # San Juan, PR: two aPower 2s and a 10 kW rooftop array for frequent outages; Emergency Backup, factory export setting (no battery export). No TOU plan.
   - id: san-juan-pr
     seed: 236
     ac_type: 1
@@ -913,6 +1036,7 @@ gateways:
     model: {agate: 103, apower: [3, 3]}
     apower_units: 2
     native_mode: 1
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 10000
     loads:
       - {name: base, type: base, w: 400, drift: 0.15}
@@ -924,7 +1048,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5076}
     directconnect: {port: 9076}
-  # San Juan, PR: aGate X-20 on V10R01, an aPower X, no solar, a 7 kW generator; Emergency Backup, factory export setting (no battery export), no smart circuits.
+  # San Juan, PR: aGate X-20 on V10R01, an aPower X, no solar, a 7 kW generator; Emergency Backup, factory export setting (no battery export), no smart circuits. No TOU plan.
   - id: san-juan-pr-2
     seed: 237
     ac_type: 1
@@ -933,6 +1057,7 @@ gateways:
     model: {agate: 101, apower: 1}
     apower_units: 1
     native_mode: 1
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     generator: {installed: true, rated_w: 7000}
     accessories: {smart_circuits: false}
@@ -945,7 +1070,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5077}
     directconnect: {port: 9077}
-  # Ponce, PR: two aPower S with 20 kW of DC PV and rooftop solar; Self-Consumption, battery export on.
+  # Ponce, PR: two aPower S with 20 kW of DC PV and rooftop solar; Self-Consumption, battery export on. No TOU plan.
   - id: ponce-pr
     seed: 238
     ac_type: 1
@@ -954,6 +1079,7 @@ gateways:
     model: {agate: 104, apower: [4, 4]}
     apower_units: 2
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     dc_pv: {rated_w: 20000}
     utility: {battery_export: true}
     loads:
@@ -966,7 +1092,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5078}
     directconnect: {port: 9078}
-  # Ponce, PR: aGate X-10 on V10R01, an aPower X, rooftop solar; Self-Consumption, zero export, no smart circuits.
+  # Ponce, PR: aGate X-10 on V10R01, an aPower X, rooftop solar; Self-Consumption, zero export, no smart circuits. No TOU plan.
   - id: ponce-pr-2
     seed: 239
     ac_type: 1
@@ -975,6 +1101,7 @@ gateways:
     model: {agate: 100, apower: 0}
     apower_units: 1
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     utility: {export: prohibited}
     accessories: {smart_circuits: false}
     loads:
@@ -986,7 +1113,7 @@ gateways:
     service: {main_breaker_a: 200}
     modbus: {port: 5079}
     directconnect: {port: 9079}
-  # Atlantic City, NJ: aGate X-10 on V10R01, an aPower X and an aPower 2 (mixed), a generator, no solar, an EV; Self-Consumption, factory export setting (no battery export).
+  # Atlantic City, NJ: aGate X-10 on V10R01, an aPower X and an aPower 2 (mixed), a generator, no solar, an EV; Self-Consumption, factory export setting (no battery export). No TOU plan.
   - id: atlantic-city-nj-2
     seed: 240
     ac_type: 1
@@ -995,6 +1122,7 @@ gateways:
     model: {agate: 100, apower: [0, 3]}
     apower_units: 2
     native_mode: 2
+    tou_schedule: []         # no TOU plan (#368)
     solar_peak_w: 0
     generator: {installed: true, rated_w: 10000}
     loads:

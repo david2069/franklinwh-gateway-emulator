@@ -256,6 +256,7 @@ function running() {
     },
     touNote(g) {
       const a = g.tou.active;
+      if (!a) return 'No TOU plan' + (g.native_mode === 3 ? ': TOU mode self-consumes.' : '.');
       if (g.native_mode !== 3) return 'Applies in TOU mode; this gateway is in ' + g.native_mode_name + '.';
       return 'Now: ' + a.name + ' · ' + a.dispatch + ' · ' + a.wave + ' · ' + Math.round(a.remaining_min) + ' min left';
     },

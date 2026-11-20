@@ -263,7 +263,7 @@ ACTIONS: dict[str, dict[str, Any]] = {
             "schedule": dict(_f("array", "blocks: {name, startHourTime, endHourTime, waveType (0 off-peak, "
                                     "1 mid-peak, 2 on-peak, 4 super off-peak), dispatchId (1 HOME, "
                                     "2 STANDBY, 3 SOLAR, 6 SELF, 7 GRID_EXPORT, 8 GRID_CHARGE)}; gaps "
-                                    "are SELF off-peak"), items="object"),
+                                    "are SELF off-peak; [] = no TOU plan (TOU mode self-consumes)"), items="object"),
             "rates": _f("object", "{waveType: {buy, sell}} $/kWh, display only"),
             "reset": _f("boolean", "true = back to the default schedule"),
         },

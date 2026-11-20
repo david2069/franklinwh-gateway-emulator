@@ -89,6 +89,22 @@ def test_set_tou_schedule_changes_the_site_and_not_the_mode(fleet, caplog):
     assert "get_tou_info failed" not in caplog.text and mode["workMode"] == 1
 
 
+def test_no_plan_reads_back_empty_and_a_save_sets_one(fleet):
+    """#368: no TOU plan: an empty template and no seasons (franklinwh-cloud's no-config
+    fixture shape); franklinwh-cloud's set_tou_schedule still gives the site a plan."""
+    site = fleet["home"].site
+    apply(fleet["home"], "tou", {"schedule": []})
+    detail = _run(fleet, lambda c: c.get_tou_dispatch_detail())["result"]
+    assert detail["template"] == {} and detail["strategyList"] == []
+    assert detail["detailDefaultVo"]["touDispatchList"]                    # the editor's codes stay
+    blocks = [{"name": "Peak", "startHourTime": "17:00", "endHourTime": "21:00",
+               "waveType": 2, "dispatchId": 1}]
+    _run(fleet, lambda c: c.set_tou_schedule("CUSTOM", blocks))
+    assert ("17:00", "21:00", 1, 2) in _hours(site) and site.native_mode == MODE_SELF
+    detail = _run(fleet, lambda c: c.get_tou_dispatch_detail())["result"]
+    assert detail["template"]["id"] and len(detail["strategyList"]) == 1
+
+
 def test_seasons_follow_the_date(fleet):
     today = _today(fleet)
     other = [m for m in range(1, 13) if m != today.month]

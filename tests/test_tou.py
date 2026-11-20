@@ -121,3 +121,35 @@ def test_tou_action_sets_and_resets_without_changing_mode():
                                         "waveType": 0, "dispatchId": 4}]})
     apply(gw, "tou", {"reset": True})
     assert [b["dispatch"] for b in gateway_state(gw)["tou"]["schedule"]] == ["SOLAR", "SELF", "SOLAR"]
+
+
+# -- no TOU plan (#368) ---------------------------------------------------------------------
+def test_no_plan_is_an_empty_schedule_and_tou_mode_self_consumes():
+    s, clock = site(12, tou_schedule=[])
+    assert s.tou_schedule == []
+    now = s.tou_now(clock.now())
+    assert now["schedule"] == [] and now["active"] is None
+    assert battery(s, clock, 0, 2000) == pytest.approx(2000, abs=60)      # SELF: discharge
+    assert battery(s, clock, 3000, 1000) == pytest.approx(-2000, abs=60)  # SELF: charge surplus
+    d, clock = site(12)                                                   # omitted: the default
+    assert [b["dispatchId"] for b in d.tou_schedule] == [3, 6, 3]
+    assert battery(d, clock, 0, 2000) == pytest.approx(0, abs=60)         # noon SOLAR: no discharge
+
+
+def test_no_plan_validates_and_reads_through_the_control_api():
+    assert validate_fleet({"gateways": [{"id": "g", "tou_schedule": []}]}) == []
+    gw = Gateway(GatewayConfig(seed=7, setup="in-service", site=SiteConfig(seed=7, tou_schedule=[])),
+                 clock=ManualClock(DAY + 12 * 3600))
+    assert gateway_state(gw)["tou"] == {"schedule": [], "rates": {}, "active": None}
+
+
+def test_tou_action_clears_and_sets_a_plan():
+    gw = Gateway(GatewayConfig(seed=7, setup="in-service"), clock=ManualClock(DAY + 12 * 3600))
+    apply(gw, "tou", {"schedule": []})                                    # no plan
+    assert gateway_state(gw)["tou"]["schedule"] == [] and gateway_state(gw)["tou"]["active"] is None
+    apply(gw, "tou", {"schedule": [{"name": "Peak", "startHourTime": "00:00", "endHourTime": "24:00",
+                                    "waveType": 2, "dispatchId": 1}]})    # a plan again
+    assert gateway_state(gw)["tou"]["active"]["dispatch"] == "HOME"
+    apply(gw, "tou", {"schedule": []})
+    apply(gw, "tou", {"reset": True})                                     # reset: the default
+    assert [b["dispatch"] for b in gateway_state(gw)["tou"]["schedule"]] == ["SOLAR", "SELF", "SOLAR"]
