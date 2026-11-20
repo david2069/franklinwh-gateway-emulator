@@ -39,6 +39,8 @@ function running() {
     layout: 'right',  // where the actions go: 'right' (beside, on wide screens) or 'below'
     groupBy: 'none',  // cards grouped by location (groups.js): none | country | state | city | postcode | site
     compact: false,   // one-line cards
+    mapOn: false,     // the map of where the gateways are (map.js, #352)
+    mapError: '',
     tempUnit: 'C',    // temperatures shown in °C or °F (units.js); the emulator stays metric
     collapsed: {},    // group label -> true when collapsed
     pickFilters: {},  // the detail card's gateway picker: field -> value ('' = any) (#142)
@@ -63,6 +65,7 @@ function running() {
         const gb = localStorage.getItem('emulator.groupBy');
         if (gb && GROUP_BY[gb]) this.groupBy = gb;
         this.compact = localStorage.getItem('emulator.compact') === '1';
+        this.mapOn = localStorage.getItem('emulator.mapOn') === '1';
         this.tempUnit = localStorage.getItem('emulator.tempUnit') || defaultTempUnit(navigator.language);   // US → °F
         this.collapsed = JSON.parse(localStorage.getItem('emulator.collapsed') || '{}') || {};
         this.pickFilters = JSON.parse(localStorage.getItem('emulator.pickFilters') || '{}') || {};
@@ -74,6 +77,7 @@ function running() {
       await this.poll();
       this._timer = setInterval(() => this.poll(), POLL_MS);
       if (this.splash) this.loadSplash(shownAt);
+      if (this.mapOn) this.showMap();
       this.loadSessions();
       try {
         this.schema = await this._get('/schema');
@@ -94,6 +98,7 @@ function running() {
         this._get('/log').then(l => { this.log = l; }).catch(() => {});
         if (this.monOpen) this._get('/monitor').then(m => { this.mon = m; }).catch(() => {});
         this.pollEvents();
+        if (this.mapOn) this.drawMap();
       } catch (e) {
         this.error = 'Can\'t reach the emulator: ' + e.message + '. Retrying every second.';
       }
@@ -432,7 +437,25 @@ function running() {
     setView(key, value) {
       this[key] = value;
       if (key === 'tempUnit') setTempUnit(value);
-      try { localStorage.setItem('emulator.' + key, key === 'compact' ? (value ? '1' : '0') : value); } catch (e) { /* private mode */ }
+      if (key === 'mapOn' && value) this.showMap();
+      try { localStorage.setItem('emulator.' + key, typeof value === 'boolean' ? (value ? '1' : '0') : value); } catch (e) { /* private mode */ }
+    },
+
+    // -- the map (map.js, #352) ------------------------------------------------------------------
+    async showMap() {
+      this.mapError = '';
+      await this.$nextTick();
+      try {
+        await openFleetMap(document.getElementById('fleet-map'));
+        this.drawMap();
+      } catch (e) {
+        this.mapError = 'The map couldn\'t load: ' + e.message;
+      }
+    },
+    drawMap() { drawFleetMap(mapPoints(this.gateways), this.active, id => this.select(id)); },
+    mapNote() {
+      const n = mapMissing(this.gateways);
+      return n ? n + (n === 1 ? ' gateway has no location, so isn\'t shown' : ' gateways have no location, so aren\'t shown') : '';
     },
     toggleGroup(label) {
       this.collapsed = { ...this.collapsed, [label]: !this.collapsed[label] };
@@ -472,6 +495,7 @@ function running() {
     select(id) {
       this.active = id;
       try { localStorage.setItem('emulator.active', id); } catch (e) { /* private mode */ }
+      if (this.mapOn) this.drawMap();
     },
 
     kw(w) { const v = w / 1000; return (Math.abs(v) < 0.005 ? 0 : v).toFixed(2) + ' kW'; },

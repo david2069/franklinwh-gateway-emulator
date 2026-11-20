@@ -134,6 +134,22 @@ filters for country, state/province, postcode and timezone narrow the list ("1 o
 offers only values the fleet has, given the others. Picking selects the gateway everywhere, as
 clicking its card does. The filters are remembered by the browser.
 
+## Map
+
+![The map: one marker per place, the selected gateway's in amber](assets/ui/map.png)
+
+**Map** (header) shows where the gateways are installed, from each one's `location` latitude and
+longitude, above the cards. It is off until you turn it on, and the browser remembers the choice.
+
+- One marker per place: gateways at the same spot (a group's aGates, or separate sites in one city)
+  share it, and a bigger marker means more gateways there. The selected gateway's place is amber.
+- Hover a marker for the place and each gateway's id and SoC; click it to select that gateway for
+  the actions (click again for the next gateway at the same place).
+- Gateways without a latitude and longitude aren't shown; a line under the map counts them.
+- It works offline. The base is Natural Earth's 1:110m outline (land, country borders, state and
+  province lines), shipped with the UI, not online map tiles; Leaflet 1.9.4 draws it, loaded only
+  when the map is first turned on. It follows the page's light or dark theme.
+
 ## Actions
 
 ![An action form with its result](assets/ui/actions.png)

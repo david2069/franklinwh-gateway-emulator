@@ -1,0 +1,42 @@
+# #352 Web UI: an optional map of where the gateways are installed, 2026-11-21
+
+Approach copied from franklinwh-direct-connect-bridge's CloudFront PoP map: Leaflet 1.9.4 vendored
+(byte-identical to the bridge's copy, sha256 db49d009...641a), loaded on first use, circle markers with
+tooltips, Leaflet objects kept out of Alpine's reactive data. Difference: no online OpenStreetMap
+tiles; the base is a shipped Natural Earth 1:110m outline (land, country borders, state/province
+lines; 187 kB), so it works offline. Shown inline above the cards (the bridge opens a dialog).
+
+## Browser check: headless Chrome over CDP, examples/fleet-north-america.yaml on free ports, map on
+markers: 24 (one per place: 21 North American places incl. Hawaii and Puerto Rico, Sydney, Melbourne, Adelaide)
+outline paths: 567
+note under the map: "2 gateways have no location, so aren't shown"
+tooltip, read 2.5 s after hover (across two polls): "<b>Sydney</b><br>site · 38%<br>fresh · 38%"
+three clicks on the Sydney marker: fresh, site, fresh (cycles through the place's gateways)
+a click on the last marker: active gateway ponce-pr, 1 marker highlighted
+phone (390 px): page overflow 0 px, map 356 px wide
+turned off, page reloaded: map hidden, localStorage emulator.mapOn = "0"
+requests to hosts other than the emulator: none
+Screenshots: dark and light at 1400 px, phone at 390 px; docs/assets/ui/map.png is the dark one, clipped.
+
+## Break check 1 (pytest): markers per gateway instead of per place
+E       AssertionError: assert [['gw:a', -33...['<b>x</b>']]] == [['-33.870,15...['<b>x</b>']]]
+E         At index 0 diff: ['gw:a', -33.87, 151.21, 'Sydney', ['a']] != ['-33.870,151.210', -33.87, 151.21, 'Sydney', ['a', 'b']]
+Restored: tests/test_ui_map.py 4 passed.
+
+## Break check 2 (browser): markers removed and redrawn on every poll
+tooltip 2.5 s after hover: null (each 1 s poll's redraw closed it). With the in-place update: the
+Sydney tooltip above.
+
+## Seen in the browser, not from this change
+The page raises "a.localeCompare is not a function" (groups.js pickValues) and reads model.agate /
+model.apower of a null model (groups.js modelText/modelTitle; the fleet's `spec` gateway). groups.js
+is not changed here.
+
+## Full suite
+879 passed, 44 warnings in 89.09s
+
+## mkdocs build --strict
+INFO    -  Documentation built in 0.41 seconds
+
+## check_pii --scan
+SUCCESS: No PII leaks found!

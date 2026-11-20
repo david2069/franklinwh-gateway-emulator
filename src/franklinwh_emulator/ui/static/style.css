@@ -431,3 +431,20 @@ main.layout-right > .session-msg { grid-column: 1 / -1; }
 .splash-off { opacity: 0; }
 @media (max-width: 600px) { .splash-chart .tick { font-size: 30px; } }   /* the chart scales down: labels stay legible */
 @media (prefers-reduced-motion: reduce) { .splash-leave { transition: none; } }
+
+/* The map of where the gateways are (map.js, #352): the shipped outline, themed here. */
+.fleet-map { margin: 0 0 14px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
+#fleet-map { height: 380px; background: var(--bg); font: 13px var(--sans); }
+#fleet-map .map-land { fill: var(--panel-2); fill-opacity: 1; stroke: var(--line); }
+#fleet-map .map-border { fill: none; stroke: var(--muted); stroke-opacity: 0.7; }
+#fleet-map .map-state { fill: none; stroke: var(--line); }
+#fleet-map .map-pt { stroke: var(--c-home); fill: var(--c-home); cursor: pointer; }
+#fleet-map .map-pt.on { stroke: var(--c-solar); fill: var(--c-solar); }
+#fleet-map .leaflet-tooltip { font: 12px var(--mono); color: var(--text); background: var(--panel); border-color: var(--line); }
+#fleet-map .leaflet-tooltip-left::before { border-left-color: var(--line); }
+#fleet-map .leaflet-tooltip-right::before { border-right-color: var(--line); }
+#fleet-map .leaflet-control-attribution { background: var(--panel); color: var(--muted); font-size: 11px; }
+#fleet-map .leaflet-control-attribution a { color: var(--text-2); }
+#fleet-map .leaflet-bar a { background: var(--panel); color: var(--text); border-color: var(--line); }
+.map-note { margin: 0; padding: 6px 12px; font-size: 13px; color: var(--text-2); border-top: 1px solid var(--line); }
+@media (max-width: 600px) { #fleet-map { height: 260px; } }
