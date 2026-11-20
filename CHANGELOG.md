@@ -15,6 +15,7 @@
 - `examples/fleet-north-america.yaml`: export settings mixed (the North American factory default of no battery export, battery export on, solar export capped at 5 or 10 kW, zero export), 10 homes without smart circuits, aPower S DC PV at the MPPT maximum (15 kW per aPower S: 30 and 45 kW) and 12 to 15 kW rooftop arrays. Two DC PV homes had `solar_peak_w: 0`, which silences DC PV (it follows the site's solar shape); they now have no AC solar through a 0 PV share (#349). See docs/configuration.md.
 
 ### Fixed
+- Web UI: the site header showed the array size unrounded (e.g. "PV 4.511405733736995 kWp"); it shows 0.1 kWp like the diagram (#369).
 - Tests: `test_values_come_from_the_site` failed now and then: it checked the Cloud API's `tempF` against the rounded `tempC` within 0.1 °F, where rounding allows 0.14 (#366).
 - Web UI: a gateway without a hardware model (the `spec` profile) no longer throws in the card's model line, and the gateway picker and grouping take non-text location values. `examples/fleet-north-america.yaml` quotes Ontario's `"ON"`, which YAML read as true (#355). See docs/configuration.md.
 

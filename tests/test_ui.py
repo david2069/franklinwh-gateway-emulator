@@ -476,6 +476,22 @@ print(JSON.stringify({none: meterText(g(null)),
     assert not r["listed"]
 
 
+
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_site_header_rounds_the_array_kwp(tmp_path):
+    """#369: the header showed weather.kwp unrounded (PV 4.511405733736995 kWp)."""
+    import subprocess
+    harness = tmp_path / "diagram.js"
+    harness.write_text((STATIC / "diagram.js").read_text() + """
+const m = {agate: {name: 'aGate X-01-AU'}, apower: {units: 2, name: 'aPower X-01-AU', kwh: 13.6}};
+print(JSON.stringify([modelSummary({model: m, weather: {kwp: 4.511405733736995}}),
+                      modelSummary({model: m, weather: {kwp: 10}}), modelSummary({model: m})]));
+""")
+    r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
+    assert r == ["aGate X-01-AU · 2× aPower X-01-AU · 27.2 kWh · PV 4.5 kWp",
+                 "aGate X-01-AU · 2× aPower X-01-AU · 27.2 kWh · PV 10 kWp",
+                 "aGate X-01-AU · 2× aPower X-01-AU · 27.2 kWh"]
+
 # -- card border when faulted or offline (#168) ---------------------------------------------------
 @pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
 def test_card_health(tmp_path):
