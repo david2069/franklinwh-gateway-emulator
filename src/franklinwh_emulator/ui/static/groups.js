@@ -32,7 +32,7 @@ function groupLabel(g, by) {
   }[by];
   if (!parts) return '';
   const own = parts[parts.length - 1];
-  return own ? parts.filter(Boolean).join(' · ') : '';
+  return own != null && own !== '' ? parts.filter(p => p != null && p !== '').join(' · ') : '';
 }
 
 // [{label, missing, items}] in label order, the "no <field>" group last. 'none': one group.
@@ -44,7 +44,7 @@ function groupGateways(gateways, by) {
     if (!groups.has(label)) groups.set(label, []);
     groups.get(label).push(g);
   }
-  const named = [...groups.keys()].filter(Boolean).sort((a, b) => a.localeCompare(b));
+  const named = [...groups.keys()].filter(Boolean).sort((a, b) => String(a).localeCompare(String(b)));
   const out = named.map(label => ({ label, missing: false, items: groups.get(label) }));
   if (groups.has('')) {
     out.push({ label: 'no ' + GROUP_BY[by].toLowerCase(), missing: true, items: groups.get('') });
@@ -64,7 +64,8 @@ function localTimeText(g) {
 // Filters, in narrowing order; each matches one field exactly ('' = any).
 const PICK_FILTERS = [['country', 'Country'], ['state', 'State / province'], ['postcode', 'Postcode'], ['timezone', 'Timezone']];
 
-function pickField(g, f) { return f === 'timezone' ? zoneOf(g) : (_loc(g)[f] || ''); }
+// As text: a fleet file may hold a number or a boolean here (YAML reads a bare ON as true) (#355).
+function pickField(g, f) { const v = f === 'timezone' ? zoneOf(g) : _loc(g)[f]; return v == null ? '' : String(v); }
 
 // Gateways matching every set filter.
 function pickGateways(gateways, filters) {
@@ -108,11 +109,14 @@ function cardHealth(g) {
 // "aGate X-01-AU (AGT-R1V1-AU) · 2× aPower X-01-AU (APR-05K13V1-AU) · 13.6 kWh, 5 kW". The SKU
 // carries the country code and is what FranklinWH documents name; the first one is the current.
 function _withSku(m) { return m.name + (m.skus && m.skus.length ? ' (' + m.skus[0] + ')' : ''); }
+// '' for a gateway without a model (the spec profile is not an aGate) (#355).
 function modelText(g) {
+  if (!g || !g.model) return '';
   const m = g.model, p = m.apower;
   return _withSku(m.agate) + ' · ' + p.units + '× ' + _withSku(p) + ' · ' + p.kwh + ' kWh, ' + p.kw + ' kW';
 }
 function modelTitle(g) {
+  if (!g || !g.model) return '';
   const m = g.model;
   return 'aGate code ' + m.agate.code + ' (' + m.agate.skus.join(' / ') + ', ' + m.agate.status + '); aPower code ' +
          m.apower.code + ' (' + m.apower.skus.join(' / ') + ', ' + m.apower.status + '); region ' + m.region;

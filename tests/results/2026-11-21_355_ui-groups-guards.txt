@@ -1,0 +1,24 @@
+# #355 groups.js: a gateway without a model, non-text location values; Ontario's ON quoted, 2026-11-21
+
+## Root cause found on the way: YAML 1.1 reads the bare state ON (Ontario) as true
+Before: ottawa-on and ottawa-on-2 had location.state == True (gateway_state); every other non-string location value was latitude/longitude.
+
+## Break 1: groups.js from main (no guards)
+E       assert ("ERROR null i...g 'm.apower')" == ''
+1 failed, 91 deselected in 0.11s
+
+## Break 2: Ottawa's state unquoted again
+E       AssertionError: assert {('ottawa-on'...state'): True} == {}
+1 failed, 1 passed, 90 deselected in 0.14s
+
+## After restoring
+3 passed, 89 deselected in 0.17s
+
+## Full suite
+882 passed, 44 warnings in 58.17s
+
+## mkdocs build --strict
+INFO    -  Documentation built in 0.45 seconds
+
+## check_pii --scan
+✅ SUCCESS: No PII leaks found!

@@ -42,6 +42,9 @@ with type, default and meaning, is also served at `GET /schema` under `gateway_c
 
 `defaults:` applies keys to every gateway; a gateway's own keys win.
 
+Quote a state or province code that YAML reads as a boolean: `state: "ON"` (Ontario). Bare
+`ON`, `OFF`, `YES`, `NO`, `Y` and `N` become true or false.
+
 `groups:` puts several aGates at one site and grid connection (#241). The AU aGate is single
 phase, so an AU three-phase home has one aGate per phase. A group holds what they share:
 `location`, `weather`, `grid_code`, `grid_overrides`, `utility`, `service` (per phase),

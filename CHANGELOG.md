@@ -9,6 +9,9 @@
 - `examples/fleet-north-america.yaml`: operating modes mixed (Self-Consumption, TOU, and Emergency Backup mostly on homes without solar), grid charging prohibited for the California homes, two homes in each of Honolulu, Hilo and Kahului covering every North American aPower model (some without solar; IEEE 1547 Category III, plausible) and two in each of San Juan and Ponce, Puerto Rico: 51 gateways (#351). See docs/configuration.md.
 - `examples/fleet-north-america.yaml`: export settings mixed (the North American factory default of no battery export, battery export on, solar export capped at 5 or 10 kW, zero export), 10 homes without smart circuits, aPower S DC PV at the MPPT maximum (15 kW per aPower S: 30 and 45 kW) and 12 to 15 kW rooftop arrays. Two DC PV homes had `solar_peak_w: 0`, which silences DC PV (it follows the site's solar shape); they now have no AC solar through a 0 PV share (#349). See docs/configuration.md.
 
+### Fixed
+- Web UI: a gateway without a hardware model (the `spec` profile) no longer throws in the card's model line, and the gateway picker and grouping take non-text location values. `examples/fleet-north-america.yaml` quotes Ontario's `"ON"`, which YAML read as true (#355). See docs/configuration.md.
+
 ## 0.3.1 (2026-11-20)
 
 ### Added
