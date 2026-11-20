@@ -45,6 +45,7 @@ function running() {
     groupBy: 'none',  // cards grouped by location (groups.js): none | country | state | city | postcode | site
     compact: false,   // one-line cards
     mapOn: false,     // the map of where the gateways are (map.js, #352)
+    mapPinned: false, // the map stays in place while the cards scroll (#365)
     mapError: '',
     tempUnit: 'C',    // temperatures shown in °C or °F (units.js); the emulator stays metric
     collapsed: {},    // group label -> true when collapsed
@@ -72,6 +73,7 @@ function running() {
         if (gb && GROUP_BY[gb]) this.groupBy = gb;
         this.compact = localStorage.getItem('emulator.compact') === '1';
         this.mapOn = localStorage.getItem('emulator.mapOn') === '1';
+        this.mapPinned = localStorage.getItem('emulator.mapPinned') === '1';
         this.tempUnit = localStorage.getItem('emulator.tempUnit') || defaultTempUnit(navigator.language);   // US → °F
         this.collapsed = JSON.parse(localStorage.getItem('emulator.collapsed') || '{}') || {};
         this.pickFilters = JSON.parse(localStorage.getItem('emulator.pickFilters') || '{}') || {};
@@ -444,6 +446,7 @@ function running() {
       this[key] = value;
       if (key === 'tempUnit') setTempUnit(value);
       if (key === 'mapOn' && value) this.showMap();
+      if (key === 'mapPinned') this.$nextTick(() => resizeFleetMap());   // its height changes
       try { localStorage.setItem('emulator.' + key, typeof value === 'boolean' ? (value ? '1' : '0') : value); } catch (e) { /* private mode */ }
     },
 

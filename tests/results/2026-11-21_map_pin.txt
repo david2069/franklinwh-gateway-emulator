@@ -1,0 +1,64 @@
+# #365 Web UI: pin the map so the gateway cards scroll beneath it, 2026-11-21
+
+Base: origin/main 0fcbbb8. No owner design for this in private/ui-design; the toggle follows the
+header's Compact and Map buttons.
+
+Design: a **Pin** button beside **Map** (shown only while the map is on, aria-pressed like Compact
+and Map). Pinned, `.fleet-map` is `position: sticky; top: 0; z-index: 20` inside the cards' column,
+so it stays at the top of the window while the cards scroll beneath it; the drawer is z-index 30,
+the splash 50; `.fleet-map` keeps `isolation: isolate`, so Leaflet's 400-1000 stay inside it.
+Narrow screens: pinned, not disabled, with the map's height capped at min(380px, 40vh)
+(min(260px, 40vh) at 600 px wide or less), which also covers short windows such as a phone in
+landscape. Remembered as localStorage `emulator.mapPinned` through the existing setView (try/catch).
+setView calls resizeFleetMap (map.js: `_map.invalidateSize()`) after a pin change, since the map's
+height changes and Leaflet measures only when told.
+
+## Browser check: headless Chrome over CDP, examples/fleet-north-america.yaml (renamed fleet-us-canada.yaml on main by #364 since), every port 0, map on
+Driver: a scratch CDP script (not committed). Each case: stored layout + mapPinned, reload, scroll to
+900 px. Keys: map_top = the map section's top in the window; map_div_h = the Leaflet box;
+cards_behind_map = cards whose box overlaps the map's; map_on_top = elementFromPoint at the map's
+centre is in the map; leaflet_matches_box = _map.getSize().y == the box's height; drawer = after a
+right-click on a card below the map: whether the map overlaps the drawer, and whether the drawer is
+on top at the map's height.
+1400_left_pinned {'scrollY': 900, 'map_top': 0, 'map_div_h': 304, 'position': 'sticky', 'cards_behind_map': 4, 'map_on_top': True, 'leaflet_matches_box': True, 'overflow_px': 0} drawer: {"drawer_open": true, "map_overlaps_drawer": false, "drawer_on_top_at_map_height": true, "drawer_z": "30", "map_z": "20"}
+1400_left_unpinned {'scrollY': 900, 'map_top': -762, 'map_div_h': 380, 'position': 'static', 'cards_behind_map': 0, 'map_on_top': False, 'leaflet_matches_box': True, 'overflow_px': 0}
+1400_right_pinned {'scrollY': 900, 'map_top': 0, 'map_div_h': 304, 'position': 'sticky', 'cards_behind_map': 4, 'map_on_top': True, 'leaflet_matches_box': True, 'overflow_px': 0} drawer: {"drawer_open": true, "map_overlaps_drawer": false, "drawer_on_top_at_map_height": true, "drawer_z": "30", "map_z": "20"}
+1400_right_unpinned {'scrollY': 900, 'map_top': -762, 'map_div_h': 380, 'position': 'static', 'cards_behind_map': 0, 'map_on_top': False, 'leaflet_matches_box': True, 'overflow_px': 0}
+1400_below_pinned {'scrollY': 900, 'map_top': 0, 'map_div_h': 304, 'position': 'sticky', 'cards_behind_map': 4, 'map_on_top': True, 'leaflet_matches_box': True, 'overflow_px': 0} drawer: {"drawer_open": true, "map_overlaps_drawer": false, "drawer_on_top_at_map_height": true, "drawer_z": "30", "map_z": "20"}
+1400_below_unpinned {'scrollY': 900, 'map_top': -762, 'map_div_h': 380, 'position': 'static', 'cards_behind_map': 0, 'map_on_top': False, 'leaflet_matches_box': True, 'overflow_px': 0}
+1400_drawer_pinned {'scrollY': 900, 'map_top': 0, 'map_div_h': 304, 'position': 'sticky', 'cards_behind_map': 4, 'map_on_top': True, 'leaflet_matches_box': True, 'overflow_px': 0} drawer: {"drawer_open": true, "map_overlaps_drawer": false, "drawer_on_top_at_map_height": true, "drawer_z": "30", "map_z": "20"}
+1400_drawer_unpinned {'scrollY': 900, 'map_top': -762, 'map_div_h': 380, 'position': 'static', 'cards_behind_map': 0, 'map_on_top': False, 'leaflet_matches_box': True, 'overflow_px': 0}
+390_below_pinned {'scrollY': 900, 'map_top': 0, 'map_div_h': 260, 'position': 'sticky', 'cards_behind_map': 2, 'map_on_top': True, 'leaflet_matches_box': True, 'overflow_px': 0} drawer: {"drawer_open": true, "map_overlaps_drawer": true, "drawer_on_top_at_map_height": true, "drawer_z": "30", "map_z": "20"}
+390_below_unpinned {'scrollY': 900, 'map_top': -546, 'map_div_h': 260, 'position': 'static', 'cards_behind_map': 0, 'map_on_top': False, 'leaflet_matches_box': True, 'overflow_px': 0}
+390_drawer_pinned {'scrollY': 900, 'map_top': 0, 'map_div_h': 260, 'position': 'sticky', 'cards_behind_map': 2, 'map_on_top': True, 'leaflet_matches_box': True, 'overflow_px': 0} drawer: {"drawer_open": true, "map_overlaps_drawer": true, "drawer_on_top_at_map_height": true, "drawer_z": "30", "map_z": "20"}
+390_drawer_unpinned {'scrollY': 900, 'map_top': -546, 'map_div_h': 260, 'position': 'static', 'cards_behind_map': 0, 'map_on_top': False, 'leaflet_matches_box': True, 'overflow_px': 0}
+(at 390 px the Actions drop-down is hidden and left/right stack as below, so those were not run)
+toggle {"pin_visible_with_map": true, "pin_pressed_before": "false", "after_pin": {"stored": "1", "pressed": "true", "leaflet_h_before": 380, "leaflet_h": 304, "box_h": 304}, "after_unpin": {"stored": "0", "leaflet_h": 380, "box_h": 380}, "after_reload_pinned": true, "pin_visible_without_map": false}
+errors []
+
+At 1400 x 760 the pinned map is 304 px (40vh) plus the 34 px "2 gateways have no location" line.
+Screenshots: every pinned case at 1400 and 390 px, with and without the drawer;
+docs/assets/ui/map-pinned.png is 1400 x 760, dark, Actions: right, pinned, scrolled 900 px.
+
+## Break check 1 (pytest): setView without the resizeFleetMap call
+E       assert "if (key === 'mapPinned') this.$nextTick(() => resizeFleetMap());" in "setView(key, value) {..."
+1 failed, 2 passed in 0.05s
+Restored: tests/test_ui_map_pin.py 3 passed.
+
+## Break check 2 (browser): the same, in Chrome, 1400 x 760, Pin clicked
+after pin, no resize call: {"leaflet_h":380,"box_h":304}   (Leaflet still thinks it is 380 px tall)
+With the call: leaflet_h 304, box_h 304 (toggle line above).
+
+## Seen in the browser, not from this change
+At 390 px, with the drawer open, the layout viewport is 421 px wide (innerWidth 421, the drawer at
+x 31..421), pinned and unpinned alike; the #361 result recorded 390 of 390 with a different
+gateway selected. Not investigated here; reported to the caller.
+
+## Verification
+.venv/bin/python -m pytest -q -p no:cacheprovider    891 passed (on 0fcbbb8), 44 warnings in 94.07s
+.venv/bin/python -m pytest -q -p no:cacheprovider    after rebasing onto bffd167 (#364): 1 failed, 894 passed
+    in the first run (not captured which test); the next three runs 895 passed, 44 warnings (62-67 s).
+    Not reproduced, so not attributed; this change touches only static UI files and one new test file.
+.venv/bin/python -m pytest -q -p no:cacheprovider    after rebasing onto 7ccb905 (#367, #370): 896 passed, 44 warnings in 61.70s
+.venv/bin/mkdocs build --strict                        built, no warnings
+python3 scripts/check_pii.py --scan                    No PII leaks found (408 files)

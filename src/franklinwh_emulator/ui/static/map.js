@@ -72,6 +72,11 @@ async function openFleetMap(el) {
   setTimeout(() => _map && _map.invalidateSize(), 50);
 }
 
+// Leaflet measures its box only when told: after pinning or unpinning (#365) changes its height.
+function resizeFleetMap() {
+  if (_map) _map.invalidateSize();
+}
+
 // The markers, updated in place on each poll (a redraw would close an open tooltip every second);
 // the view fits the points when they change.
 function drawFleetMap(points, activeId, onPick, onDrawer) {
