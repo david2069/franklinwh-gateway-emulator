@@ -151,6 +151,14 @@ longitude, above the cards. It is off until you turn it on, and the browser reme
   province lines), shipped with the UI, not online map tiles; Leaflet 1.9.4 draws it, loaded only
   when the map is first turned on. It follows the page's light or dark theme.
 
+![The map pinned: the cards scroll beneath it, the actions column beside](assets/ui/map-pinned.png)
+
+**Pin** (beside **Map**, shown while the map is on) keeps the map at the top of the window while the
+cards scroll beneath it, with every actions layout (left, right, below, drawer). The actions drawer
+still opens over it. Pinned, the map is 380 px tall (260 px on a phone) or 40% of the window's
+height, whichever is less, so the cards keep most of the screen on a phone or a short window. The
+browser remembers the choice; it applies whenever the map is on.
+
 ## Actions
 
 ![An action form with its result](assets/ui/actions.png)

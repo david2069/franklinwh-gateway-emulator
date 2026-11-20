@@ -76,6 +76,8 @@
             title="Compact cards: SoC, local time and tags only">Compact</button>
     <button type="button" @click="setView('mapOn', !mapOn)" :aria-pressed="mapOn.toString()"
             title="A map of where the gateways are installed, from each one's location">Map</button>
+    <button type="button" x-show="mapOn" x-cloak @click="setView('mapPinned', !mapPinned)" :aria-pressed="mapPinned.toString()"
+            aria-label="Pin the map" title="Pin the map: it stays in place at the top while the cards scroll (#365)">Pin</button>
   </div>
   <a class="docs-link" :href="docsUrl('')" target="_blank" rel="noopener" title="The emulator's documentation (opens a new tab)">Docs</a>
   <label class="vh" for="layout">Where the actions go</label>
@@ -100,7 +102,7 @@
   </div>
   <div class="col-main">
 
-  <section class="fleet-map" x-show="mapOn" x-cloak aria-label="Map of the gateways">
+  <section class="fleet-map" x-show="mapOn" x-cloak :class="{ pinned: mapPinned }" aria-label="Map of the gateways">
     <div id="fleet-map" role="application" aria-label="Where the gateways are installed: hover a marker for its gateways, click to select it"></div>
     <p class="map-note" x-show="mapError" x-text="mapError" role="status"></p>
     <p class="map-note" x-show="mapNote()" x-text="mapNote()"></p>

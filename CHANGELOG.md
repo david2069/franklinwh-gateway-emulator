@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Web UI: **Pin** beside **Map** keeps the map at the top of the window while the gateway cards scroll beneath it, with every actions layout; the drawer still opens over it, and pinned the map is at most 40% of the window's height (phones included). Remembered by the browser (#365). See docs/ui.md.
 - `examples/fleet-global.yaml`: `examples/fleet.yaml` plus every US, Canadian, Australian and New Zealand home from the two regional examples, 71 gateways in one fleet (#363). See docs/configuration.md.
 - Web UI: an actions drawer. Right-click a gateway card or a map marker (a long press on a touch screen) to open its actions at the side of the window, left or right; nothing is greyed out, and Esc or × closes it. The header's **Actions** drop-down (was a right/below toggle) adds Left and Drawer (#361). See docs/ui.md.
 - `examples/fleet-au-nz.yaml`: `examples/fleet.yaml` plus two different homes in each of Devonport (Auckland), Hamilton, Christchurch, Queenstown, Perth, Townsville, Canberra, Adelaide, Hobart and Darwin: aPower X-01-AU or X-02-AU (some mixed), V10R01 or V12R02 firmware, solar or none, remote PV, large arrays, a generator, V2L, smart circuits or none, the three modes and export settings; AS/NZS 4777.2 Australia A throughout, the only region the emulator has (New Zealand's region and Australia B/C are not emulated) (#357). See docs/configuration.md.

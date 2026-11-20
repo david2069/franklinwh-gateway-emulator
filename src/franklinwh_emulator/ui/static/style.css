@@ -472,3 +472,9 @@ main.layout-right > .session-msg, main.layout-left > .session-msg { grid-column:
 #fleet-map .leaflet-bar a { background: var(--panel); color: var(--text); border-color: var(--line); }
 .map-note { margin: 0; padding: 6px 12px; font-size: 13px; color: var(--text-2); border-top: 1px solid var(--line); }
 @media (max-width: 600px) { #fleet-map { height: 260px; } }
+/* Pinned (#365): the map stays at the top of the cards' column while they scroll beneath it, in every
+   actions layout. Above the cards, under the drawer (30) and the splash (50). At most 40% of the
+   window's height, so on a phone or a short window the cards keep most of the screen. */
+.fleet-map.pinned { position: sticky; top: 0; z-index: 20; box-shadow: 0 6px 12px -6px rgba(0, 0, 0, .45); }
+.fleet-map.pinned #fleet-map { height: min(380px, 40vh); }
+@media (max-width: 600px) { .fleet-map.pinned #fleet-map { height: min(260px, 40vh); } }
