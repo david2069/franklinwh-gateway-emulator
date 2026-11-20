@@ -1,0 +1,51 @@
+# #357 Australia and New Zealand example fleet, 2026-11-21
+
+## validate
+examples/fleet-au-nz.yaml: fleet ok (30 gateways)
+
+## Break 1: every home Self-Consumption
+>       assert {1, 2, 3} <= set(modes)
+1 failed, 3 passed, 46 deselected in 3.84s
+
+## Break 2: darwin-nt-2 removed (Darwin has one home)
+>       assert len(places) == 10 and {len(v) for v in places.values()} == {2}
+1 failed, 3 passed, 46 deselected in 3.71s
+
+## After restoring
+4 passed, 46 deselected in 3.93s
+
+## Stepped in process without listening, 2026-01-15 03:00 UTC (summer, around midday in the east): mode, export, aPowers, PV, circuits, generator, V2L, local time
+devonport-akl      AUK Self   export=limited 5kW   batt_export=y X-01-AU+X-01-AU        pv= 1.0kW circuits=2 gen=n v2l=n 16:00 NZDT
+devonport-akl-2    AUK Backup export=allowed       batt_export=y X-02-AU                pv= 0.0kW circuits=2 gen=n v2l=n 16:00 NZDT
+hamilton-nz        WKO TOU    export=allowed       batt_export=y X-01-AU                pv= 4.5kW circuits=2 gen=n v2l=n 16:00 NZDT
+hamilton-nz-2      WKO Self   export=allowed       batt_export=y X-02-AU+X-02-AU        pv= 7.5kW circuits=2 gen=y v2l=n 16:00 NZDT
+christchurch-nz    CAN TOU    export=allowed       batt_export=n X-01-AU+X-02-AU        pv= 0.8kW circuits=2 gen=n v2l=n 16:00 NZDT
+christchurch-nz-2  CAN Backup export=allowed       batt_export=y X-01-AU                pv= 0.0kW circuits=0 gen=n v2l=n 16:00 NZDT
+queenstown-nz      OTA Self   export=allowed       batt_export=y X-02-AU                pv= 3.7kW circuits=2 gen=n v2l=y 16:00 NZDT
+queenstown-nz-2    OTA Backup export=allowed       batt_export=y X-01-AU+X-01-AU+X-01-AU pv= 0.0kW circuits=2 gen=y v2l=n 16:00 NZDT
+perth-wa           WA  TOU    export=limited 5kW   batt_export=y X-02-AU+X-02-AU        pv= 8.6kW circuits=2 gen=n v2l=n 11:00 AWST
+perth-wa-2         WA  Self   export=prohibited    batt_export=y X-01-AU                pv= 0.9kW circuits=2 gen=n v2l=n 11:00 AWST
+townsville-qld     QLD Self   export=limited 5kW   batt_export=y X-02-AU                pv= 1.1kW circuits=2 gen=n v2l=n 13:00 AEST
+townsville-qld-2   QLD Backup export=allowed       batt_export=y X-01-AU+X-01-AU        pv= 0.0kW circuits=2 gen=y v2l=n 13:00 AEST
+canberra-act       ACT TOU    export=allowed       batt_export=y X-02-AU+X-02-AU+X-02-AU pv=11.9kW circuits=2 gen=n v2l=n 14:00 AEDT
+canberra-act-2     ACT Self   export=allowed       batt_export=y X-01-AU                pv= 4.5kW circuits=0 gen=n v2l=n 14:00 AEDT
+adelaide-sa        SA  Self   export=limited 1.5kW batt_export=y X-02-AU                pv= 1.0kW circuits=2 gen=n v2l=n 13:30 ACDT
+adelaide-sa-2      SA  TOU    export=allowed       batt_export=n X-01-AU+X-02-AU        pv= 1.1kW circuits=2 gen=n v2l=n 13:30 ACDT
+hobart-tas         TAS Self   export=allowed       batt_export=y X-01-AU                pv= 0.0kW circuits=2 gen=n v2l=n 14:00 AEDT
+hobart-tas-2       TAS Self   export=allowed       batt_export=y X-02-AU+X-02-AU        pv= 4.2kW circuits=2 gen=n v2l=y 14:00 AEDT
+darwin-nt          NT  Self   export=prohibited    batt_export=y X-01-AU+X-01-AU        pv= 8.3kW circuits=2 gen=n v2l=n 12:30 ACST
+darwin-nt-2        NT  Backup export=allowed       batt_export=y X-02-AU                pv= 0.0kW circuits=0 gen=y v2l=n 12:30 ACST
+
+## Full suite
+886 passed, 44 warnings in 61.74s (0:01:01)
+
+## mkdocs build --strict
+INFO    -  Documentation built in 0.40 seconds
+
+## check_pii --scan
+✅ SUCCESS: No PII leaks found!
+
+## Wording corrected before merge
+The first version said WA, the NT and New Zealand 'use their own' region. Only New Zealand's region
+(AS/NZS 4777.2:2020) is established; WA's and the NT's required region is not established here. Fleet
+header, docs/configuration.md and CHANGELOG now say so. test_validate: 50 passed in 12.04s
