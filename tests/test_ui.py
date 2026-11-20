@@ -428,6 +428,33 @@ print(JSON.stringify({{
     assert r["group_tz"][0] == ["America/Phoenix", ["phx"]] and ["UTC+13:00", ["fixed"]] in r["group_tz"]
 
 
+
+@pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
+def test_cards_and_picker_take_gateways_without_a_model_or_text(tmp_path):
+    """#355: the spec gateway has no model; a fleet file can hold a non-text location value
+    (YAML reads a bare ON as true, an unquoted postcode as a number)."""
+    import subprocess
+    gws = [{"id": "spec", "model": None, "location": {}},
+           {"id": "on", "location": {"country": "CA", "state": True, "postcode": 1000}},
+           {"id": "ns", "location": {"country": "CA", "state": "NS", "postcode": "B3H"}}]
+    harness = tmp_path / "guards.js"
+    harness.write_text((STATIC / "groups.js").read_text() + f"""
+const G = {json.dumps(gws)};
+const r = {{}};
+for (const [k, f] of Object.entries({{
+  text: () => modelText(G[0]), title: () => modelTitle(G[0]),
+  states: () => pickValues(G, {{}}, 'state'), postcodes: () => pickValues(G, {{}}, 'postcode'),
+  pick: () => pickGateways(G, {{state: 'true'}}).map(g => g.id),
+  groups: () => groupGateways(G, 'state').map(x => x.label),
+}})) {{ try {{ r[k] = f(); }} catch (e) {{ r[k] = 'ERROR ' + e.message; }} }}
+print(JSON.stringify(r));
+""")
+    r = json.loads(subprocess.run([str(JSC), str(harness)], capture_output=True, text=True, check=True).stdout)
+    assert r["text"] == "" and r["title"] == ""
+    assert r["states"] == ["NS", "true"] and r["postcodes"] == ["1000", "B3H"]
+    assert r["pick"] == ["on"]
+    assert r["groups"] == ["CA · NS", "CA · true", "no state / province"]
+
 # -- the service rating on the diagram (#156) -----------------------------------------------------
 @pytest.mark.skipif(not JSC.exists(), reason="needs a JavaScript runtime (JavaScriptCore)")
 def test_diagram_meter_shows_the_service_rating(tmp_path):

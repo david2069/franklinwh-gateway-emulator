@@ -658,7 +658,7 @@ gateways:
       - {name: hvac, type: hvac, w: 3500, cool_above: 27, heat_below: 3, span: 8, circuit: 1}
       - {name: hot_water, type: schedule, w: 4500, on: ["05:30-07:00", "18:00-19:30"], circuit: 2}
     location: {latitude: 45.42, longitude: -75.7, timezone: America/Toronto,
-               country: CA, state: ON, city: Ottawa}
+               country: CA, state: "ON", city: Ottawa}
     service: {main_breaker_a: 200}
     modbus: {port: 5063}
     directconnect: {port: 9063}
@@ -679,7 +679,7 @@ gateways:
       - {name: evse, type: ev, w: 9600, min_w: 1440, arrive: "18:00", depart: "07:30", kwh: 20, mode: offpeak, start: "23:00", circuit: 1}
       - {name: hvac, type: hvac, w: 3500, cool_above: 27, heat_below: 2, span: 8, circuit: 2}
     location: {latitude: 45.42, longitude: -75.7, timezone: America/Toronto,
-               country: CA, state: ON, city: Ottawa}
+               country: CA, state: "ON", city: Ottawa}
     service: {main_breaker_a: 200}
     modbus: {port: 5064}
     directconnect: {port: 9064}

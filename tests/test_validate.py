@@ -26,6 +26,16 @@ def test_example_fleet_is_clean_and_starts(path):
 
 
 @pytest.mark.parametrize("path", EXAMPLE_FLEETS)
+def test_example_locations_are_text(path):
+    """YAML reads a bare ON (Ontario) as true (#355): every location name is a string."""
+    from franklinwh_emulator.gateway import expand_groups
+    entries, _ = expand_groups(load_yaml(str(ROOT / path)))
+    bad = {(g["id"], k): v for g in entries for k, v in (g.get("location") or {}).items()
+           if k not in ("latitude", "longitude") and not isinstance(v, str)}
+    assert bad == {}
+
+
+@pytest.mark.parametrize("path", EXAMPLE_FLEETS)
 def test_example_gateways_have_a_service_rating(path):
     """Each example shows its service rating on the diagram's Meter box (#156)."""
     from franklinwh_emulator.gateway import expand_groups
