@@ -125,7 +125,7 @@ function modelSummary(g) {
   const p = m.apower;
   const kwp = g.weather && g.weather.kwp;
   return [m.agate.name, p.units + '× ' + p.name, +(p.kwh * p.units).toFixed(1) + ' kWh',
-          kwp ? 'PV ' + kwp + ' kWp' : null].filter(Boolean).join(' · ');
+          kwp ? 'PV ' + +(+kwp).toFixed(1) + ' kWp' : null].filter(Boolean).join(' · ');
 }
 // The design's configuration label: how solar reaches the aGate.
 function configLabel(g) {
