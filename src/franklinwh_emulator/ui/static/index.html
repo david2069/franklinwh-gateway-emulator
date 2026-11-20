@@ -14,6 +14,7 @@
 <script src="/static/units.js"></script>
 <script src="/static/splash.js"></script>
 <script src="/static/map.js"></script>
+<script src="/static/drawer.js"></script>
 <script defer src="/static/alpinejs-3.14.1.min.js"></script>
 </head>
 <body x-data="running()" x-init="start()">
@@ -77,11 +78,13 @@
             title="A map of where the gateways are installed, from each one's location">Map</button>
   </div>
   <a class="docs-link" :href="docsUrl('')" target="_blank" rel="noopener" title="The emulator's documentation (opens a new tab)">Docs</a>
-  <button type="button" class="layout-toggle" @click="toggleLayout()" :aria-pressed="(layout === 'right').toString()"
-          x-text="layout === 'right' ? 'Actions: right' : 'Actions: below'"
-          title="Show the actions beside the gateways, or below them"></button>
+  <label class="vh" for="layout">Where the actions go</label>
+  <select id="layout" class="layout-toggle" :value="layout" @change="setLayout($event.target.value)"
+          title="Actions beside the gateways (left or right), below them, or only in a drawer. Right-click a card or a map marker (long press on a touch screen) to open the drawer">
+    <template x-for="[v, l] in Object.entries(LAYOUTS)" :key="v"><option :value="v" x-text="l" :selected="v === layout"></option></template>
+  </select>
 </header>
-<main :class="'layout-' + layout">
+<main :class="['layout-' + layout, drawer ? 'drawer-open drawer-on-' + drawerSide : '']">
   <p class="status" :class="{ bad: error }" x-show="error || !loaded" x-text="error || 'Loading…'" role="status"></p>
   <div class="session-msg" x-show="sessionMsg" :class="sessionMsg && (sessionMsg.ok ? 'ok' : 'bad')" role="status">
     <span x-text="sessionMsg && sessionMsg.text"></span>
@@ -114,7 +117,9 @@
     </button>
    <div class="cards" :class="{ compact: compact }" x-show="groupBy === 'none' || !collapsed[grp.label]">
     <template x-for="g in grp.items" :key="g.id">
-      <button type="button" class="card" :aria-pressed="(g.id === active).toString()" @click="select(g.id)"
+      <button type="button" class="card" :aria-pressed="(g.id === active).toString()" @click="clickCard(g.id)"
+              @contextmenu.prevent="openDrawer(g.id, $event)" @touchstart.passive="pressStart(g.id, $event)"
+              @touchend="pressEnd()" @touchmove.passive="pressEnd()" @touchcancel="pressEnd()"
               :class="cardHealth(g).state && 'h-' + cardHealth(g).state" :title="cardHealth(g).why">
         <div class="top">
           <span class="id" x-text="g.id"></span>
@@ -356,7 +361,8 @@
   </section>
   </div>
 
-  <section class="actions col-side" x-show="current && schema" aria-labelledby="actions-h">
+  <section class="actions col-side" x-show="current && schema && actionsShown(layout, drawer)" aria-labelledby="actions-h"
+           :class="drawer && 'drawer drawer-' + drawerSide" @keydown.escape.window="closeDrawer()">
     <div class="actions-top">
       <h2 id="actions-h"><label for="active-gw">Actions on</label></h2>
       <select id="active-gw" @change="select($event.target.value)">
@@ -364,6 +370,13 @@
              set (from localStorage), so a select-level value would fall back to the first (#62) -->
         <template x-for="g in gateways" :key="g.id"><option :value="g.id" x-text="g.id" :selected="g.id === active"></option></template>
       </select>
+      <span class="drawer-btns" :hidden="!drawer">
+        <button type="button" class="secondary" @click="flipDrawer()"
+                :title="'Move the drawer to the ' + (drawerSide === 'left' ? 'right' : 'left')"
+                :aria-label="'Move the drawer to the ' + (drawerSide === 'left' ? 'right' : 'left')"
+                x-text="drawerSide === 'left' ? '→' : '←'"></button>
+        <button type="button" id="drawer-close" class="secondary" @click="closeDrawer()" title="Close (Esc)" aria-label="Close the actions drawer">×</button>
+      </span>
     </div>
     <p class="sub">Each form sends only the fields you fill. The emulator checks them; its answer stays in the form.</p>
     <details class="group force" @toggle="$event.target.open && loadForceEvents()">

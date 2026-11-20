@@ -55,7 +55,7 @@ def test_the_toggle_the_panel_and_the_remembered_choice():
     assert 'x-show="mapOn"' in page and 'id="fleet-map"' in page
     assert "mapOn: false," in app                                    # off by default
     assert "localStorage.getItem('emulator.mapOn') === '1'" in app   # remembered like Compact
-    assert "drawFleetMap(mapPoints(this.gateways), this.active, id => this.select(id))" in app
+    assert "drawFleetMap(mapPoints(this.gateways), this.active, id => this.select(id), id => this.openDrawer(id))" in app
 
 
 def test_offline_leaflet_vendored_and_loaded_on_first_use():

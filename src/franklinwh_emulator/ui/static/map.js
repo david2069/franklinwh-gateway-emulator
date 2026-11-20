@@ -74,7 +74,7 @@ async function openFleetMap(el) {
 
 // The markers, updated in place on each poll (a redraw would close an open tooltip every second);
 // the view fits the points when they change.
-function drawFleetMap(points, activeId, onPick) {
+function drawFleetMap(points, activeId, onPick, onDrawer) {
   const L = window.L;
   if (!L || !_map) return;
   if (!_layer) _layer = L.layerGroup().addTo(_map);
@@ -94,6 +94,12 @@ function drawFleetMap(points, activeId, onPick) {
     // A click selects the place's first gateway, or the next one when one of them is selected.
     const i = p.items.findIndex(g => g.id === activeId);
     m.off('click').on('click', () => onPick(p.items[(i + 1) % p.items.length].id));
+    // A right-click (a long press on touch) opens the actions drawer on the place's selected
+    // gateway, or its first (#361).
+    m.off('contextmenu').on('contextmenu', e => {
+      if (e.originalEvent) e.originalEvent.preventDefault();
+      if (onDrawer) onDrawer(p.items[Math.max(i, 0)].id);
+    });
     const el = m.getElement();
     if (el) el.classList.toggle('on', on);
   }
