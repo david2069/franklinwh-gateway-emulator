@@ -15,8 +15,8 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILTINS = sorted((ROOT / "src/franklinwh_emulator/scenarios").glob("*.yaml"))
 
 
-EXAMPLE_FLEETS = ["examples/fleet.yaml", "examples/fleet-north-america.yaml",   # (#335)
-                  "examples/fleet-au-nz.yaml"]                                      # (#357)
+EXAMPLE_FLEETS = ["examples/fleet.yaml", "examples/fleet-us-canada.yaml",       # (#335, #363)
+                  "examples/fleet-au-nz.yaml", "examples/fleet-global.yaml"]        # (#357, #363)
 
 
 @pytest.mark.parametrize("path", EXAMPLE_FLEETS)
@@ -44,9 +44,9 @@ def test_example_gateways_have_a_service_rating(path):
     assert [g["id"] for g in entries if not (g.get("service") or {}).get("main_breaker_a")] == []
 
 
-def test_north_america_example_adds_its_homes_to_the_example_fleet():
+def test_us_canada_example_adds_its_homes_to_the_example_fleet():
     base = load_yaml(str(ROOT / "examples/fleet.yaml"))["gateways"]
-    na = load_yaml(str(ROOT / "examples/fleet-north-america.yaml"))["gateways"]
+    na = load_yaml(str(ROOT / "examples/fleet-us-canada.yaml"))["gateways"]
     assert na[:len(base)] == base
     homes = [g for g in na if (g.get("location") or {}).get("country") in ("US", "CA")]
     assert len(homes) == len(na) - len(base) + 1          # + us-split, Phoenix's first home
@@ -94,6 +94,17 @@ def test_north_america_example_adds_its_homes_to_the_example_fleet():
         m.code for m in models.APOWERS.values() if m.region == models.NA}          # every NA aPower
     assert any(g.get("solar_peak_w") == 0 for g in homes if g["location"]["state"] == "HI")   # some without solar
     assert sum(g["location"]["state"] == "PR" for g in homes) >= 4
+
+
+def test_global_example_is_the_example_fleet_with_every_home():
+    """#363: fleet.yaml, then the US & Canada homes, then the AU/NZ homes, nothing else."""
+    load = lambda name: load_yaml(str(ROOT / "examples" / name))
+    base = load("fleet.yaml")
+    us, au, world = load("fleet-us-canada.yaml"), load("fleet-au-nz.yaml"), load("fleet-global.yaml")
+    n = len(base["gateways"])
+    assert world["gateways"] == us["gateways"] + au["gateways"][n:]
+    assert {k: v for k, v in world.items() if k != "gateways"} == {k: v for k, v in base.items() if k != "gateways"}
+    assert not (ROOT / "examples/fleet-north-america.yaml").exists()
 
 
 def test_au_nz_example_has_two_different_homes_per_place():
