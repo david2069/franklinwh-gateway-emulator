@@ -15,7 +15,8 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILTINS = sorted((ROOT / "src/franklinwh_emulator/scenarios").glob("*.yaml"))
 
 
-EXAMPLE_FLEETS = ["examples/fleet.yaml", "examples/fleet-north-america.yaml"]   # (#335)
+EXAMPLE_FLEETS = ["examples/fleet.yaml", "examples/fleet-north-america.yaml",   # (#335)
+                  "examples/fleet-au-nz.yaml"]                                      # (#357)
 
 
 @pytest.mark.parametrize("path", EXAMPLE_FLEETS)
@@ -93,6 +94,37 @@ def test_north_america_example_adds_its_homes_to_the_example_fleet():
         m.code for m in models.APOWERS.values() if m.region == models.NA}          # every NA aPower
     assert any(g.get("solar_peak_w") == 0 for g in homes if g["location"]["state"] == "HI")   # some without solar
     assert sum(g["location"]["state"] == "PR" for g in homes) >= 4
+
+
+def test_au_nz_example_has_two_different_homes_per_place():
+    """#357: two homes in each of 10 Australian and New Zealand places, each one different."""
+    base = load_yaml(str(ROOT / "examples/fleet.yaml"))["gateways"]
+    d = load_yaml(str(ROOT / "examples/fleet-au-nz.yaml"))["gateways"]
+    assert d[:len(base)] == base
+    homes = d[len(base):]
+    places = {}
+    for g in homes:
+        places.setdefault(g["location"]["city"], []).append(g["id"])
+    assert len(places) == 10 and {len(v) for v in places.values()} == {2}
+    assert {g["location"]["country"] for g in homes} == {"AU", "NZ"}
+    f = Fleet.from_dict({"gateways": homes})
+    sites = [f[g["id"]].site for g in homes]
+    assert {(s.model.region, s.model.agate.code, s.grid.nominal_hz, tuple(s.phases)) for s in sites} == {
+        ("AU/NZ", 102, 50.0, ("L1",))}
+    looks = [(f[g["id"]].profile.name, tuple(u.code for u in s.unit_models), g.get("solar_peak_w"),
+              tuple(sorted((g.get("pv_inputs") or {}).items())), s.generator.hw.installed, s.v2l is not None,
+              len(s.circuits or ()), str(g.get("loads")), tuple(sorted((g.get("utility") or {}).items())),
+              s.native_mode) for g, s in zip(homes, sites)]
+    assert len(set(looks)) == len(looks)
+    assert {c for x in looks for c in x[1]} == {2, 7} and any(len(set(x[1])) > 1 for x in looks)
+    assert {x[0] for x in looks} == {"agate-v10r01b04d00", "agate-v12r02b60d00-candidate"}
+    modes = [s.native_mode for s in sites]
+    assert {1, 2, 3} <= set(modes)
+    backup = [g for g in homes if g.get("native_mode") == 1]
+    assert sum(g.get("solar_peak_w") == 0 for g in backup) > len(backup) / 2
+    rules = {(s.utility_rules.export if s.utility_rules else "allowed", s.battery_export()) for s in sites}
+    assert {e for e, _ in rules} == {"allowed", "limited", "prohibited"} and {b for _, b in rules} == {True, False}
+    assert all(any(x[i] for x in looks) and not all(x[i] for x in looks) for i in (4, 5, 6))
 
 
 @pytest.mark.parametrize("path", BUILTINS, ids=lambda p: p.stem)

@@ -1,0 +1,535 @@
+# franklinwh-emulator fleet ./examples/fleet-au-nz.yaml
+#
+# examples/fleet.yaml plus two homes in each of 10 places across Australia and New Zealand
+# (#357): the AU/NZ aGate (single phase, 230 V, 50 Hz), aPower X-01-AU and X-02-AU (some mixed),
+# AS/NZS 4777.2 Australia A (the only region emulated: WA, the NT and New Zealand use their own,
+# not emulated), older (V10R01) or newer (V12R02) firmware, solar or none, remote PV, large
+# arrays, a generator, V2L, two smart circuits or none, Self-Consumption, TOU or Emergency Backup
+# (mostly homes without solar), and export settings: battery export (the AU/NZ default) or off,
+# export capped, or zero export. City-level locations.
+#
+# Every key outside `gateways` is optional. Per gateway:
+#   id, seed, serial, host, port (or modbus: {host, port}), directconnect: {port} (every aGate
+#   runs one; a free port if not given), setup (factory: Modbus TCP off until a Direct Connect
+#   1205 write enables it; in-service: Modbus TCP on), modbus_enabled, commissioned (YYYY-MM-DD),
+#   history_days (in-service: run the model over N days before start; ~0.2 s/day), profile, quirks,
+#   time_scale, and any site setting:
+#     group (a `groups:` site, one aGate per phase), apower_units, ac_type (0 single,
+#     1 split, 2 three: not on AU/NZ aGates, which are single phase), phases ([L1, L2, ...]),
+#     load_split / gen_split ({L1: 2, L2: 1}), grid_code (as4777-au-a, ieee1547-cat2,
+#     ieee1547-cat3, ausgrid), grid_overrides ({es_delay_s: 5, ...}),
+#     location ({latitude, longitude, timezone: <IANA, DST-aware>, postcode}), weather_events, weather
+#     ({model: bell|synthetic|open-meteo, kwp, tilt, azimuth, sky} — inherits lat/lon),
+#     tz_offset_hours (fixed offset, no DST; location.timezone wins),
+#     native_mode (Modbus 15507 numbering: 1 Emergency Backup, 2 Self-Consumption, 3 TOU;
+#     Direct Connect and the cloud number them differently), self_reserve, tou_reserve,
+#     initial_soc, solar_peak_w, home_base_w, pv_inputs ({proximal: 0.6, remote1: 0.4}),
+#     offgrid_floor_soc.
+# cloud: {account, password}: the FranklinWH Cloud API's account (with --cloud-port; default
+#   owner@example.com / emulator). Every gateway here belongs to it (#297).
+defaults:
+  host: 127.0.0.1
+  setup: in-service          # already set up, Modbus TCP on; `fresh` below is a factory aGate
+
+# Sites with one aGate per phase (#241): what the aGates share, per group.
+groups:
+  au-3phase:
+    seed: 11
+    location: {latitude: -37.81, longitude: 144.96, timezone: Australia/Melbourne,
+               country: AU, state: VIC, city: Melbourne}
+    service: {main_breaker_a: 63}   # per phase
+  au-2phase:
+    seed: 12
+    location: {latitude: -34.93, longitude: 138.60, timezone: Australia/Adelaide,
+               country: AU, state: SA, city: Adelaide}
+    service: {main_breaker_a: 63}
+
+gateways:
+  # Sydney single-phase home on Ausgrid (the reference aGate): Australia A + 10 kW export.
+  - id: site
+    seed: 7
+    apower_units: 2
+    grid_code: ausgrid
+    location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney, postcode: "2000",
+               country: AU, state: NSW, city: Sydney, site_id: demo-sydney}
+    weather: {model: synthetic, kwp: 6.6, tilt: 20, sky: broken}
+    weather_events:          # darker skies on top of the weather (#270)
+      - {sky: storm, at: "15:00", for: 1h, every: 1d, times: 2}   # 15:00-16:00, the first two days
+      - {sky: overcast, for: 30m..2h, chance: 0.3, per: day}      # random, from the seed
+    install: {outdoor: {sun: afternoon, cover: roof}}   # cabinet temperature (#110)
+    loads: sydney-family     # appliances on smart circuits 1-3 (hot water, EV, aircon)
+    history_days: 7          # a week of Direct Connect history and totals, run at start-up
+    service: {main_breaker_a: 63}   # service rating: 63 A x 230 V = 14.5 kW; import above it trips (#123)
+    modbus: {port: 5020}
+    directconnect: {port: 9020}
+
+  # US split-phase 120/240 V, IEEE 1547-2018 Category II.
+  - id: us-split
+    seed: 42
+    ac_type: 1
+    location: {latitude: 33.45, longitude: -112.07, timezone: America/Phoenix,
+               country: US, state: AZ, city: Phoenix}
+    service: {main_breaker_a: 200}
+    modbus: {port: 5021}
+    directconnect: {port: 9021}
+
+  # Melbourne three-phase home: the AU aGate is single phase, so one aGate per phase in the
+  # au-3phase group (#241, #242), as board E of the design (#285):
+  #   L1: solar (remote PV through an aPbox), no smart circuits; most of the house
+  #   L2: aircon and hot water + induction on smart circuits 1 and 2
+  #   L3: the EV on smart circuit 1 with V2L (through the generator input and the smart
+  #       circuits): it charges on-grid and supplies the home off-grid (#287); circuit 2 unused
+  - id: au-3phase-l1
+    group: au-3phase
+    phases: [L1]
+    seed: 11
+    install: {indoor: unheated}   # a garage: lags the outside air
+    home_base_w: 600
+    pv_inputs: {proximal: 0.6, remote1: 0.4}
+    accessories: {smart_circuits: false}
+    modbus: {port: 5022}
+    directconnect: {port: 9022}
+  - id: au-3phase-l2
+    group: au-3phase
+    phases: [L2]
+    seed: 111
+    install: {indoor: unheated}
+    solar_peak_w: 0
+    loads:
+      - {name: base, type: base, w: 200, drift: 0.1}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 26, heat_below: 15, span: 8,
+         on: ["07:00-23:00"], circuit: 1}
+      - {name: hot_water, type: schedule, w: 3600, on: ["11:00-13:30"], circuit: 2}
+      - {name: induction, type: events, w: 2400, duration: 30m, per_day: 1,
+         windows: ["17:30-19:00"], circuit: 2}
+    modbus: {port: 5030}
+    directconnect: {port: 9030}
+  - id: au-3phase-l3
+    group: au-3phase
+    phases: [L3]
+    seed: 112
+    install: {indoor: unheated}
+    solar_peak_w: 0
+    accessories: {smart_circuits: true, generator_module: true}   # what V2L needs
+    v2l: {circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 2200, min_soc: 20}   # EV values: placeholders (#287)
+    loads:
+      - {name: base, type: base, w: 200, drift: 0.1}
+      - {name: ev, type: ev, w: 7000, min_w: 1400, arrive: "18:00", depart: "07:30", kwh: 18,
+         mode: offpeak, start: "22:00", circuit: 1}
+    modbus: {port: 5031}
+    directconnect: {port: 9031}
+
+  # Two legs of a three-phase supply in Adelaide (UTC+9:30/+10:30): one aGate on each.
+  - id: au-2phase-l1
+    group: au-2phase
+    phases: [L1]
+    seed: 12
+    modbus: {port: 5023}
+    directconnect: {port: 9023}
+  - id: au-2phase-l2
+    group: au-2phase
+    phases: [L2]
+    seed: 121
+    solar_peak_w: 0
+    modbus: {port: 5032}
+    directconnect: {port: 9032}
+
+  # 15509 holds the TOU reserve instead of repeating 15508.
+  - id: tou-reserve
+    seed: 99
+    quirks:
+      tou_reserve_mirrors_self: false
+    service: {main_breaker_a: 63}
+    modbus: {port: 5024}
+    directconnect: {port: 9024}
+
+  # Fresh from the installer: Modbus TCP is off until a Direct Connect 1205 sunsMdEn write
+  # (the UI's "Enable Modbus TCP", or a Direct Connect client) turns it on.
+  - id: fresh
+    seed: 21
+    setup: factory
+    location: {latitude: -33.87, longitude: 151.21, timezone: Australia/Sydney,
+               country: AU, state: NSW, city: Sydney}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5026}
+    directconnect: {port: 9026}
+
+  # A spec-compliant SunSpec DER on Rule 21-style Category III ride-through (not an aGate: no
+  # Direct Connect, Modbus TCP on).
+  - id: spec
+    seed: 3
+    profile: spec
+    ac_type: 1
+    grid_code: ieee1547-cat3
+    service: {main_breaker_a: 200}
+    modbus: {port: 5025}
+
+  # Australia and New Zealand (#357): one AU/NZ aGate per home, single phase, each home different.
+  # Devonport, AUK: two aPower X-01-AU, rooftop solar, export capped at 5 kW; Self-Consumption.
+  - id: devonport-akl
+    seed: 300
+    grid_code: as4777-au-a
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 102, apower: [2, 2]}
+    apower_units: 2
+    native_mode: 2
+    utility: {export: limited, export_limit_w: 5000}
+    loads: sydney-family
+    location: {latitude: -36.83, longitude: 174.8, timezone: Pacific/Auckland,
+               country: NZ, state: AUK, city: Devonport}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5100}
+    directconnect: {port: 9100}
+  # Devonport, AUK: an aPower X-02-AU, no solar: a backup battery; Emergency Backup.
+  - id: devonport-akl-2
+    seed: 301
+    grid_code: as4777-au-a
+    profile: agate-v10r01b04d00
+    model: {agate: 102, apower: 7}
+    apower_units: 1
+    native_mode: 1
+    solar_peak_w: 0
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 26, heat_below: 12, span: 8, circuit: 1}
+    location: {latitude: -36.83, longitude: 174.8, timezone: Pacific/Auckland,
+               country: NZ, state: AUK, city: Devonport}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5101}
+    directconnect: {port: 9101}
+  # Hamilton, WKO: an aPower X-01-AU on V10R01, solar on the house and a shed (aPbox), an EV; TOU.
+  - id: hamilton-nz
+    seed: 302
+    grid_code: as4777-au-a
+    profile: agate-v10r01b04d00
+    model: {agate: 102, apower: 2}
+    apower_units: 1
+    native_mode: 3
+    pv_inputs: {proximal: 0.6, remote1: 0.4}
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: ev, type: ev, w: 7000, min_w: 1400, arrive: "18:00", depart: "07:30", kwh: 18, mode: offpeak, start: "22:00", circuit: 1}
+    location: {latitude: -37.79, longitude: 175.28, timezone: Pacific/Auckland,
+               country: NZ, state: WKO, city: Hamilton}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5102}
+    directconnect: {port: 9102}
+  # Hamilton, WKO: two aPower X-02-AU, a 10 kW array and a generator; Self-Consumption.
+  - id: hamilton-nz-2
+    seed: 303
+    grid_code: as4777-au-a
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 102, apower: [7, 7]}
+    apower_units: 2
+    native_mode: 2
+    solar_peak_w: 10000
+    generator: {installed: true, rated_w: 8000}
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: hot_water, type: schedule, w: 3600, on: ["11:00-13:30"], circuit: 1}
+    location: {latitude: -37.79, longitude: 175.28, timezone: Pacific/Auckland,
+               country: NZ, state: WKO, city: Hamilton}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5103}
+    directconnect: {port: 9103}
+  # Christchurch, CAN: an aPower X-01-AU and an X-02-AU (mixed), solar, a heat pump; TOU.
+  - id: christchurch-nz
+    seed: 304
+    grid_code: as4777-au-a
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 102, apower: [2, 7]}
+    apower_units: 2
+    native_mode: 3
+    utility: {battery_export: false}
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 25, heat_below: 8, span: 8, circuit: 1}
+      - {name: hot_water, type: schedule, w: 3600, on: ["11:00-13:30"], circuit: 2}
+    location: {latitude: -43.53, longitude: 172.64, timezone: Pacific/Auckland,
+               country: NZ, state: CAN, city: Christchurch}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5104}
+    directconnect: {port: 9104}
+  # Christchurch, CAN: an aPower X-01-AU, no solar, no smart circuits; Emergency Backup.
+  - id: christchurch-nz-2
+    seed: 305
+    grid_code: as4777-au-a
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 102, apower: 2}
+    apower_units: 1
+    native_mode: 1
+    solar_peak_w: 0
+    accessories: {smart_circuits: false}
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 25, heat_below: 6, span: 8}
+    location: {latitude: -43.53, longitude: 172.64, timezone: Pacific/Auckland,
+               country: NZ, state: CAN, city: Christchurch}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5105}
+    directconnect: {port: 9105}
+  # Queenstown, OTA: an aPower X-02-AU, solar and an EV on V2L; Self-Consumption.
+  - id: queenstown-nz
+    seed: 306
+    grid_code: as4777-au-a
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 102, apower: 7}
+    apower_units: 1
+    native_mode: 2
+    v2l: {circuit: 1, ev_kwh: 64, ev_soc: 80, max_w: 2200, min_soc: 20}   # EV values: placeholders (#287)
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 25, heat_below: 4, span: 8, circuit: 2}
+    location: {latitude: -45.03, longitude: 168.66, timezone: Pacific/Auckland,
+               country: NZ, state: OTA, city: Queenstown}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5106}
+    directconnect: {port: 9106}
+  # Queenstown, OTA: three aPower X-01-AU on V10R01, no solar, a generator for snow outages; Emergency Backup.
+  - id: queenstown-nz-2
+    seed: 307
+    grid_code: as4777-au-a
+    profile: agate-v10r01b04d00
+    model: {agate: 102, apower: [2, 2, 2]}
+    apower_units: 3
+    native_mode: 1
+    solar_peak_w: 0
+    generator: {installed: true, rated_w: 9000}
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 25, heat_below: 2, span: 8, circuit: 1}
+    location: {latitude: -45.03, longitude: 168.66, timezone: Pacific/Auckland,
+               country: NZ, state: OTA, city: Queenstown}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5107}
+    directconnect: {port: 9107}
+  # Perth, WA: two aPower X-02-AU, a 10 kW array, export capped at 5 kW, a pool pump; TOU.
+  - id: perth-wa
+    seed: 308
+    grid_code: as4777-au-a
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 102, apower: [7, 7]}
+    apower_units: 2
+    native_mode: 3
+    solar_peak_w: 10000
+    utility: {export: limited, export_limit_w: 5000}
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: pool_pump, type: schedule, w: 1100, on: ["10:00-14:00"], circuit: 1}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 26, heat_below: 12, span: 8, circuit: 2}
+    location: {latitude: -31.95, longitude: 115.86, timezone: Australia/Perth,
+               country: AU, state: WA, city: Perth}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5108}
+    directconnect: {port: 9108}
+  # Perth, WA: an aPower X-01-AU on V10R01, rooftop solar, zero export; Self-Consumption.
+  - id: perth-wa-2
+    seed: 309
+    grid_code: as4777-au-a
+    profile: agate-v10r01b04d00
+    model: {agate: 102, apower: 2}
+    apower_units: 1
+    native_mode: 2
+    utility: {export: prohibited}
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: hot_water, type: schedule, w: 3600, on: ["11:00-13:30"], circuit: 1}
+    location: {latitude: -31.95, longitude: 115.86, timezone: Australia/Perth,
+               country: AU, state: WA, city: Perth}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5109}
+    directconnect: {port: 9109}
+  # Townsville, QLD: an aPower X-02-AU, rooftop solar, aircon; Self-Consumption.
+  - id: townsville-qld
+    seed: 310
+    grid_code: as4777-au-a
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 102, apower: 7}
+    apower_units: 1
+    native_mode: 2
+    utility: {export: limited, export_limit_w: 5000}
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 24, heat_below: 14, span: 8, circuit: 1}
+    location: {latitude: -19.26, longitude: 146.82, timezone: Australia/Brisbane,
+               country: AU, state: QLD, city: Townsville}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5110}
+    directconnect: {port: 9110}
+  # Townsville, QLD: two aPower X-01-AU on V10R01, no solar, a generator for cyclones; Emergency Backup.
+  - id: townsville-qld-2
+    seed: 311
+    grid_code: as4777-au-a
+    profile: agate-v10r01b04d00
+    model: {agate: 102, apower: [2, 2]}
+    apower_units: 2
+    native_mode: 1
+    solar_peak_w: 0
+    generator: {installed: true, rated_w: 10000}
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 24, heat_below: 14, span: 8, circuit: 1}
+    location: {latitude: -19.26, longitude: 146.82, timezone: Australia/Brisbane,
+               country: AU, state: QLD, city: Townsville}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5111}
+    directconnect: {port: 9111}
+  # Canberra, ACT: three aPower X-02-AU, a 13 kW array, an EV on solar surplus; TOU.
+  - id: canberra-act
+    seed: 312
+    grid_code: as4777-au-a
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 102, apower: [7, 7, 7]}
+    apower_units: 3
+    native_mode: 3
+    solar_peak_w: 13000
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: ev, type: ev, w: 7000, min_w: 1400, arrive: "18:00", depart: "07:30", kwh: 18, mode: solar, start: "22:00", circuit: 1}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 27, heat_below: 6, span: 8, circuit: 2}
+    location: {latitude: -35.28, longitude: 149.13, timezone: Australia/Sydney,
+               country: AU, state: ACT, city: Canberra}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5112}
+    directconnect: {port: 9112}
+  # Canberra, ACT: a flat: an aPower X-01-AU on V10R01, rooftop solar, no smart circuits; Self-Consumption.
+  - id: canberra-act-2
+    seed: 313
+    grid_code: as4777-au-a
+    profile: agate-v10r01b04d00
+    model: {agate: 102, apower: 2}
+    apower_units: 1
+    native_mode: 2
+    accessories: {smart_circuits: false}
+    loads: small-flat
+    location: {latitude: -35.28, longitude: 149.13, timezone: Australia/Sydney,
+               country: AU, state: ACT, city: Canberra}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5113}
+    directconnect: {port: 9113}
+  # Adelaide, SA: an aPower X-02-AU, rooftop solar, export capped at 1.5 kW; Self-Consumption.
+  - id: adelaide-sa
+    seed: 314
+    grid_code: as4777-au-a
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 102, apower: 7}
+    apower_units: 1
+    native_mode: 2
+    utility: {export: limited, export_limit_w: 1500}
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: hot_water, type: schedule, w: 3600, on: ["11:00-13:30"], circuit: 1}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 27, heat_below: 9, span: 8, circuit: 2}
+    location: {latitude: -34.93, longitude: 138.6, timezone: Australia/Adelaide,
+               country: AU, state: SA, city: Adelaide}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5114}
+    directconnect: {port: 9114}
+  # Adelaide, SA: an aPower X-01-AU and an X-02-AU (mixed) on V10R01, solar on a garage (aPbox), battery export off; TOU.
+  - id: adelaide-sa-2
+    seed: 315
+    grid_code: as4777-au-a
+    profile: agate-v10r01b04d00
+    model: {agate: 102, apower: [2, 7]}
+    apower_units: 2
+    native_mode: 3
+    pv_inputs: {remote1: 1.0}
+    utility: {battery_export: false}
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: ev, type: ev, w: 7000, min_w: 1400, arrive: "18:00", depart: "07:30", kwh: 18, mode: offpeak, start: "22:00", circuit: 1}
+    location: {latitude: -34.93, longitude: 138.6, timezone: Australia/Adelaide,
+               country: AU, state: SA, city: Adelaide}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5115}
+    directconnect: {port: 9115}
+  # Hobart, TAS: an aPower X-01-AU, no solar, heating on a smart circuit; Self-Consumption.
+  - id: hobart-tas
+    seed: 316
+    grid_code: as4777-au-a
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 102, apower: 2}
+    apower_units: 1
+    native_mode: 2
+    solar_peak_w: 0
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 26, heat_below: 10, span: 8, circuit: 1}
+    location: {latitude: -42.88, longitude: 147.33, timezone: Australia/Hobart,
+               country: AU, state: TAS, city: Hobart}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5116}
+    directconnect: {port: 9116}
+  # Hobart, TAS: two aPower X-02-AU, rooftop solar and an EV on V2L; Self-Consumption.
+  - id: hobart-tas-2
+    seed: 317
+    grid_code: as4777-au-a
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 102, apower: [7, 7]}
+    apower_units: 2
+    native_mode: 2
+    v2l: {circuit: 1, ev_kwh: 60, ev_soc: 80, max_w: 2200, min_soc: 20}   # EV values: placeholders (#287)
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: hot_water, type: schedule, w: 3600, on: ["11:00-13:30"], circuit: 2}
+    location: {latitude: -42.88, longitude: 147.33, timezone: Australia/Hobart,
+               country: AU, state: TAS, city: Hobart}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5117}
+    directconnect: {port: 9117}
+  # Darwin, NT: two aPower X-01-AU, a 10 kW array, zero export, aircon; Self-Consumption.
+  - id: darwin-nt
+    seed: 318
+    grid_code: as4777-au-a
+    profile: agate-v12r02b60d00-candidate
+    model: {agate: 102, apower: [2, 2]}
+    apower_units: 2
+    native_mode: 2
+    solar_peak_w: 10000
+    utility: {export: prohibited}
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 24, heat_below: 18, span: 8, circuit: 1}
+      - {name: pool_pump, type: schedule, w: 1100, on: ["10:00-14:00"], circuit: 2}
+    location: {latitude: -12.46, longitude: 130.84, timezone: Australia/Darwin,
+               country: AU, state: NT, city: Darwin}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5118}
+    directconnect: {port: 9118}
+  # Darwin, NT: an aPower X-02-AU on V10R01, no solar, a generator for the wet season; Emergency Backup.
+  - id: darwin-nt-2
+    seed: 319
+    grid_code: as4777-au-a
+    profile: agate-v10r01b04d00
+    model: {agate: 102, apower: 7}
+    apower_units: 1
+    native_mode: 1
+    solar_peak_w: 0
+    generator: {installed: true, rated_w: 7000}
+    accessories: {smart_circuits: false}
+    loads:
+      - {name: base, type: base, w: 300, drift: 0.15}
+      - {name: fridge, type: cycle, w: 140, period: 40m, duty: 0.35}
+      - {name: aircon, type: hvac, w: 2400, cool_above: 24, heat_below: 18, span: 8}
+    location: {latitude: -12.46, longitude: 130.84, timezone: Australia/Darwin,
+               country: AU, state: NT, city: Darwin}
+    service: {main_breaker_a: 63}
+    modbus: {port: 5119}
+    directconnect: {port: 9119}
