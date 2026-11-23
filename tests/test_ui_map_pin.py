@@ -60,3 +60,10 @@ def test_pinned_is_sticky_under_the_drawer_and_capped():
     for sel, body in re.findall(r"([^{}]+)\{([^}]*)\}", css):
         if all(own.fullmatch(s.strip()) for s in sel.split(",")):
             assert "overflow" not in body, sel
+
+
+def test_view_options_wrap_on_a_phone():
+    """#373: with the map on, the Pin button made the view options 404 px wide; they didn't wrap,
+    so at 390 px the page was 421 px wide and the drawer sat 31 px off-screen."""
+    css = (STATIC / "style.css").read_text()
+    assert "flex-wrap: wrap" in re.search(r"\.view-opts \{[^}]*\}", css).group(0)

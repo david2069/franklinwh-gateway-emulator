@@ -1,0 +1,48 @@
+# #373 headless Chrome, 390x844 mobile, examples/fleet-global.yaml (free ports), map on
+## layout drawer, map/pinned 1 0
+before [390, 390]
+73 cards, drawer opened on each; not [390 page, 0 left, 390 wide]: 0 []
+view-opts rows: 78
+## layout below, map/pinned 1 0
+before [390, 390]
+73 cards, drawer opened on each; not [390 page, 0 left, 390 wide]: 0 []
+view-opts rows: 78
+## layout right, map/pinned 1 0
+before [390, 390]
+73 cards, drawer opened on each; not [390 page, 0 left, 390 wide]: 0 []
+view-opts rows: 78
+## layout drawer, map/pinned 1 1
+before [390, 390]
+73 cards, drawer opened on each; not [390 page, 0 left, 390 wide]: 0 []
+view-opts rows: 78
+## layout below, map/pinned 1 1
+before [390, 390]
+73 cards, drawer opened on each; not [390 page, 0 left, 390 wide]: 0 []
+view-opts rows: 78
+## layout right, map/pinned 1 1
+before [390, 390]
+73 cards, drawer opened on each; not [390 page, 0 left, 390 wide]: 0 []
+view-opts rows: 78
+## layout drawer, map/pinned 0 0
+before [390, 390]
+73 cards, drawer opened on each; not [390 page, 0 left, 390 wide]: 0 []
+view-opts rows: 78
+## layout below, map/pinned 0 0
+before [390, 390]
+73 cards, drawer opened on each; not [390 page, 0 left, 390 wide]: 0 []
+view-opts rows: 78
+## layout right, map/pinned 0 0
+before [390, 390]
+73 cards, drawer opened on each; not [390 page, 0 left, 390 wide]: 0 []
+view-opts rows: 78
+
+# before the fix (main 6405c97), same probe: map on, every layout: page 421 px, drawer left 31, 73 of 73 openings; map off: 0 of 73
+# cause: .view-opts 404 px wide (Pin button shown with the map), no flex-wrap
+
+# break check: flex-wrap removed
+1 failed, 3 passed in 0.22s
+(css reverted)
+# full suite
+908 passed, 44 warnings in 63.63s (0:01:03)
+# PII
+✅ SUCCESS: No PII leaks found!
