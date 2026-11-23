@@ -291,7 +291,7 @@ main.layout-right > .session-msg, main.layout-left > .session-msg { grid-column:
 .comms .result { flex-basis: 100%; }
 
 /* Cards grouped by location, compact cards, local time (#86) */
-.view-opts { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
+.view-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
 .view-opts select, .view-opts button { font: 13px var(--sans); color: var(--text-2); background: var(--panel);
   border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; min-height: 36px; cursor: pointer; }
 .view-opts button[aria-pressed="true"] { border-color: var(--ok); color: var(--ok); }
