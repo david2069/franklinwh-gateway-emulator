@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.3 (2026-11-25)
+
 ### Added
 - Published on PyPI: `pip install franklinwh-gateway-emulator`. A `v*` tag builds the package, installs the wheel and runs its CLI, then publishes it through PyPI trusted publishing (#381). See docs/getting-started.md.
 

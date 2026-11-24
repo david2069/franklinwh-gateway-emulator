@@ -1,0 +1,2 @@
+909 passed, 44 warnings in 62.47s (0:01:02)
+v0.3.3 release commit: full suite on the 3.12 venv; PII scan clean; mkdocs --strict ok
