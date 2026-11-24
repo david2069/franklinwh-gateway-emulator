@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+- Published on PyPI: `pip install franklinwh-gateway-emulator`. A `v*` tag builds the package, installs the wheel and runs its CLI, then publishes it through PyPI trusted publishing (#381). See docs/getting-started.md.
+
+### Changed
+- The `dev` extra takes franklinwh-modbus 0.11.0 from PyPI instead of from git (the same `firmware_quirks.json`); PyPI refuses packages with git dependencies. The README's links are absolute, so they work on PyPI too (#381).
+
 ## 0.3.2 (2026-11-24)
 
 ### Added

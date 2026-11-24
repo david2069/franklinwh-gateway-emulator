@@ -3,8 +3,8 @@
 [![release](https://img.shields.io/github/v/release/david2069/franklinwh-gateway-emulator)](https://github.com/david2069/franklinwh-gateway-emulator/releases/latest)
 [![tests](https://github.com/david2069/franklinwh-gateway-emulator/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/david2069/franklinwh-gateway-emulator/actions/workflows/test.yml)
 [![docs](https://github.com/david2069/franklinwh-gateway-emulator/actions/workflows/docs.yml/badge.svg?branch=main)](https://david2069.github.io/franklinwh-gateway-emulator/)
-[![python](https://img.shields.io/badge/python-%3E%3D3.10-blue)](pyproject.toml)
-[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![python](https://img.shields.io/badge/python-%3E%3D3.10-blue)](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/pyproject.toml)
+[![license](https://img.shields.io/badge/license-MIT-green)](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/LICENSE)
 
 An emulator of the FranklinWH **aGate** for testing without hardware. It serves the **Direct
 Connect** local protocol (TCP/9000) and **Modbus TCP** (SunSpec chain plus FranklinWH
@@ -16,8 +16,8 @@ With `--cloud-port` it also serves the **FranklinWH Cloud API**, the REST API th
 FranklinWH app, [franklinwh-cloud](https://github.com/david2069/franklinwh-cloud) and
 [homeassistant-franklinwh](https://github.com/richo/homeassistant-franklinwh) use, from the same
 gateways: a cloud client, a Modbus client and a Direct Connect client all see one site. It never
-contacts the real cloud. See [FranklinWH Cloud API](docs/cloud-api.md) and
-[Cloud API clients](docs/cloud-clients.md).
+contacts the real cloud. See [FranklinWH Cloud API](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/cloud-api.md) and
+[Cloud API clients](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/cloud-clients.md).
 
 **As on a real aGate, Modbus TCP starts off.** Every aGate runs a Direct Connect listener; Modbus
 TCP comes on when a Direct Connect `1205` `sunsMdEn` write enables it (about 3 s later). That is
@@ -32,7 +32,7 @@ unmodified `FranklinWHController` connects, scans, reads and dispatches against 
 > **Unofficial, and an emulation: it can never be 100% accurate.** See the
 > [Disclaimer](#disclaimer). It emulates documented and observed behaviour of the reference
 > aGate's firmware. Where the sources disagree, the choices are in
-> [What is emulated](docs/emulated.md).
+> [What is emulated](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/emulated.md).
 
 ## Disclaimer
 <!-- --8<-- [start:disclaimer] -->
@@ -70,6 +70,16 @@ unmodified `FranklinWHController` connects, scans, reads and dispatches against 
 
 ## Quick start
 
+From PyPI (Python 3.10 or later), with one of the example fleets:
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install franklinwh-gateway-emulator
+curl -O https://raw.githubusercontent.com/david2069/franklinwh-gateway-emulator/main/examples/fleet.yaml
+.venv/bin/franklinwh-emulator ui fleet.yaml               # web UI: open http://127.0.0.1:8502/
+```
+
+From a clone, for the examples, the tests and development:
+
 ```bash
 git clone https://github.com/david2069/franklinwh-gateway-emulator.git
 cd franklinwh-gateway-emulator
@@ -80,26 +90,26 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # Python 3.10 or la
 .venv/bin/python -m pytest
 ```
 
-![The emulator's web UI](docs/assets/ui/overview.png)
+![The emulator's web UI](https://raw.githubusercontent.com/david2069/franklinwh-gateway-emulator/main/docs/assets/ui/overview.png)
 
 ## Documentation
 
 **The full docs:** <https://david2069.github.io/franklinwh-gateway-emulator/>. They are built
-from [`docs/`](docs/), so these links also work on GitHub:
+from [`docs/`](https://github.com/david2069/franklinwh-gateway-emulator/tree/main/docs/), so these links also work on GitHub:
 
 | | |
 |---|---|
-| [Getting started](docs/getting-started.md) | install, run one gateway or a fleet, use it from Python |
-| [Model baseline](docs/model-baseline.md) | the hardware, and how location, weather, placement and controls drive the model, with a diagram |
-| [Configuration](docs/configuration.md) | describe each site: aGate, aPowers, PV, grid, accessories, location; where it's saved |
-| [Web UI](docs/ui.md) | the optional web page, with screenshots |
-| [What is emulated](docs/emulated.md) | protocols, profiles and the choices where sources disagree |
-| [Grid, grid codes, export limits and phases](docs/grid.md) | outages, trips, CSIP-AUS, phases |
-| [The site model](docs/site-model.md) | TOU, energy, location and time, weather, loads, generator |
-| [Control API and `ctl`](docs/control-api.md) | drive the emulator from scripts and tests |
-| [FranklinWH Cloud API](docs/cloud-api.md) · [Cloud API clients](docs/cloud-clients.md) | the cloud's REST API from the same gateways; pointing franklinwh-cloud, homeassistant-franklinwh or the official app at it |
-| [Scenarios](docs/SCENARIOS.md) · [Replay](docs/replay.md) | timed, checked test runs; recorded data |
-| [Direct Connect](docs/DIRECT_CONNECT.md) · [Design](docs/DESIGN.md) · [Calibration](docs/CALIBRATION.md) · [Findings](docs/FINDINGS.md) | reference |
-| [Changelog](CHANGELOG.md) · [Backlog](BACKLOG.md) | |
+| [Getting started](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/getting-started.md) | install, run one gateway or a fleet, use it from Python |
+| [Model baseline](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/model-baseline.md) | the hardware, and how location, weather, placement and controls drive the model, with a diagram |
+| [Configuration](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/configuration.md) | describe each site: aGate, aPowers, PV, grid, accessories, location; where it's saved |
+| [Web UI](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/ui.md) | the optional web page, with screenshots |
+| [What is emulated](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/emulated.md) | protocols, profiles and the choices where sources disagree |
+| [Grid, grid codes, export limits and phases](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/grid.md) | outages, trips, CSIP-AUS, phases |
+| [The site model](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/site-model.md) | TOU, energy, location and time, weather, loads, generator |
+| [Control API and `ctl`](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/control-api.md) | drive the emulator from scripts and tests |
+| [FranklinWH Cloud API](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/cloud-api.md) · [Cloud API clients](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/cloud-clients.md) | the cloud's REST API from the same gateways; pointing franklinwh-cloud, homeassistant-franklinwh or the official app at it |
+| [Scenarios](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/SCENARIOS.md) · [Replay](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/replay.md) | timed, checked test runs; recorded data |
+| [Direct Connect](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/DIRECT_CONNECT.md) · [Design](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/DESIGN.md) · [Calibration](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/CALIBRATION.md) · [Findings](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/docs/FINDINGS.md) | reference |
+| [Changelog](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/CHANGELOG.md) · [Backlog](https://github.com/david2069/franklinwh-gateway-emulator/blob/main/BACKLOG.md) | |
 
 Local preview: `pip install mkdocs-material && mkdocs serve` (live reload at http://127.0.0.1:8000/).

@@ -29,8 +29,14 @@ dev = [
     "pymodbus>=3.6",
     "franklinwh-cloud>=0.6.5",                 # the Cloud API's acceptance client (#297)
     "franklinwh==2026.3.*",                    # richo's library, as homeassistant-franklinwh pins it (#322)
-    "franklinwh-modbus @ git+https://github.com/david2069/franklinwh-modbus.git@38a80f8b3f24e573f5ee3c5c0bca3e0526d4566b",  # v0.11.0: ships firmware_quirks.json
+    "franklinwh-modbus==0.11.0",               # ships firmware_quirks.json; PyPI rejects git dependencies
 ]
+
+[project.urls]
+Homepage = "https://github.com/david2069/franklinwh-gateway-emulator"
+Documentation = "https://david2069.github.io/franklinwh-gateway-emulator/"
+Changelog = "https://github.com/david2069/franklinwh-gateway-emulator/blob/main/CHANGELOG.md"
+Issues = "https://github.com/david2069/franklinwh-gateway-emulator/issues"
 
 [project.scripts]
 franklinwh-emulator = "franklinwh_emulator.cli:main"

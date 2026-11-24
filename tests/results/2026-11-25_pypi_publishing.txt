@@ -1,0 +1,17 @@
+# #381 PyPI publishing, local checks
+franklinwh-modbus 0.11.0: PyPI wheel firmware_quirks.json byte-identical (cmp) to the git-pinned 38a80f8 install
+python -m build: sdist + wheel (425 KB, 83 files incl. ui/static leaflet-1.9.4, world-110m.json); twine check --strict: PASSED both
+sdist: no private/, .claude, tests/results, tests/data or HAR files
+clean venv, wheel only: --help ok; validate examples/fleet-global.yaml: fleet ok (71 gateways); ui on port 0 from outside the repo: page 200, app.js/map.js/drawer.js 200
+
+# break check: a git dependency put back in the dev extra
+1 failed, 3 passed in 0.02s
+# break check: one relative README link
+1 failed, 3 passed in 0.01s
+# full suite (first run: 1 failed, tests/test_docs_install.py (#164) required the clone before any venv; now the clone before the editable install, and the PyPI install first)
+909 passed, 44 warnings in 62.18s (0:01:02)
+# mkdocs
+INFO    -  Documentation built in 0.39 seconds
+# PII
+✅ SUCCESS: No PII leaks found!
+# CI 3.10: tomllib missing (3.11+); the test now skips on 3.10 and runs on 3.12/3.13
