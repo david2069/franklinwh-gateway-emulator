@@ -26,3 +26,13 @@ def test_changelog_unreleased_uses_each_category_once():
     heads = re.findall(r"^### (\w+)", unreleased, re.M)
     kac = ["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"]
     assert heads == [h for h in kac if h in heads], heads
+
+
+def test_pypi_accepts_the_package():
+    """#381: PyPI rejects direct (git, URL) dependencies, extras included, and the README is the
+    PyPI page, where relative links don't resolve."""
+    import tomllib
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
+    deps = project["dependencies"] + [d for x in project["optional-dependencies"].values() for d in x]
+    assert [d for d in deps if "@" in d or "://" in d] == []
+    assert re.findall(r"\]\((?!https?://|#)[^)]*\)", (ROOT / "README.md").read_text()) == []

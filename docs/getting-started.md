@@ -2,6 +2,17 @@
 
 Install, run one gateway or a fleet, and use the emulator from Python.
 
+From PyPI (Python 3.10 or later). The example fleets aren't in the package; download one:
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install franklinwh-gateway-emulator
+curl -O https://raw.githubusercontent.com/david2069/franklinwh-gateway-emulator/main/examples/fleet.yaml
+.venv/bin/franklinwh-emulator ui fleet.yaml               # web UI: open http://127.0.0.1:8502/
+.venv/bin/franklinwh-emulator serve --port 5020 --dc-port 9000 --setup in-service   # one gateway, no file
+```
+
+From a clone, with the examples, the tests and the extras for development:
+
 ```bash
 git clone https://github.com/david2069/franklinwh-gateway-emulator.git
 cd franklinwh-gateway-emulator
