@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.2 (2026-11-24)
+
 ### Added
 - Web UI: **Pin** beside **Map** keeps the map at the top of the window while the gateway cards scroll beneath it, with every actions layout; the drawer still opens over it, and pinned the map is at most 40% of the window's height (phones included). Remembered by the browser (#365). See docs/ui.md.
 - `examples/fleet-global.yaml`: `examples/fleet.yaml` plus every US, Canadian, Australian and New Zealand home from the two regional examples, 71 gateways in one fleet (#363). See docs/configuration.md.
