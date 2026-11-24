@@ -14,3 +14,4 @@ clean venv, wheel only: --help ok; validate examples/fleet-global.yaml: fleet ok
 INFO    -  Documentation built in 0.39 seconds
 # PII
 ✅ SUCCESS: No PII leaks found!
+# CI 3.10: tomllib missing (3.11+); the test now skips on 3.10 and runs on 3.12/3.13

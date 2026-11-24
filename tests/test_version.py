@@ -31,7 +31,8 @@ def test_changelog_unreleased_uses_each_category_once():
 def test_pypi_accepts_the_package():
     """#381: PyPI rejects direct (git, URL) dependencies, extras included, and the README is the
     PyPI page, where relative links don't resolve."""
-    import tomllib
+    import pytest
+    tomllib = pytest.importorskip("tomllib")                       # Python 3.11+; CI runs 3.12 and 3.13 too
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
     deps = project["dependencies"] + [d for x in project["optional-dependencies"].values() for d in x]
     assert [d for d in deps if "@" in d or "://" in d] == []
